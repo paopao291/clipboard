@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ドロップダウンコンポーネント例</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-8">
+  <h1 class="text-2xl font-bold mb-8">ドロップダウンコンポーネント例</h1>
+  
+  <div class="space-y-10">
+    <!-- 基本的なドロップダウン -->
+    <div>
+      <h2 class="text-xl font-semibold mb-4">基本的なドロップダウン</h2>
+      <div id="simple-dropdown" class="dropdown relative">
+        <!-- トリガーボタン -->
+        <button id="dropdown-trigger" type="button" class="inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" aria-haspopup="menu" aria-expanded="false">
+          <span class="dropdown-trigger-text">ドロップダウン</span>
+          <svg class="dropdown-trigger-icon -mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+          </svg>
+        </button>
+      
+        <!-- ドロップダウンコンテンツ -->
+        <div id="dropdown-content" class="hidden absolute z-10 w-56 mt-2 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 divide-y divide-gray-100">
+          <!-- ヘッダー（オプション） -->
+          <div class="dropdown-header px-4 py-2">
+            <p class="text-sm font-medium text-gray-900">ドロップダウンメニュー</p>
+          </div>
+          
+          <!-- メニュー項目のリスト -->
+          <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="dropdown-trigger">
+            <a href="#" class="dropdown-item block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900" role="menuitem">アイテム 1</a>
+            <a href="#" class="dropdown-item block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900" role="menuitem">アイテム 2</a>
+            <a href="#" class="dropdown-item block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900" role="menuitem">アイテム 3</a>
+          </div>
+          
+          <!-- フッター（オプション） -->
+          <div class="dropdown-footer py-1">
+            <a href="#" class="dropdown-item block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900" role="menuitem">その他のアクション</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- カスタムスタイルのドロップダウン -->
+    <div>
+      <h2 class="text-xl font-semibold mb-4">カスタムスタイルのドロップダウン</h2>
+      <div id="custom-dropdown" class="dropdown relative">
+        <!-- トリガーボタン -->
+        <button id="dropdown-trigger" type="button" class="inline-flex justify-center items-center px-5 py-2.5 bg-indigo-600 text-white font-medium rounded-full hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 shadow-sm" aria-haspopup="menu" aria-expanded="false">
+          <span class="dropdown-trigger-text">設定</span>
+          <svg class="dropdown-trigger-icon -mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+          </svg>
+        </button>
+      
+        <!-- ドロップダウンコンテンツ -->
+        <div id="dropdown-content" class="hidden absolute z-10 w-72 mt-2 rounded-lg shadow-xl bg-white ring-1 ring-black ring-opacity-5 divide-y divide-gray-100">
+          <!-- ヘッダー（オプション） -->
+          <div class="dropdown-header px-4 py-3 bg-gray-50 rounded-t-lg">
+            <p class="text-sm font-medium text-gray-900">アカウント設定</p>
+          </div>
+          
+          <!-- メニュー項目のリスト -->
+          <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="dropdown-trigger">
+            <a href="#" class="dropdown-item flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900" role="menuitem">
+              <svg class="mr-3 h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+              </svg>
+              プロフィール
+            </a>
+            <a href="#" class="dropdown-item flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900" role="menuitem">
+              <svg class="mr-3 h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
+              </svg>
+              設定
+            </a>
+          </div>
+          
+          <!-- フッター（オプション） -->
+          <div class="dropdown-footer py-1 bg-gray-50 rounded-b-lg">
+            <a href="#" class="dropdown-item flex justify-center px-4 py-2 text-sm text-red-700 hover:bg-red-50 hover:text-red-900" role="menuitem">
+              ログアウト
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // 簡易版のドロップダウン実装（実際のプロジェクトではimportを使用）
+    class Dropdown {
+      constructor(container) {
+        this.container = container;
+        this.triggerElement = container.querySelector('#dropdown-trigger');
+        this.dropdownContent = container.querySelector('#dropdown-content');
+        this.isOpen = false;
+        
+        // イベントリスナーを追加
+        this.triggerElement.addEventListener('click', this.toggle.bind(this));
+        document.addEventListener('click', this.handleOutsideClick.bind(this));
+      }
+      
+      toggle(event) {
+        event.stopPropagation();
+        
+        if (this.isOpen) {
+          this.hide();
+        } else {
+          this.show();
+        }
+      }
+      
+      show() {
+        if (this.isOpen) return;
+        
+        this.isOpen = true;
+        this.dropdownContent.classList.remove('hidden');
+        this.triggerElement.setAttribute('aria-expanded', 'true');
+      }
+      
+      hide() {
+        if (!this.isOpen) return;
+        
+        this.isOpen = false;
+        this.dropdownContent.classList.add('hidden');
+        this.triggerElement.setAttribute('aria-expanded', 'false');
+      }
+      
+      handleOutsideClick(event) {
+        if (this.isOpen && !this.container.contains(event.target)) {
+          this.hide();
+        }
+      }
+    }
+
+    // ドロップダウンを初期化
+    document.addEventListener('DOMContentLoaded', () => {
+      const simpleDropdown = new Dropdown(document.getElementById('simple-dropdown'));
+      const customDropdown = new Dropdown(document.getElementById('custom-dropdown'));
+    });
+  </script>
+</body>
+</html> 

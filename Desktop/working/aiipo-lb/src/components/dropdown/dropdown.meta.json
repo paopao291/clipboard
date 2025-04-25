@@ -1,0 +1,28 @@
+{
+  "name": "dropdown",
+  "framework": "vanilla-js",
+  "triggerSelector": "#dropdown-trigger",
+  "contentSelector": "#dropdown-content",
+  "popperPlacement": "bottom-start",
+  "hiddenClass": "hidden",
+  "description": "トリガーボタンとメニューを含む完全なドロップダウンコンポーネント。キーボードナビゲーションとアクセシビリティに対応。",
+  "version": "1.2.0",
+  "author": "aiipo_2.0",
+  "files": {
+    "fragment": "fragment.html",
+    "script": "dropdown.js",
+    "preview": "preview.html"
+  },
+  "dependencies": {
+    "@popperjs/core": "^2.11.0"
+  },
+  "features": [
+    "内蔵トリガーボタン",
+    "カスタマイズ可能なトリガーテキストとアイコン",
+    "キーボードナビゲーション（矢印キー、Escキー）",
+    "WAI-ARIA対応",
+    "動的なアイテム追加/削除",
+    "ヘッダー/フッターセクション",
+    "カスタマイズ可能なコールバック関数"
+  ]
+} 

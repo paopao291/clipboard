@@ -1,0 +1,16 @@
+{
+  "name": "button",
+  "framework": "vanilla-js",
+  "triggerSelector": "#button",
+  "contentSelector": ".button-text",
+  "hiddenClass": "hidden",
+  "description": "様々なスタイルとアクションをサポートするボタンコンポーネント",
+  "version": "1.0.0",
+  "author": "aiipo_2.0",
+  "files": {
+    "fragment": "fragment.html",
+    "script": "button.js",
+    "preview": "preview.html"
+  },
+  "dependencies": {}
+} 
