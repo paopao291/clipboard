@@ -1,0 +1,1039 @@
+.material-symbols-outlined {
+    font-variation-settings:
+        "FILL" 0,
+        "wght" 300,
+        "GRAD" 0,
+        "opsz" 24;
+}
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI",
+        "Noto Sans JP", sans-serif;
+    background: transparent;
+    overflow: hidden;
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* メインコンテナ */
+.overlay-container {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    pointer-events: none;
+    background-color: #333;
+}
+
+/* サイドパネル */
+.side-panel {
+    position: fixed;
+    right: 0;
+    top: 0;
+    width: 380px;
+    height: 100vh;
+    background: #fff;
+    box-shadow: -2px 0 20px rgba(0, 0, 0, 0.1);
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* メインコンテンツ */
+.main-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+/* ヘッダー（上部固定） */
+.panel-header {
+    flex-shrink: 0;
+    padding: 8px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-title {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 36px;
+    color: #1a1a1a;
+}
+
+.settings-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    color: #5a5a5a;
+    font-size: 24px;
+}
+
+.settings-icon:hover {
+    background: #f5f5f5;
+}
+
+/* スクロール可能な中央エリア */
+.scrollable-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+}
+
+/* スクロールバーのカスタマイズ */
+.scrollable-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.scrollable-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.scrollable-content::-webkit-scrollbar-thumb {
+    background: #e0e0e0;
+    border-radius: 3px;
+}
+
+.scrollable-content::-webkit-scrollbar-thumb:hover {
+    background: #c0c0c0;
+}
+
+/* セクション共通スタイル */
+.panel-section {
+    padding: 24px 16px;
+    padding-top: 0;
+}
+
+.panel-section:first-child {
+    padding-top: 24px;
+}
+
+.section-title {
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 24px;
+    color: #1a1a1a;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.section-icon {
+    font-size: 24px;
+    color: #5a5a5a;
+    flex-shrink: 0;
+}
+
+.section-title-text {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.section-action {
+    margin-left: auto;
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    color: #8a8a8a;
+    font-size: 24px;
+}
+
+.section-action:hover {
+    background: #f5f5f5;
+    color: #4d65ff;
+}
+
+/* 感情バロメータ */
+.emotion-item {
+    margin-bottom: 8px;
+}
+
+.emotion-item:last-child {
+    margin-bottom: 0;
+}
+
+.emotion-label {
+    font-size: 13px;
+    color: #4a4a4a;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.emotion-value {
+    font-weight: 600;
+    color: #4d65ff;
+}
+
+.emotion-bar-bg {
+    width: 100%;
+    height: 8px;
+    background: #f5f5f5;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.emotion-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.emotion-bar.positive {
+    background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.emotion-bar.neutral {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.emotion-bar.negative {
+    background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+.emotion-bar.engaged {
+    background: linear-gradient(90deg, #4d65ff, #6b7fff);
+}
+
+/* AIマネージャー */
+.ai-advice-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 16px;
+    border: 1px solid #f0f0f0;
+    height: 360px;
+    overflow: hidden;
+    background-color: #ffffff;
+}
+
+.ai-advice-container::after {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 90px;
+    content: "";
+    background: linear-gradient(
+        0deg,
+        rgba(255, 255, 255, 1) 0%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    pointer-events: none;
+}
+
+.ai-advice-bubble {
+    background: #f8f9ff;
+    border: 1px solid #e8eaff;
+    border-radius: 12px;
+    padding: 12px;
+    position: relative;
+    animation: slideIn 0.3s ease;
+    transition:
+        opacity 0.5s ease,
+        transform 0.5s ease,
+        background 0.2s ease;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    cursor: pointer;
+}
+
+.ai-advice-bubble:hover {
+    background: #f0f2ff;
+}
+
+.ai-advice-bubble.fade-out {
+    animation: fadeOut 0.5s ease forwards !important;
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
+}
+
+.ai-advice-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+/* AIマネージャー1: 戦略担当（ブルー） */
+.ai-advice-avatar.manager-1 {
+    background: linear-gradient(135deg, #4d65ff, #6b7fff);
+}
+
+/* AIマネージャー2: サポート担当（グリーン） */
+.ai-advice-avatar.manager-2 {
+    background: linear-gradient(135deg, #10b981, #34d399);
+}
+
+/* AIマネージャー3: 分析担当（パープル） */
+.ai-advice-avatar.manager-3 {
+    background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+}
+
+.ai-advice-content {
+    flex: 1;
+    min-width: 0;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+}
+
+.ai-advice-text {
+    font-size: 13px;
+    color: #2a2a2a;
+    line-height: 1.6;
+}
+
+.ai-advice-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.ai-advice-name {
+    color: #8a8a8a;
+}
+
+.ai-advice-time {
+    color: #8a8a8a;
+}
+
+/* MTGチェック */
+.checklist-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 8px;
+    border-radius: 16px;
+    border: 1px solid #f0f0f0;
+}
+
+.checklist-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 8px;
+    transition: background 0.2s ease;
+    cursor: pointer;
+}
+
+.checklist-item:hover {
+    background: #f8f9fa;
+}
+
+.checklist-item.checked {
+    opacity: 0.6;
+}
+
+.checkbox {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #d0d0d0;
+    border-radius: 6px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.checklist-item.checked .checkbox {
+    background: #4d65ff;
+    border-color: #4d65ff;
+}
+
+.checkbox::after {
+    content: "✓";
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    display: none;
+}
+
+.checklist-item.checked .checkbox::after {
+    display: block;
+}
+
+.checklist-text {
+    font-size: 13px;
+    color: #3a3a3a;
+    line-height: 1.5;
+    flex: 1;
+}
+
+.checklist-item.checked .checklist-text {
+    text-decoration: line-through;
+}
+
+/* 次回やるべきこと */
+.todo-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.todo-item {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.todo-number {
+    width: 24px;
+    height: 24px;
+    background: #f0f0f0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: #5a5a5a;
+    flex-shrink: 0;
+}
+
+.todo-text {
+    font-size: 13px;
+    color: #3a3a3a;
+    line-height: 1.6;
+    flex: 1;
+    padding-top: 2px;
+}
+
+/* AIドキュメント作成 */
+.document-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.doc-button {
+    padding: 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 16px;
+    background: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+}
+
+.doc-button:hover {
+    background: #f8f9ff;
+    border-color: #4d65ff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(77, 101, 255, 0.1);
+}
+
+.doc-button:active {
+    transform: translateY(0);
+}
+
+.doc-info {
+    flex: 1;
+    text-align: left;
+    min-width: 0;
+}
+
+.doc-title {
+    font-size: 1rem;
+    color: #1a1a1a;
+}
+
+.doc-desc {
+    display: none;
+}
+
+.doc-icon {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+/* アイコンカラーバリエーション（8色） */
+.doc-icon.color-1 {
+    color: #4d65ff;
+} /* ブルー */
+.doc-icon.color-2 {
+    color: #10b981;
+} /* グリーン */
+.doc-icon.color-3 {
+    color: #f59e0b;
+} /* オレンジ */
+.doc-icon.color-4 {
+    color: #ef4444;
+} /* レッド */
+.doc-icon.color-5 {
+    color: #8b5cf6;
+} /* パープル */
+.doc-icon.color-6 {
+    color: #ec4899;
+} /* ピンク */
+.doc-icon.color-7 {
+    color: #06b6d4;
+} /* シアン */
+.doc-icon.color-8 {
+    color: #f97316;
+} /* ディープオレンジ */
+
+/* オプションエリア */
+.panel-options {
+    padding: 16px;
+    border-top: 1px solid #f0f0f0;
+    /*background-color: #fcfcfc;*/
+}
+
+.option-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 8px 0;
+}
+
+.option-item:hover .option-label {
+    color: #1a1a1a;
+}
+
+.option-checkbox {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #d0d0d0;
+    border-radius: 6px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.option-item input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.option-item input[type="checkbox"]:checked + .option-checkbox {
+    background: #4d65ff;
+    border-color: #4d65ff;
+}
+
+.option-checkbox::after {
+    content: "✓";
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    display: none;
+}
+
+.option-item
+    input[type="checkbox"]:checked
+    + .option-checkbox::after {
+    display: block;
+}
+
+.option-label {
+    font-size: 13px;
+    line-height: 20px;
+    color: #3a3a3a;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s ease;
+}
+
+/* 履歴ページ */
+.history-page {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+}
+
+.history-page.active {
+    display: flex;
+}
+
+.history-header {
+    flex-shrink: 0;
+    padding: 8px 24px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.back-button {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    color: #5a5a5a;
+    font-size: 24px;
+}
+
+.back-button:hover {
+    background: #f5f5f5;
+}
+
+.history-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.history-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 24px 16px;
+}
+
+.history-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.history-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.history-content::-webkit-scrollbar-thumb {
+    background: #e0e0e0;
+    border-radius: 3px;
+}
+
+.history-content::-webkit-scrollbar-thumb:hover {
+    background: #c0c0c0;
+}
+
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.main-content.hidden {
+    display: none;
+}
+
+/* マスターページ */
+.master-page {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+}
+
+.master-page.active {
+    display: flex;
+}
+
+.master-header {
+    flex-shrink: 0;
+    padding: 8px 16px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.master-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.master-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 24px 16px;
+}
+
+.master-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.master-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.master-content::-webkit-scrollbar-thumb {
+    background: #e0e0e0;
+    border-radius: 3px;
+}
+
+.master-content::-webkit-scrollbar-thumb:hover {
+    background: #c0c0c0;
+}
+
+.template-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.template-item {
+    padding: 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    background: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.template-item:hover {
+    background: #f8f9ff;
+    border-color: #4d65ff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(77, 101, 255, 0.1);
+}
+
+.template-item.selected {
+    background: #f8f9ff;
+    border-color: #4d65ff;
+    box-shadow: 0 2px 12px rgba(77, 101, 255, 0.15);
+}
+
+.template-radio {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #d0d0d0;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.template-item.selected .template-radio {
+    border-color: #4d65ff;
+    background: #4d65ff;
+}
+
+.template-radio::after {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: white;
+    display: none;
+}
+
+.template-item.selected .template-radio::after {
+    display: block;
+}
+
+.template-info {
+    flex: 1;
+}
+
+.template-name {
+    font-size: 14px;
+    color: #1a1a1a;
+}
+
+.template-count {
+    font-size: 12px;
+    color: #8a8a8a;
+}
+
+.template-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.template-action-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    color: #5a5a5a;
+    border: none;
+    background: transparent;
+}
+
+.template-action-btn:hover {
+    background: #f5f5f5;
+}
+
+.template-action-btn.delete:hover {
+    background: #fee;
+    color: #ef4444;
+}
+
+.add-template-button {
+    width: 100%;
+    padding: 14px;
+    border: 1px dashed #d0d0d0;
+    border-radius: 12px;
+    background: transparent;
+    color: #5a5a5a;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.add-template-button:hover {
+    border-color: #4d65ff;
+    color: #4d65ff;
+    background: #f8f9ff;
+}
+
+/* テンプレート編集ページ */
+.template-edit-page {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+}
+
+.template-edit-page.active {
+    display: flex;
+}
+
+.template-edit-header {
+    flex-shrink: 0;
+    padding: 8px 16px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.template-name-input {
+    flex: 1;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a1a1a;
+    border: none;
+    outline: none;
+    padding: 8px;
+    border-radius: 6px;
+    transition: background 0.2s ease;
+}
+
+.template-name-input:focus {
+    background: #f5f5f5;
+}
+
+.save-template-button {
+    width: 100%;
+    padding: 14px;
+    margin-top: 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: #4d65ff;
+    color: white;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.save-template-button:hover {
+    background: #3d55ef;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(77, 101, 255, 0.3);
+}
+
+.save-template-button:active {
+    transform: translateY(0);
+}
+
+.template-edit-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 24px 16px;
+}
+
+.template-edit-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.template-edit-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.template-edit-content::-webkit-scrollbar-thumb {
+    background: #e0e0e0;
+    border-radius: 3px;
+}
+
+.template-edit-content::-webkit-scrollbar-thumb:hover {
+    background: #c0c0c0;
+}
+
+.checklist-items-edit {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.checklist-item-edit {
+    padding: 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.checklist-item-edit.dragging {
+    opacity: 0.5;
+}
+
+.drag-handle {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #c0c0c0;
+    cursor: grab;
+    user-select: none;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+.item-input {
+    flex: 1;
+    font-size: 13px;
+    color: #3a3a3a;
+    border: none;
+    outline: none;
+    padding: 6px;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.item-input:focus {
+    background: #f5f5f5;
+}
+
+.delete-item-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #8a8a8a;
+    border: none;
+    background: transparent;
+}
+
+.delete-item-btn:hover {
+    background: #fee;
+    color: #ef4444;
+}
+
+.add-item-button {
+    width: 100%;
+    padding: 12px;
+    border: 1px dashed #d0d0d0;
+    border-radius: 10px;
+    background: transparent;
+    color: #5a5a5a;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.add-item-button:hover {
+    border-color: #4d65ff;
+    color: #4d65ff;
+    background: #f8f9ff;
+}

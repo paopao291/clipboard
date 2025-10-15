@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Video Chat Overlay UI</title>
+        <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+        />
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+        <div class="overlay-container">
+            <!-- サイドパネル -->
+            <div class="side-panel">
+                <!-- メインコンテンツ -->
+                <div class="main-content">
+                    <!-- ヘッダー（固定） -->
+                    <div class="panel-header">
+                        <div class="header-title">AIサポート</div>
+                        <div
+                            class="settings-icon material-symbols-outlined"
+                            onclick="openSettings()"
+                        >
+                            settings
+                        </div>
+                    </div>
+
+                    <!-- スクロール可能な中央エリア -->
+                    <div class="scrollable-content">
+                        <!-- 感情バロメータ -->
+                        <div class="panel-section">
+                            <div class="section-title">
+                                <span
+                                    class="section-icon material-symbols-outlined"
+                                    >sentiment_satisfied</span
+                                >
+                                感情バロメータ
+                            </div>
+                            <div class="emotion-item">
+                                <div class="emotion-label">
+                                    <span>ポジティブ</span>
+                                    <span class="emotion-value">78%</span>
+                                </div>
+                                <div class="emotion-bar-bg">
+                                    <div
+                                        class="emotion-bar positive"
+                                        style="width: 78%"
+                                    ></div>
+                                </div>
+                            </div>
+                            <div class="emotion-item">
+                                <div class="emotion-label">
+                                    <span>エンゲージメント</span>
+                                    <span class="emotion-value">85%</span>
+                                </div>
+                                <div class="emotion-bar-bg">
+                                    <div
+                                        class="emotion-bar engaged"
+                                        style="width: 85%"
+                                    ></div>
+                                </div>
+                            </div>
+                            <div class="emotion-item">
+                                <div class="emotion-label">
+                                    <span>中立</span>
+                                    <span class="emotion-value">42%</span>
+                                </div>
+                                <div class="emotion-bar-bg">
+                                    <div
+                                        class="emotion-bar neutral"
+                                        style="width: 42%"
+                                    ></div>
+                                </div>
+                            </div>
+                            <div class="emotion-item">
+                                <div class="emotion-label">
+                                    <span>ネガティブ</span>
+                                    <span class="emotion-value">12%</span>
+                                </div>
+                                <div class="emotion-bar-bg">
+                                    <div
+                                        class="emotion-bar negative"
+                                        style="width: 12%"
+                                    ></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AIマネージャー -->
+                        <div class="panel-section" id="ai-manager-section">
+                            <div class="section-title">
+                                <span
+                                    class="section-icon material-symbols-outlined"
+                                    >psychology</span
+                                >
+                                AIマネージャー
+                                <div
+                                    class="section-action material-symbols-outlined"
+                                    onclick="showAIHistory()"
+                                >
+                                    history
+                                </div>
+                            </div>
+                            <div class="ai-advice-container">
+                                <!-- 吹き出しはJavaScriptで動的に追加されます -->
+                            </div>
+                        </div>
+
+                        <!-- MTGチェック -->
+                        <div class="panel-section">
+                            <div class="section-title">
+                                <span
+                                    class="section-icon material-symbols-outlined"
+                                    >checklist</span
+                                >
+                                <span
+                                    class="section-title-text"
+                                    id="mtg-check-title"
+                                >
+                                    MTGチェック
+                                </span>
+                                <div
+                                    class="section-action material-symbols-outlined"
+                                    onclick="showMasterPage()"
+                                >
+                                    settings
+                                </div>
+                            </div>
+                            <div class="checklist-container">
+                                <div class="checklist-item checked">
+                                    <div class="checkbox"></div>
+                                    <div class="checklist-text">
+                                        アイスブレイク・自己紹介
+                                    </div>
+                                </div>
+                                <div class="checklist-item checked">
+                                    <div class="checkbox"></div>
+                                    <div class="checklist-text">
+                                        プロジェクトの進捗報告
+                                    </div>
+                                </div>
+                                <div class="checklist-item">
+                                    <div class="checkbox"></div>
+                                    <div class="checklist-text">
+                                        予算とリソースの確認
+                                    </div>
+                                </div>
+                                <div class="checklist-item">
+                                    <div class="checkbox"></div>
+                                    <div class="checklist-text">
+                                        スケジュールの調整
+                                    </div>
+                                </div>
+                                <div class="checklist-item">
+                                    <div class="checkbox"></div>
+                                    <div class="checklist-text">
+                                        次回ミーティングの日程決定
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 次回やるべきこと -->
+                        <div class="panel-section">
+                            <div class="section-title">
+                                <span
+                                    class="section-icon material-symbols-outlined"
+                                    >assignment</span
+                                >
+                                次回やるべきこと
+                            </div>
+                            <div class="todo-list">
+                                <div class="todo-item">
+                                    <div class="todo-number">1</div>
+                                    <div class="todo-text">
+                                        デザイン案を3パターン作成し、チームに共有する
+                                    </div>
+                                </div>
+                                <div class="todo-item">
+                                    <div class="todo-number">2</div>
+                                    <div class="todo-text">
+                                        クライアントから追加要件をヒアリングする
+                                    </div>
+                                </div>
+                                <div class="todo-item">
+                                    <div class="todo-number">3</div>
+                                    <div class="todo-text">
+                                        開発環境のセットアップを完了させる
+                                    </div>
+                                </div>
+                                <div class="todo-item">
+                                    <div class="todo-number">4</div>
+                                    <div class="todo-text">
+                                        次回ミーティングのアジェンダを作成する
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AIドキュメント作成 -->
+                        <div class="panel-section">
+                            <div class="section-title">
+                                <span
+                                    class="section-icon material-symbols-outlined"
+                                    >description</span
+                                >
+                                AIドキュメント作成
+                            </div>
+                            <div class="document-buttons">
+                                <button class="doc-button">
+                                    <div class="doc-info">
+                                        <div class="doc-title">議事録</div>
+                                        <div class="doc-desc">
+                                            ミーティングの内容をまとめます
+                                        </div>
+                                    </div>
+                                    <div class="doc-icon color-1">
+                                        <span class="material-symbols-outlined"
+                                            >description</span
+                                        >
+                                    </div>
+                                </button>
+                                <button class="doc-button">
+                                    <div class="doc-info">
+                                        <div class="doc-title">提案書</div>
+                                        <div class="doc-desc">
+                                            プロジェクト提案を作成します
+                                        </div>
+                                    </div>
+                                    <div class="doc-icon color-3">
+                                        <span class="material-symbols-outlined"
+                                            >lightbulb</span
+                                        >
+                                    </div>
+                                </button>
+                                <button class="doc-button">
+                                    <div class="doc-info">
+                                        <div class="doc-title">見積書</div>
+                                        <div class="doc-desc">
+                                            コストの見積もりを生成します
+                                        </div>
+                                    </div>
+                                    <div class="doc-icon color-2">
+                                        <span class="material-symbols-outlined"
+                                            >payments</span
+                                        >
+                                    </div>
+                                </button>
+                                <button class="doc-button">
+                                    <div class="doc-info">
+                                        <div class="doc-title">レポート</div>
+                                        <div class="doc-desc">
+                                            分析レポートを作成します
+                                        </div>
+                                    </div>
+                                    <div class="doc-icon color-5">
+                                        <span class="material-symbols-outlined"
+                                            >bar_chart</span
+                                        >
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- オプションエリア -->
+                        <div class="panel-options">
+                            <label class="option-item">
+                                <input
+                                    type="checkbox"
+                                    id="save-to-gdrive"
+                                    checked
+                                />
+                                <div class="option-checkbox"></div>
+                                <span class="option-label"
+                                    >内容をGoogleドライブに保存する</span
+                                >
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 履歴ページ -->
+                <div class="history-page" id="history-page">
+                    <div class="history-header">
+                        <div
+                            class="back-button material-symbols-outlined"
+                            onclick="hideAIHistory()"
+                        >
+                            arrow_back
+                        </div>
+                        <div class="history-title">AIマネージャー</div>
+                    </div>
+                    <div class="history-content">
+                        <div class="history-list" id="history-list">
+                            <!-- 履歴がここに動的に追加されます -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MTGチェックマスターページ -->
+                <div class="master-page" id="master-page">
+                    <div class="master-header">
+                        <div
+                            class="back-button material-symbols-outlined"
+                            onclick="hideMasterPage()"
+                        >
+                            arrow_back
+                        </div>
+                        <div class="master-title">MTGチェック設定</div>
+                    </div>
+                    <div class="master-content">
+                        <!-- 新規追加ボタン -->
+                        <button
+                            class="add-template-button"
+                            onclick="addTemplate()"
+                        >
+                            <span class="material-symbols-outlined">add</span>
+                            新しいテンプレートを追加
+                        </button>
+                        <!-- テンプレート一覧 -->
+                        <div class="template-list" id="template-list">
+                            <!-- テンプレートがここに表示されます -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- テンプレート編集ページ -->
+                <div class="template-edit-page" id="template-edit-page">
+                    <div class="template-edit-header">
+                        <div
+                            class="back-button material-symbols-outlined"
+                            onclick="hideTemplateEdit()"
+                        >
+                            arrow_back
+                        </div>
+                        <input
+                            type="text"
+                            class="template-name-input"
+                            id="template-name-input"
+                            placeholder="テンプレート名"
+                        />
+                    </div>
+                    <div class="template-edit-content">
+                        <div
+                            class="checklist-items-edit"
+                            id="checklist-items-edit"
+                        >
+                            <!-- チェックリスト項目がここに表示されます -->
+                        </div>
+                        <button
+                            class="add-item-button"
+                            onclick="addChecklistItem()"
+                        >
+                            <span class="material-symbols-outlined">add</span>
+                            項目を追加
+                        </button>
+                        <button
+                            class="save-template-button"
+                            onclick="saveTemplate()"
+                        >
+                            保存
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="script.js"></script>
+    </body>
+</html>
