@@ -125,9 +125,11 @@ async function handlePaste(e) {
     e.preventDefault();
     
     const items = e.clipboardData.items;
+    let hasImage = false;
     
     for (let item of items) {
         if (item.type.indexOf('image') !== -1) {
+            hasImage = true;
             const blob = item.getAsFile();
             
             // タッチ位置があればその位置に、なければ中央に配置
@@ -144,6 +146,12 @@ async function handlePaste(e) {
             
             break;
         }
+    }
+    
+    // 画像以外がペーストされた場合、写真ライブラリを開く
+    if (!hasImage) {
+        galleryInput.click();
+        showToast('写真ライブラリから選択してください');
     }
 }
 
