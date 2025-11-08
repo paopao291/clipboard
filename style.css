@@ -1,18 +1,18 @@
 :root {
     /* デザインシステム：極上のライトテーマ */
-    --primary: #FFFFFF;
+    --primary: #ffffff;
     --surface: rgba(0, 0, 0, 0.02);
     --surface-elevated: rgba(0, 0, 0, 0.04);
-    --accent: #007AFF;
+    --accent: #007aff;
     --accent-glow: rgba(0, 122, 255, 0.35);
     --text-primary: rgba(0, 0, 0, 0.85);
     --text-secondary: rgba(0, 0, 0, 0.45);
-    --outline-inner: #FFFFFF; /* 内側の縁取り：白 */
-    --outline-outer: #E5E7EB; /* 外側の縁取り：グレー */
+    --outline-inner: #ffffff; /* 内側の縁取り：白 */
+    --outline-outer: #e5e7eb; /* 外側の縁取り：グレー */
     --selection-glow: var(--accent);
     --shadow-ambient: rgba(0, 0, 0, 0.08);
     --shadow-key: rgba(0, 0, 0, 0.12);
-    
+
     /* アニメーション：Apple標準 */
     --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
     --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
@@ -31,10 +31,12 @@ html {
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Hiragino Kaku Gothic ProN', sans-serif;
-    background: 
+    font-family:
+        -apple-system, BlinkMacSystemFont, "SF Pro Display",
+        "Hiragino Kaku Gothic ProN", sans-serif;
+    background:
         radial-gradient(circle, rgba(0, 0, 0, 0.15) 1px, transparent 1px),
-        #E5E7EB;
+        #e5e7eb;
     background-size: 24px 24px;
     background-position: 0 0;
     overflow: hidden;
@@ -83,11 +85,11 @@ body {
     .desktop-hint {
         display: none;
     }
-    
+
     .mobile-hint {
         display: block;
     }
-    
+
     /* スマホでペーストエリアを有効化 */
     .paste-area {
         opacity: 0; /* 完全に透明 */
@@ -97,12 +99,12 @@ body {
         -webkit-user-select: text; /* iOSでペーストメニューを出すため */
         user-select: text;
     }
-    
+
     .paste-area:focus {
         opacity: 0;
         outline: none;
     }
-    
+
     /* スマホ：タッチ最適化 */
     .delete-btn {
         width: 36px;
@@ -115,11 +117,11 @@ body {
         border: 2.5px solid white;
         box-shadow: 0 4px 12px rgba(255, 59, 48, 0.3);
     }
-    
+
     .delete-btn:active {
         transform: scale(0.85);
     }
-    
+
     /* スマホ：ボタンサイズ調整 */
     .info-btn {
         bottom: 20px;
@@ -127,34 +129,34 @@ body {
         width: 48px;
         height: 48px;
     }
-    
+
     .info-btn svg {
         width: 22px;
         height: 22px;
     }
-    
+
     /* ヘルプモーダル */
     .help-content {
         padding: 36px 28px;
         border-radius: 24px;
         width: 90%;
     }
-    
+
     .help-content h2 {
         font-size: 26px;
         margin-bottom: 28px;
         letter-spacing: -0.5px;
     }
-    
+
     .help-section h3 {
         font-size: 17px;
         margin-top: 20px;
     }
-    
+
     .help-section p {
         font-size: 15px;
     }
-    
+
     .close-help {
         top: 16px;
         right: 16px;
@@ -180,7 +182,7 @@ body {
     z-index: 100;
     color: rgba(0, 0, 0, 0.4);
     transition: all 0.25s var(--ease-out-expo);
-    box-shadow: 
+    box-shadow:
         0 4px 16px rgba(0, 0, 0, 0.08),
         0 1px 4px rgba(0, 0, 0, 0.04);
 }
@@ -240,7 +242,7 @@ body {
     max-height: 75vh;
     overflow-y: auto;
     position: relative;
-    box-shadow: 
+    box-shadow:
         0 32px 96px rgba(0, 0, 0, 0.15),
         0 8px 32px rgba(0, 0, 0, 0.08);
     transform: scale(0.92) translateY(20px);
@@ -318,7 +320,7 @@ body {
     background: rgba(0, 0, 0, 0.06);
     border: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: 6px;
-    font-family: 'SF Mono', 'Menlo', monospace;
+    font-family: "SF Mono", "Menlo", monospace;
     font-size: 13px;
     font-weight: 600;
     color: var(--text-primary);
@@ -328,7 +330,7 @@ body {
 /* ステッカー */
 .sticker {
     position: absolute;
-    cursor: grab;
+    cursor: default;
     user-select: none;
     overflow: visible;
     will-change: transform;
@@ -341,12 +343,12 @@ body {
 }
 
 @keyframes stickerAppear {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.sticker:active {
-    cursor: grabbing;
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
 /* 画像ラッパー：回転用コンテナ */
@@ -355,6 +357,11 @@ body {
     height: 100%;
     position: relative;
     transition: transform 0.1s linear;
+    cursor: grab;
+}
+
+.sticker-img-wrapper:active {
+    cursor: grabbing;
 }
 
 .sticker img {
@@ -372,7 +379,7 @@ body {
     filter: url(#outline-filter) drop-shadow(0 12px 32px rgba(0, 0, 0, 0.18));
 }
 
-.sticker.rotating {
+.sticker.rotating .sticker-img-wrapper {
     cursor: crosshair;
 }
 
@@ -383,7 +390,7 @@ body {
     right: -12px;
     width: 28px;
     height: 28px;
-    background: #FF3B30;
+    background: #ff3b30;
     color: white;
     border: 2px solid white;
     border-radius: 50%;
@@ -417,7 +424,6 @@ body {
     transform: scale(0.9);
 }
 
-
 /* トースト：シンプルな通知 */
 .toast {
     position: fixed;
@@ -438,4 +444,3 @@ body {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(0, 0, 0, 0.05);
 }
-
