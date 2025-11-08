@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Opacity テスト</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+
+        h1 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .test {
+            margin-bottom: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .test h2 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #007AFF;
+            font-weight: 600;
+        }
+
+        .test p {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 12px;
+        }
+
+        /* 共通のtextareaベーススタイル */
+        .test-textarea {
+            width: 100%;
+            height: 100px;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #007AFF;
+            border-radius: 8px;
+            resize: none;
+            -webkit-user-select: text;
+            user-select: text;
+            -webkit-touch-callout: default;
+        }
+
+        /* opacity: 0 */
+        #test1 {
+            opacity: 0;
+        }
+
+        /* opacity: 0.01 */
+        #test2 {
+            opacity: 0.01;
+        }
+
+        /* opacity: 0.05 */
+        #test3 {
+            opacity: 0.05;
+        }
+
+        /* opacity: 0.1 */
+        #test4 {
+            opacity: 0.1;
+        }
+
+        /* 透明textarea + 背景色付きコンテナ */
+        #container5 {
+            position: relative;
+            height: 150px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        #test5 {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.01;
+            font-size: 16px;
+            border: none;
+            background: transparent;
+            color: transparent;
+            caret-color: transparent;
+            -webkit-user-select: text;
+            user-select: text;
+            -webkit-touch-callout: default;
+            padding: 12px;
+        }
+
+        #label5 {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            pointer-events: none;
+            text-align: center;
+        }
+
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #333;
+            min-height: 40px;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .note {
+            margin-top: 8px;
+            padding: 8px 12px;
+            background: #fff3cd;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <h1>📱 Opacity 値とペーストメニュー表示テスト</h1>
+
+    <!-- テスト1: opacity: 0 -->
+    <div class="test">
+        <h2>テスト1: opacity: 0（完全に透明）</h2>
+        <p>このエリアを長押ししてペーストメニューが出るか</p>
+        <textarea id="test1" class="test-textarea" placeholder="opacity: 0"></textarea>
+        <div class="status" id="status1">待機中...</div>
+        <div class="note">⚠️ iOSではペーストメニューが出ない可能性</div>
+    </div>
+
+    <!-- テスト2: opacity: 0.01 -->
+    <div class="test">
+        <h2>テスト2: opacity: 0.01（ほぼ見えない）</h2>
+        <p>このエリアを長押ししてペーストメニューが出るか</p>
+        <textarea id="test2" class="test-textarea" placeholder="opacity: 0.01"></textarea>
+        <div class="status" id="status2">待機中...</div>
+        <div class="note">✅ 推奨値: 目には見えないがiOSで動作</div>
+    </div>
+
+    <!-- テスト3: opacity: 0.05 -->
+    <div class="test">
+        <h2>テスト3: opacity: 0.05（かすかに見える）</h2>
+        <p>このエリアを長押ししてペーストメニューが出るか</p>
+        <textarea id="test3" class="test-textarea" placeholder="opacity: 0.05"></textarea>
+        <div class="status" id="status3">待機中...</div>
+        <div class="note">少しだけ視認できる可能性あり</div>
+    </div>
+
+    <!-- テスト4: opacity: 0.1 -->
+    <div class="test">
+        <h2>テスト4: opacity: 0.1（うっすら見える）</h2>
+        <p>このエリアを長押ししてペーストメニューが出るか</p>
+        <textarea id="test4" class="test-textarea" placeholder="opacity: 0.1"></textarea>
+        <div class="status" id="status4">待機中...</div>
+        <div class="note">視認できるレベル</div>
+    </div>
+
+    <!-- テスト5: アプリ実装方式（opacity: 0.01 + 背景色） -->
+    <div class="test">
+        <h2>テスト5: アプリ実装方式</h2>
+        <p>opacity: 0.01 + transparent background + 背景コンテナ</p>
+        <div id="container5">
+            <textarea id="test5"></textarea>
+            <div id="label5">このエリアを長押し<br>（アプリと同じ実装）</div>
+        </div>
+        <div class="status" id="status5">待機中...</div>
+        <div class="note">✅ 実際のアプリと同じ設定</div>
+    </div>
+
+    <script>
+        console.log('Opacity Test Loaded');
+        console.log('User Agent:', navigator.userAgent);
+
+        // 各テストの設定
+        const tests = [
+            { id: 'test1', status: 'status1', opacity: 0 },
+            { id: 'test2', status: 'status2', opacity: 0.01 },
+            { id: 'test3', status: 'status3', opacity: 0.05 },
+            { id: 'test4', status: 'status4', opacity: 0.1 },
+            { id: 'test5', status: 'status5', opacity: 0.01 }
+        ];
+
+        tests.forEach(test => {
+            const textarea = document.getElementById(test.id);
+            const status = document.getElementById(test.status);
+
+            // フォーカスイベント
+            textarea.addEventListener('focus', () => {
+                status.textContent = `フォーカス中 (opacity: ${test.opacity}) - 長押ししてください`;
+                status.className = 'status info';
+                console.log(`${test.id}: focused`);
+            });
+
+            // タッチイベント
+            textarea.addEventListener('touchstart', (e) => {
+                console.log(`${test.id}: touchstart`);
+            });
+
+            // 長押しメニュー
+            textarea.addEventListener('contextmenu', (e) => {
+                console.log(`${test.id}: contextmenu - ペーストメニュー表示！`);
+                status.textContent = `✅ 長押しメニュー表示成功 (opacity: ${test.opacity})`;
+                status.className = 'status success';
+            });
+
+            // ペーストイベント
+            textarea.addEventListener('paste', (e) => {
+                console.log(`${test.id}: paste event!`, e);
+                e.preventDefault();
+
+                const clipboardData = e.clipboardData || window.clipboardData;
+                const items = clipboardData.items;
+
+                let result = `✅ ペースト成功！ (opacity: ${test.opacity}) - `;
+                let hasImage = false;
+
+                if (items) {
+                    for (let i = 0; i < items.length; i++) {
+                        console.log(`${test.id} Item type:`, items[i].type);
+                        if (items[i].type.indexOf('image') !== -1) {
+                            hasImage = true;
+                            result += '画像を検出';
+                        }
+                    }
+                }
+
+                if (!hasImage) {
+                    result += 'テキストを検出';
+                }
+
+                status.textContent = result;
+                status.className = 'status success';
+            });
+        });
+
+        // テスト5に自動フォーカス
+        setTimeout(() => {
+            document.getElementById('test5').focus();
+            console.log('Test5: auto-focused');
+        }, 100);
+    </script>
+</body>
+</html>
