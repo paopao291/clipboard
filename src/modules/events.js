@@ -9,6 +9,7 @@ import {
   saveStickerChanges,
 } from "./sticker.js";
 import { elements, showToast, updateInfoButtonVisibility } from "./ui.js";
+import { showConfirmDialog } from "./dialog.js";
 
 let wheelTimeout = null;
 
@@ -55,11 +56,14 @@ export async function handlePaste(e) {
     }
   }
 
-  // 画像以外がペーストされた場合、写真ライブラリを開く
+  // 画像以外がペーストされた場合
   if (!hasImage) {
     console.log("No image found in clipboard");
-    elements.galleryInput.click();
-    showToast(MESSAGES.SELECT_FROM_LIBRARY);
+
+    // 確認ダイアログを表示
+    showConfirmDialog("クリップボードに画像がありません", "写真を選択", () => {
+      elements.galleryInput.click();
+    });
   }
 }
 
