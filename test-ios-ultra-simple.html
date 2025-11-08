@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>iOS ペースト超シンプルテスト</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+
+        h1 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .test {
+            margin-bottom: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .test h2 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #007AFF;
+            font-weight: 600;
+        }
+
+        .test p {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 12px;
+        }
+
+        /* テスト1: 完全に普通のtextarea */
+        #test1 {
+            width: 100%;
+            height: 100px;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #007AFF;
+            border-radius: 8px;
+            resize: none;
+        }
+
+        /* テスト2: 大きな透明textarea */
+        #container2 {
+            position: relative;
+            height: 200px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        #test2 {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            font-size: 16px;
+        }
+
+        #label2 {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            pointer-events: none;
+            text-align: center;
+        }
+
+        /* テスト3: Safariに最適化 */
+        #test3 {
+            width: 100%;
+            height: 100px;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #34C759;
+            border-radius: 8px;
+            resize: none;
+            -webkit-user-select: text;
+            user-select: text;
+            -webkit-touch-callout: default;
+        }
+
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #333;
+            min-height: 40px;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <h1>📱 iOS ペースト機能テスト</h1>
+
+    <!-- テスト1: 完全に標準のtextarea -->
+    <div class="test">
+        <h2>テスト1: 標準textarea</h2>
+        <p>このtextareaを長押しして、ペーストメニューが表示されるか確認</p>
+        <textarea id="test1" placeholder="ここを長押ししてペースト"></textarea>
+        <div class="status" id="status1">待機中...</div>
+    </div>
+
+    <!-- テスト2: 透明なtextarea（アプリ方式） -->
+    <div class="test">
+        <h2>テスト2: 透明textarea（アプリ方式）</h2>
+        <p>この紫のエリアを長押しして、ペーストメニューが表示されるか確認</p>
+        <div id="container2">
+            <textarea id="test2"></textarea>
+            <div id="label2">このエリアを長押し</div>
+        </div>
+        <div class="status" id="status2">待機中...</div>
+    </div>
+
+    <!-- テスト3: Safari最適化textarea -->
+    <div class="test">
+        <h2>テスト3: Safari最適化</h2>
+        <p>user-selectとtouch-calloutを明示的に設定したtextarea</p>
+        <textarea id="test3" placeholder="ここを長押ししてペースト"></textarea>
+        <div class="status" id="status3">待機中...</div>
+    </div>
+
+    <script>
+        console.log('iOS Paste Test Loaded');
+        console.log('User Agent:', navigator.userAgent);
+
+        // デバイス情報表示
+        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        console.log('Is iOS:', isIOS);
+
+        // テスト1
+        const test1 = document.getElementById('test1');
+        const status1 = document.getElementById('status1');
+
+        test1.addEventListener('focus', () => {
+            status1.textContent = 'フォーカス中 - 長押ししてください';
+            status1.className = 'status info';
+            console.log('Test1: focused');
+        });
+
+        test1.addEventListener('touchstart', () => {
+            console.log('Test1: touchstart');
+        });
+
+        test1.addEventListener('contextmenu', (e) => {
+            console.log('Test1: contextmenu');
+        });
+
+        test1.addEventListener('paste', (e) => {
+            console.log('Test1: paste event!', e);
+            e.preventDefault();
+
+            const clipboardData = e.clipboardData || window.clipboardData;
+            const items = clipboardData.items;
+
+            let result = 'ペーストイベント発火！ ';
+            let hasImage = false;
+
+            if (items) {
+                for (let i = 0; i < items.length; i++) {
+                    console.log('Item type:', items[i].type);
+                    if (items[i].type.indexOf('image') !== -1) {
+                        hasImage = true;
+                        result += '画像を検出しました';
+                    }
+                }
+            }
+
+            if (!hasImage) {
+                result += 'テキストを検出しました';
+            }
+
+            status1.textContent = '✅ ' + result;
+            status1.className = 'status success';
+        });
+
+        // テスト2
+        const test2 = document.getElementById('test2');
+        const status2 = document.getElementById('status2');
+
+        // 自動フォーカス
+        setTimeout(() => {
+            test2.focus();
+            console.log('Test2: auto-focused');
+        }, 100);
+
+        test2.addEventListener('focus', () => {
+            status2.textContent = 'フォーカス中 - 長押ししてください';
+            status2.className = 'status info';
+            console.log('Test2: focused');
+        });
+
+        test2.addEventListener('touchstart', (e) => {
+            console.log('Test2: touchstart', e.touches[0]);
+        });
+
+        test2.addEventListener('contextmenu', (e) => {
+            console.log('Test2: contextmenu');
+        });
+
+        test2.addEventListener('paste', (e) => {
+            console.log('Test2: paste event!', e);
+            e.preventDefault();
+
+            const clipboardData = e.clipboardData || window.clipboardData;
+            const items = clipboardData.items;
+
+            let result = 'ペーストイベント発火！ ';
+            let hasImage = false;
+
+            if (items) {
+                for (let i = 0; i < items.length; i++) {
+                    console.log('Item type:', items[i].type);
+                    if (items[i].type.indexOf('image') !== -1) {
+                        hasImage = true;
+                        result += '画像を検出しました';
+                    }
+                }
+            }
+
+            if (!hasImage) {
+                result += 'テキストを検出しました';
+            }
+
+            status2.textContent = '✅ ' + result;
+            status2.className = 'status success';
+        });
+
+        // テスト3
+        const test3 = document.getElementById('test3');
+        const status3 = document.getElementById('status3');
+
+        test3.addEventListener('focus', () => {
+            status3.textContent = 'フォーカス中 - 長押ししてください';
+            status3.className = 'status info';
+            console.log('Test3: focused');
+        });
+
+        test3.addEventListener('touchstart', () => {
+            console.log('Test3: touchstart');
+        });
+
+        test3.addEventListener('contextmenu', (e) => {
+            console.log('Test3: contextmenu');
+        });
+
+        test3.addEventListener('paste', (e) => {
+            console.log('Test3: paste event!', e);
+            e.preventDefault();
+
+            const clipboardData = e.clipboardData || window.clipboardData;
+            const items = clipboardData.items;
+
+            let result = 'ペーストイベント発火！ ';
+            let hasImage = false;
+
+            if (items) {
+                for (let i = 0; i < items.length; i++) {
+                    console.log('Item type:', items[i].type);
+                    if (items[i].type.indexOf('image') !== -1) {
+                        hasImage = true;
+                        result += '画像を検出しました';
+                    }
+                }
+            }
+
+            if (!hasImage) {
+                result += 'テキストを検出しました';
+            }
+
+            status3.textContent = '✅ ' + result;
+            status3.className = 'status success';
+        });
+    </script>
+</body>
+</html>
