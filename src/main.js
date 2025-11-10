@@ -21,7 +21,6 @@ import {
   handlePasteAreaInput,
   handlePasteAreaKeydown,
   handleCanvasWheel,
-  handleDocumentTouchStart,
 } from "./modules/events.js";
 import { addStickerToDOM } from "./modules/sticker.js";
 
@@ -80,9 +79,6 @@ async function init() {
   document.addEventListener("mouseup", handleMouseUp);
 
   // タッチイベント
-  document.addEventListener("touchstart", handleDocumentTouchStart, {
-    passive: false,
-  });
   document.addEventListener("touchmove", handleTouchMove, { passive: false });
   document.addEventListener("touchend", handleTouchEnd);
 

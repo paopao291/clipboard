@@ -21,6 +21,26 @@ import { showConfirmDialog } from "./dialog.js";
 let wheelTimeout = null;
 
 /**
+ * 2本指ピンチ操作を開始（共通処理）
+ * @param {Touch} touch1 - 1本目の指
+ * @param {Touch} touch2 - 2本目の指
+ * @param {Object} targetSticker - 対象のステッカー
+ */
+function startPinchGesture(touch1, touch2, targetSticker) {
+  // 初期距離を保存（拡大縮小用）
+  const dx = touch2.clientX - touch1.clientX;
+  const dy = touch2.clientY - touch1.clientY;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  state.startPinch(distance, targetSticker.width);
+
+  // 初期角度を保存（回転用）
+  const angle =
+    Math.atan2(touch2.clientY - touch1.clientY, touch2.clientX - touch1.clientX) *
+    (180 / Math.PI);
+  state.startRotating(angle);
+}
+
+/**
  * ペーストイベントハンドラー
  * @param {ClipboardEvent} e
  */
@@ -122,30 +142,28 @@ export function handleCanvasMouseDown(e) {
 }
 
 /**
- * キャンバスタッチスタート（フォーカス用と選択解除）
+ * キャンバスタッチスタート（ペーストエリアフォーカスと選択解除）
  * @param {TouchEvent} e
  */
 export function handleCanvasTouchStart(e) {
   if (e.target === elements.canvas || e.target === elements.pasteArea) {
     const touches = e.touches;
-    
-    // 1本指の場合
+
     if (touches.length === 1) {
       const touch = touches[0];
       state.setLastTouchPosition(touch.clientX, touch.clientY);
 
-      // ペーストエリアをタッチ位置に移動
+      // ペーストエリアをタッチ位置に配置
       elements.pasteArea.style.left = `${touch.clientX - 50}px`;
       elements.pasteArea.style.top = `${touch.clientY - 50}px`;
       elements.pasteArea.style.width = `${PASTE_AREA_CONFIG.TOUCH_SIZE}px`;
       elements.pasteArea.style.height = `${PASTE_AREA_CONFIG.TOUCH_SIZE}px`;
 
-      // 選択中のステッカーがない場合のみペーストエリアにフォーカス
       if (!state.selectedSticker) {
+        // 未選択時：ペーストエリアにフォーカス
         elements.pasteArea.focus();
       } else {
-        // 選択中のステッカーがある場合は、タップとして確定するまで選択解除しない
-        // （2本目の指を追加してピンチできるようにするため）
+        // 選択中：タップ判定を待つ（2本指追加でピンチできるようにするため）
         state.canvasTapPending = true;
         state.canvasTapStartTime = Date.now();
         state.canvasTapX = touch.clientX;
@@ -155,45 +173,6 @@ export function handleCanvasTouchStart(e) {
   }
 }
 
-/**
- * ドキュメント全体のタッチスタート（2本指ピンチ検出用）
- * @param {TouchEvent} e
- */
-export function handleDocumentTouchStart(e) {
-  const touches = e.touches;
-  
-  // 選択中のステッカーがあり、2本指でタッチした場合
-  if (state.selectedSticker && touches.length === 2) {
-    // ステッカー要素上でのタッチはhandleStickerTouchStartで処理されるのでスキップ
-    const stickerElements = document.querySelectorAll('.sticker');
-    for (let stickerEl of stickerElements) {
-      if (stickerEl.contains(e.target)) {
-        return;
-      }
-    }
-
-    // 空白エリアでの2本指ピンチ：選択中のステッカーを操作
-    e.preventDefault();
-    
-    const touch1 = touches[0];
-    const touch2 = touches[1];
-
-    // 初期距離を保存（拡大縮小用）
-    const dx = touch2.clientX - touch1.clientX;
-    const dy = touch2.clientY - touch1.clientY;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    state.startPinch(distance, state.selectedSticker.width);
-
-    // 初期角度を保存（回転用）
-    const angle =
-      Math.atan2(
-        touch2.clientY - touch1.clientY,
-        touch2.clientX - touch1.clientX,
-      ) *
-      (180 / Math.PI);
-    state.startRotating(angle);
-  }
-}
 
 /**
  * シールマウスダウンイベント
@@ -217,14 +196,7 @@ export function handleStickerMouseDown(e, id) {
 
   // 同じステッカーが既に選択されている場合
   if (state.selectedSticker && state.selectedSticker.id === id) {
-    // クリック判定用のフラグを立てる（mouseupで判定）
-    state.possibleClick = true;
-    state.clickStartTime = Date.now();
-
-    // ドラッグ準備（実際のドラッグはmousemoveで開始）
-    state.dragPrepareX = e.clientX;
-    state.dragPrepareY = e.clientY;
-
+    // Shiftキーが押されていたら回転モード
     if (e.shiftKey) {
       const rect = sticker.element.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
@@ -234,7 +206,16 @@ export function handleStickerMouseDown(e, id) {
         Math.atan2(e.clientY - centerY, e.clientX - centerX) * (180 / Math.PI);
       state.startRotating(angle);
       sticker.element.classList.add("rotating");
+      return;
     }
+
+    // Shiftキーが押されていない場合：クリック判定とドラッグ準備
+    state.possibleClick = true;
+    state.clickStartTime = Date.now();
+
+    // ドラッグ準備（実際のドラッグはmousemoveで開始）
+    state.dragPrepareX = e.clientX;
+    state.dragPrepareY = e.clientY;
     return;
   }
 
@@ -425,108 +406,82 @@ export function handleStickerTouchStart(e, id) {
   const sticker = state.getStickerById(id);
   if (!sticker) return;
 
-  // 選択中のステッカーがある場合は、カーソル位置に関わらず選択中のステッカーを操作対象にする
+  const touches = e.touches;
+  // 選択中のステッカーがある場合、そのステッカーを操作対象にする
   const targetSticker = state.selectedSticker || sticker;
 
-  // 別のステッカーが選択中の場合でも、選択中のステッカーを操作
+  // 別のステッカーが選択中の場合：選択中のステッカーを操作
   if (state.selectedSticker && state.selectedSticker.id !== id) {
-    // 選択中のステッカーを操作対象とする（選択解除しない）
-    const touches = e.touches;
-    
-    if (touches.length === 1) {
-      // 1本指：タップ判定用のフラグを立てる
-      state.possibleTap = true;
-      state.tapStartTime = Date.now();
-      state.touchPrepareX = touches[0].clientX;
-      state.touchPrepareY = touches[0].clientY;
-    } else if (touches.length === 2) {
-      // 2本指：拡大縮小と回転
-      const touch1 = touches[0];
-      const touch2 = touches[1];
-
-      // 初期距離を保存（拡大縮小用）
-      const dx = touch2.clientX - touch1.clientX;
-      const dy = touch2.clientY - touch1.clientY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      state.startPinch(distance, targetSticker.width);
-
-      // 初期角度を保存（回転用）
-      const angle =
-        Math.atan2(
-          touch2.clientY - touch1.clientY,
-          touch2.clientX - touch1.clientX,
-        ) *
-        (180 / Math.PI);
-      state.startRotating(angle);
-    }
+    handleTouchOnDifferentSticker(touches, targetSticker);
     return;
   }
 
-  // 同じステッカーが既に選択されている場合
+  // 同じステッカーが既に選択されている場合：タップ判定とジェスチャー検出
   if (state.selectedSticker && state.selectedSticker.id === id) {
-    // タップ判定用のフラグを立てる（touchendで判定）
+    handleTouchOnSelectedSticker(touches, targetSticker);
+    return;
+  }
+
+  // 未選択のステッカーをタッチ：自動選択してジェスチャー開始
+  handleTouchOnUnselectedSticker(sticker, touches, targetSticker);
+}
+
+/**
+ * 別のステッカー選択中に他のステッカーをタッチした場合の処理
+ * @param {TouchList} touches - タッチリスト
+ * @param {Object} targetSticker - 操作対象のステッカー
+ */
+function handleTouchOnDifferentSticker(touches, targetSticker) {
+  if (touches.length === 1) {
+    // 1本指：タップ判定の準備
     state.possibleTap = true;
     state.tapStartTime = Date.now();
-
-    // ドラッグ準備（実際のドラッグはtouchmoveで開始）
-    const touches = e.touches;
-    if (touches.length === 1) {
-      state.touchPrepareX = touches[0].clientX;
-      state.touchPrepareY = touches[0].clientY;
-    } else if (touches.length === 2) {
-      // 2本指：拡大縮小と回転
-      const touch1 = touches[0];
-      const touch2 = touches[1];
-
-      // 初期距離を保存（拡大縮小用）
-      const dx = touch2.clientX - touch1.clientX;
-      const dy = touch2.clientY - touch1.clientY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      state.startPinch(distance, targetSticker.width);
-
-      // 初期角度を保存（回転用）
-      const angle =
-        Math.atan2(
-          touch2.clientY - touch1.clientY,
-          touch2.clientX - touch1.clientX,
-        ) *
-        (180 / Math.PI);
-      state.startRotating(angle);
-    }
-    return;
+    state.touchPrepareX = touches[0].clientX;
+    state.touchPrepareY = touches[0].clientY;
+  } else if (touches.length === 2) {
+    // 2本指：選択中のステッカーをピンチ
+    startPinchGesture(touches[0], touches[1], targetSticker);
   }
+}
 
-  // 選択していない状態からの操作：自動選択
-  if (!state.selectedSticker) {
-    state.selectSticker(sticker);
-    updateInfoButtonVisibility();
-    bringToFront(sticker);
-  }
-
-  const touches = e.touches;
+/**
+ * 選択中のステッカーをタッチした場合の処理
+ * @param {TouchList} touches - タッチリスト
+ * @param {Object} targetSticker - 操作対象のステッカー
+ */
+function handleTouchOnSelectedSticker(touches, targetSticker) {
+  // タップ判定の準備
+  state.possibleTap = true;
+  state.tapStartTime = Date.now();
 
   if (touches.length === 1) {
-    // 1本指：ドラッグ
+    // 1本指：ドラッグ準備
+    state.touchPrepareX = touches[0].clientX;
+    state.touchPrepareY = touches[0].clientY;
+  } else if (touches.length === 2) {
+    // 2本指：ピンチ開始
+    startPinchGesture(touches[0], touches[1], targetSticker);
+  }
+}
+
+/**
+ * 未選択のステッカーをタッチした場合の処理
+ * @param {Object} sticker - タッチされたステッカー
+ * @param {TouchList} touches - タッチリスト
+ * @param {Object} targetSticker - 操作対象のステッカー
+ */
+function handleTouchOnUnselectedSticker(sticker, touches, targetSticker) {
+  // 自動選択
+  state.selectSticker(sticker);
+  updateInfoButtonVisibility();
+  bringToFront(sticker);
+
+  if (touches.length === 1) {
+    // 1本指：ドラッグ開始
     state.startDragging(touches[0].clientX, touches[0].clientY);
   } else if (touches.length === 2) {
-    // 2本指：拡大縮小と回転
-    const touch1 = touches[0];
-    const touch2 = touches[1];
-
-    // 初期距離を保存（拡大縮小用）
-    const dx = touch2.clientX - touch1.clientX;
-    const dy = touch2.clientY - touch1.clientY;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    state.startPinch(distance, targetSticker.width);
-
-    // 初期角度を保存（回転用）
-    const angle =
-      Math.atan2(
-        touch2.clientY - touch1.clientY,
-        touch2.clientX - touch1.clientX,
-      ) *
-      (180 / Math.PI);
-    state.startRotating(angle);
+    // 2本指：ピンチ開始
+    startPinchGesture(touches[0], touches[1], targetSticker);
   }
 }
 
@@ -537,42 +492,25 @@ export function handleStickerTouchStart(e, id) {
 export function handleTouchMove(e) {
   const touches = e.touches;
 
-  // 選択中のステッカーがあり、2本指になった場合、まだピンチ操作が開始されていなければ開始
+  // 選択中のステッカーがあり、2本指になった場合、ピンチ操作を開始
   if (
     state.selectedSticker &&
     touches.length === 2 &&
     !state.isRotating &&
     !state.isDragging
   ) {
-    // キャンバスタップ待機をキャンセル
+    // 待機状態をクリア
     state.canvasTapPending = false;
-    
-    // ステッカータップ待機もキャンセル
     state.possibleTap = false;
     state.touchPrepareX = undefined;
     state.touchPrepareY = undefined;
 
-    const touch1 = touches[0];
-    const touch2 = touches[1];
-
-    // 初期距離を保存（拡大縮小用）
-    const dx = touch2.clientX - touch1.clientX;
-    const dy = touch2.clientY - touch1.clientY;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    state.startPinch(distance, state.selectedSticker.width);
-
-    // 初期角度を保存（回転用）
-    const angle =
-      Math.atan2(
-        touch2.clientY - touch1.clientY,
-        touch2.clientX - touch1.clientX,
-      ) *
-      (180 / Math.PI);
-    state.startRotating(angle);
+    // ピンチ開始
+    startPinchGesture(touches[0], touches[1], state.selectedSticker);
     return;
   }
 
-  // キャンバスタップ待機中に移動した場合、タップをキャンセル
+  // キャンバスタップ待機中の移動検出
   if (state.canvasTapPending && touches.length === 1) {
     const moveDistance = Math.sqrt(
       Math.pow(touches[0].clientX - state.canvasTapX, 2) +
@@ -585,7 +523,7 @@ export function handleTouchMove(e) {
 
   if (!state.selectedSticker) return;
 
-  // ドラッグ準備状態からドラッグ開始
+  // ドラッグ準備状態からドラッグ開始への移行
   if (
     state.possibleTap &&
     state.touchPrepareX !== undefined &&
@@ -596,13 +534,13 @@ export function handleTouchMove(e) {
         Math.pow(touches[0].clientY - state.touchPrepareY, 2),
     );
 
-    // 10px以上動いたらドラッグ開始
     if (moveDistance > 10) {
       state.possibleTap = false;
       state.startDragging(touches[0].clientX, touches[0].clientY);
     }
   }
 
+  // ドラッグ中の処理
   if (state.isDragging && touches.length === 1) {
     e.preventDefault();
 
@@ -610,10 +548,12 @@ export function handleTouchMove(e) {
     const newY = touches[0].clientY - state.dragStartY;
     updateStickerPosition(state.selectedSticker, newX, newY);
 
-    // ゴミ箱ボタンとの重なり判定
     const isOver = isOverTrashBtn(touches[0].clientX, touches[0].clientY);
     setTrashDragOver(isOver);
-  } else if (state.isRotating && touches.length === 2) {
+  }
+
+  // ピンチ中の処理
+  if (state.isRotating && touches.length === 2) {
     e.preventDefault();
 
     const touch1 = touches[0];
@@ -629,10 +569,7 @@ export function handleTouchMove(e) {
 
     // 回転
     const angle =
-      Math.atan2(
-        touch2.clientY - touch1.clientY,
-        touch2.clientX - touch1.clientX,
-      ) *
+      Math.atan2(touch2.clientY - touch1.clientY, touch2.clientX - touch1.clientX) *
       (180 / Math.PI);
     const rotation = angle - state.startAngle;
     updateStickerRotation(state.selectedSticker, rotation);
@@ -644,15 +581,12 @@ export function handleTouchMove(e) {
  * @param {TouchEvent} e
  */
 export async function handleTouchEnd(e) {
-  // キャンバスタップ判定（空白エリアをタップで選択解除）
+  // 空白エリアタップ判定：選択解除
   if (state.canvasTapPending) {
     const tapDuration = Date.now() - (state.canvasTapStartTime || 0);
-    // 200ms以内の場合はタップとみなして選択解除
     if (tapDuration < 200) {
       state.deselectAll();
       updateInfoButtonVisibility();
-      
-      // ペーストエリアにフォーカス
       elements.pasteArea.focus();
     }
     state.canvasTapPending = false;
@@ -661,10 +595,9 @@ export async function handleTouchEnd(e) {
     return;
   }
 
-  // タップ判定（選択中のステッカーをタップで解除）
+  // ステッカータップ判定：選択解除
   if (state.possibleTap && state.selectedSticker) {
     const tapDuration = Date.now() - (state.tapStartTime || 0);
-    // 200ms以内かつドラッグしていない場合はタップとみなす
     if (tapDuration < 200 && !state.isDragging) {
       state.deselectAll();
       updateInfoButtonVisibility();
@@ -674,13 +607,16 @@ export async function handleTouchEnd(e) {
       return;
     }
   }
+
+  // タップフラグをクリア
   state.possibleTap = false;
   state.touchPrepareX = undefined;
   state.touchPrepareY = undefined;
 
+  // ドラッグ/ピンチ終了処理
   if (state.isDragging || state.isRotating) {
     if (state.selectedSticker) {
-      // ゴミ箱エリアに重なっていたら削除
+      // ゴミ箱へのドロップ判定
       if (state.isDragging && e.changedTouches.length > 0) {
         const touch = e.changedTouches[0];
         if (isOverTrashBtn(touch.clientX, touch.clientY)) {
@@ -693,6 +629,7 @@ export async function handleTouchEnd(e) {
         }
       }
 
+      // 変更を保存
       state.selectedSticker.element.classList.remove("rotating");
       await saveStickerChanges(state.selectedSticker);
     }
