@@ -478,10 +478,15 @@ a, button {
     z-index: 6000 !important;
 }
 
-/* クリック時の押し込み効果 */
-.sticker.click-feedback img {
-    transform: scale(0.98);
-    transition: transform 0.1s ease-out;
+/* 選択時のクリックフィードバック */
+.sticker.selected img {
+    animation: click-feedback 0.4s var(--ease-out-expo);
+}
+
+@keyframes click-feedback {
+    0% { transform: scale(1); }
+    25% { transform: scale(0.98); }
+    100% { transform: scale(1); }
 }
 
 /* リサイズ中はトランジションを無効化（パフォーマンス改善） */

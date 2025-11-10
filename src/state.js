@@ -82,12 +82,6 @@ class AppState {
       sticker.element.classList.add("selected");
       // オーバーレイを表示
       showOverlay();
-      
-      // クリック時の押し込みフィードバック
-      sticker.element.classList.add("click-feedback");
-      setTimeout(() => {
-        sticker.element.classList.remove("click-feedback");
-      }, 150);
     }
 
     this.selectedSticker = sticker;
