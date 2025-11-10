@@ -47,6 +47,11 @@ body {
     left: 0;
 }
 
+a, button {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+
 #app {
     width: 100%;
     height: 100%;
