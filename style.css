@@ -102,8 +102,8 @@ body {
 
     /* スマホ：ボタンサイズ調整 */
     .info-btn {
-        bottom: 20px;
-        right: 20px;
+        top: 20px;
+        left: 20px;
         width: 48px;
         height: 48px;
     }
@@ -189,15 +189,21 @@ body {
     transform: translateX(-50%);
     font-size: 12px;
     font-weight: 600;
-    color: rgba(0, 0, 0, 0.5);
+    color: white;
     white-space: nowrap;
     pointer-events: none;
-    transition: color 0.2s var(--ease-out-expo);
+    text-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.3),
+        0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s var(--ease-out-expo);
 }
 
 .trash-btn:hover .trash-tooltip,
 .trash-btn.drag-over .trash-tooltip {
     color: #ff3b30;
+    text-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.4),
+        0 2px 8px rgba(255, 59, 48, 0.3);
 }
 
 /* ドラッグ中のゴミ箱ハイライト */
@@ -212,8 +218,8 @@ body {
 /* インフォボタン */
 .info-btn {
     position: fixed;
-    bottom: 24px;
-    right: 24px;
+    top: 24px;
+    left: 24px;
     width: 44px;
     height: 44px;
     background: rgba(255, 255, 255, 0.96);
@@ -223,7 +229,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 100;
+    z-index: 10000;
     color: rgba(0, 0, 0, 0.4);
     transition: all 0.25s var(--ease-out-expo);
     box-shadow:
