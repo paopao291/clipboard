@@ -315,24 +315,38 @@ export async function handleMouseUp(e) {
       if (state.isDragging) {
         const rect = state.selectedSticker.element.getBoundingClientRect();
         
-        // 画面内に見えている部分の幅と高さを計算
-        const visibleWidth = Math.min(rect.right, window.innerWidth) - Math.max(rect.left, 0);
-        const visibleHeight = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
+        // 完全に画面外に出たかチェック（回転していても確実に判定）
+        const isCompletelyOutside = 
+          rect.right <= 0 || 
+          rect.left >= window.innerWidth || 
+          rect.bottom <= 0 || 
+          rect.top >= window.innerHeight;
         
-        // ステッカーの実際のサイズ
-        const stickerWidth = rect.width;
-        const stickerHeight = rect.height;
-        
-        // 画面内に見えている割合を計算（幅と高さの両方で判定）
-        const visibleRatioX = visibleWidth / stickerWidth;
-        const visibleRatioY = visibleHeight / stickerHeight;
-        
-        // 90%以上が画面外に出ている、または見えている部分が20px未満の場合は中央に戻す
-        const isMostlyOutside = visibleRatioX < 0.1 || visibleRatioY < 0.1 || 
-                                visibleWidth < 20 || visibleHeight < 20;
-        
-        if (isMostlyOutside) {
-          // 中央に戻す
+        if (!isCompletelyOutside) {
+          // 画面内に見えている部分の幅と高さを計算
+          const visibleWidth = Math.min(rect.right, window.innerWidth) - Math.max(rect.left, 0);
+          const visibleHeight = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
+          
+          // ステッカーの実際のサイズ
+          const stickerWidth = rect.width;
+          const stickerHeight = rect.height;
+          
+          // 画面内に見えている割合を計算（幅と高さの両方で判定）
+          const visibleRatioX = visibleWidth / stickerWidth;
+          const visibleRatioY = visibleHeight / stickerHeight;
+          
+          // 90%以上が画面外に出ている、または見えている部分が20px未満の場合は中央に戻す
+          const isMostlyOutside = visibleRatioX < 0.1 || visibleRatioY < 0.1 || 
+                                  visibleWidth < 20 || visibleHeight < 20;
+          
+          if (isMostlyOutside) {
+            // 中央に戻す
+            updateStickerPosition(state.selectedSticker, 0, 50);
+            await saveStickerChanges(state.selectedSticker);
+            showToast("画面外に出たため中央に戻しました");
+          }
+        } else {
+          // 完全に画面外に出た場合も中央に戻す
           updateStickerPosition(state.selectedSticker, 0, 50);
           await saveStickerChanges(state.selectedSticker);
           showToast("画面外に出たため中央に戻しました");
@@ -670,24 +684,38 @@ export async function handleTouchEnd(e) {
       if (state.isDragging) {
         const rect = state.selectedSticker.element.getBoundingClientRect();
         
-        // 画面内に見えている部分の幅と高さを計算
-        const visibleWidth = Math.min(rect.right, window.innerWidth) - Math.max(rect.left, 0);
-        const visibleHeight = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
+        // 完全に画面外に出たかチェック（回転していても確実に判定）
+        const isCompletelyOutside = 
+          rect.right <= 0 || 
+          rect.left >= window.innerWidth || 
+          rect.bottom <= 0 || 
+          rect.top >= window.innerHeight;
         
-        // ステッカーの実際のサイズ
-        const stickerWidth = rect.width;
-        const stickerHeight = rect.height;
-        
-        // 画面内に見えている割合を計算（幅と高さの両方で判定）
-        const visibleRatioX = visibleWidth / stickerWidth;
-        const visibleRatioY = visibleHeight / stickerHeight;
-        
-        // 90%以上が画面外に出ている、または見えている部分が10px未満の場合は中央に戻す
-        const isMostlyOutside = visibleRatioX < 0.1 || visibleRatioY < 0.1 || 
-                                visibleWidth < 10 || visibleHeight < 10;
-        
-        if (isMostlyOutside) {
-          // 中央に戻す
+        if (!isCompletelyOutside) {
+          // 画面内に見えている部分の幅と高さを計算
+          const visibleWidth = Math.min(rect.right, window.innerWidth) - Math.max(rect.left, 0);
+          const visibleHeight = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
+          
+          // ステッカーの実際のサイズ
+          const stickerWidth = rect.width;
+          const stickerHeight = rect.height;
+          
+          // 画面内に見えている割合を計算（幅と高さの両方で判定）
+          const visibleRatioX = visibleWidth / stickerWidth;
+          const visibleRatioY = visibleHeight / stickerHeight;
+          
+          // 90%以上が画面外に出ている、または見えている部分が16px未満の場合は中央に戻す
+          const isMostlyOutside = visibleRatioX < 0.1 || visibleRatioY < 0.1 || 
+                                  visibleWidth < 16 || visibleHeight < 16;
+          
+          if (isMostlyOutside) {
+            // 中央に戻す
+            updateStickerPosition(state.selectedSticker, 0, 50);
+            await saveStickerChanges(state.selectedSticker);
+            showToast("画面外に出たため中央に戻しました");
+          }
+        } else {
+          // 完全に画面外に出た場合も中央に戻す
           updateStickerPosition(state.selectedSticker, 0, 50);
           await saveStickerChanges(state.selectedSticker);
           showToast("画面外に出たため中央に戻しました");
