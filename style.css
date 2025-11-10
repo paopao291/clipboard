@@ -522,13 +522,13 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
 .sticker.selected img {
     /* 選択時は青い影で浮き上がる */
     filter: url(#outline-filter) drop-shadow(0 12px 32px rgba(0, 122, 255, 0.4))
-        drop-shadow(0 4px 12px rgba(0, 122, 255, 0.2));
+        drop-shadow(0 4px 12px rgba(0, 122, 255, 0.4));
 }
 
 /* ゴミ箱にドラッグオーバー時は赤い影を優先 */
 .sticker.selected.being-deleted img {
     filter: url(#outline-filter) drop-shadow(0 8px 24px rgba(255, 59, 48, 0.5))
-        drop-shadow(0 4px 12px rgba(255, 59, 48, 0.3)) !important;
+        drop-shadow(0 4px 20px rgba(255, 59, 48, 0.8)) !important;
 }
 
 .sticker.rotating .sticker-img-wrapper {
