@@ -1,5 +1,5 @@
 import { initDB, loadAllStickersFromDB, updateStickerInDB } from "./modules/db.js";
-import { PASTE_AREA_CONFIG } from "./modules/constants.js";
+import { PASTE_AREA_CONFIG, STICKER_DEFAULTS } from "./modules/constants.js";
 import {
   initElements,
   showHelp,
@@ -103,53 +103,64 @@ async function init() {
 async function loadStickersFromDB() {
   const stickers = await loadAllStickersFromDB();
   
-  // パーセント値への変換が必要かチェック
-  const needsPercentConversion = !localStorage.getItem('coordinates_migrated_to_percent');
+  // データ形式の変換が必要かチェック
+  const needsConversion = !localStorage.getItem('hybrid_coordinate_migrated');
   const screenWidth = window.innerWidth;
   const screenHeight = window.innerHeight;
 
   for (const stickerData of stickers) {
     const url = URL.createObjectURL(stickerData.blob);
     
-    let xPercent, yPercent;
+    let x, yPercent, width;
     
-    // すでにパーセント値で保存されているかチェック
-    if (stickerData.xPercent !== undefined && stickerData.yPercent !== undefined) {
-      // パーセント値で保存されている場合
-      xPercent = stickerData.xPercent;
+    // X座標の変換（画面中央からのオフセット px）
+    if (stickerData.x !== undefined && stickerData.yPercent !== undefined && stickerData.width !== undefined) {
+      // 新形式（X:px, Y:%, width:px）
+      x = stickerData.x;
       yPercent = stickerData.yPercent;
-    } else if (needsPercentConversion) {
-      // 旧形式（ピクセル値）からパーセント値に変換
-      // x, y が存在する場合（中央基準オフセット or 左上基準の座標）
-      if (stickerData.x !== undefined && stickerData.y !== undefined) {
-        // 中央基準のオフセット値からパーセント値に変換
-        // 注: 以前の中央基準実装では calc(50% + x px) だったので
-        // x, y はオフセット値として扱う
-        const centerXPx = screenWidth / 2;
-        const centerYPx = screenHeight / 2;
-        const absoluteX = centerXPx + stickerData.x;
-        const absoluteY = centerYPx + stickerData.y;
-        xPercent = (absoluteX / screenWidth) * 100;
-        yPercent = (absoluteY / screenHeight) * 100;
+      width = stickerData.width;
+    } else if (needsConversion) {
+      // 旧形式からの変換
+      if (stickerData.xPercent !== undefined && stickerData.yPercent !== undefined) {
+        // パーセント値形式から変換
+        const absoluteX = (stickerData.xPercent / 100) * screenWidth;
+        const centerX = screenWidth / 2;
+        x = absoluteX - centerX;
+        yPercent = stickerData.yPercent;
+        
+        // サイズの変換
+        if (stickerData.widthPercent !== undefined) {
+          width = (stickerData.widthPercent / 100) * screenWidth;
+        } else if (stickerData.width !== undefined) {
+          width = stickerData.width;
+        } else {
+          width = STICKER_DEFAULTS.WIDTH;
+        }
       } else {
         // デフォルト（中央）
-        xPercent = 50;
+        x = 0;
         yPercent = 50;
+        width = STICKER_DEFAULTS.WIDTH;
       }
       
-      // 変換後の座標をDBに保存
-      await updateStickerInDB(stickerData.id, { xPercent, yPercent });
+      // 変換後のデータをDBに保存
+      await updateStickerInDB(stickerData.id, { 
+        x, 
+        yPercent, 
+        width 
+      });
     } else {
-      // 変換済みだがパーセント値がない場合（エラー時のフォールバック）
-      xPercent = 50;
+      // デフォルト
+      x = 0;
       yPercent = 50;
+      width = STICKER_DEFAULTS.WIDTH;
     }
     
     addStickerToDOM(
       url,
-      xPercent,
+      x,
       yPercent,
-      stickerData.width,
+      width,
       stickerData.rotation,
       stickerData.id,
       stickerData.zIndex,
@@ -157,8 +168,8 @@ async function loadStickersFromDB() {
   }
   
   // 変換完了フラグを保存
-  if (needsPercentConversion && stickers.length > 0) {
-    localStorage.setItem('coordinates_migrated_to_percent', 'true');
+  if (needsConversion && stickers.length > 0) {
+    localStorage.setItem('hybrid_coordinate_migrated', 'true');
   }
 }
 

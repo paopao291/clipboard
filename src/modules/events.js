@@ -67,16 +67,16 @@ export async function handlePaste(e) {
       const blob = item.getAsFile();
       console.log("Image blob:", blob);
 
-      // タッチ位置があればその位置に、なければ中央に配置（パーセント値に変換）
-      const xPercent = state.lastTouchX 
-        ? (state.lastTouchX / window.innerWidth) * 100 
-        : 50;
+      // タッチ位置があればその位置に、なければ中央に配置
+      // X: 画面中央からのオフセット（px）、Y: パーセント値
+      const centerX = window.innerWidth / 2;
+      const x = state.lastTouchX ? state.lastTouchX - centerX : 0;
       const yPercent = state.lastTouchY 
         ? (state.lastTouchY / window.innerHeight) * 100 
         : 50;
 
       // Blobを追加
-      await addStickerFromBlob(blob, xPercent, yPercent);
+      await addStickerFromBlob(blob, x, yPercent);
 
       showToast(MESSAGES.IMAGE_ADDED);
 
@@ -111,20 +111,21 @@ export async function handleFileSelect(e) {
 
   for (let file of files) {
     if (file.type.indexOf("image") !== -1) {
-      // 画像を少しずつずらして配置（パーセント値に変換）
+      // 画像を少しずつずらして配置
+      // X: 画面中央からのオフセット（px）、Y: パーセント値
       const offsetXPx = addedCount * 30;
       const offsetYPx = addedCount * 30;
-      const offsetXPercent = (offsetXPx / window.innerWidth) * 100;
+      const centerX = window.innerWidth / 2;
       const offsetYPercent = (offsetYPx / window.innerHeight) * 100;
       
-      const xPercent = state.lastTouchX
-        ? ((state.lastTouchX + offsetXPx) / window.innerWidth) * 100
-        : 50 + offsetXPercent;
+      const x = state.lastTouchX
+        ? state.lastTouchX - centerX + offsetXPx
+        : offsetXPx;
       const yPercent = state.lastTouchY
         ? ((state.lastTouchY + offsetYPx) / window.innerHeight) * 100
         : 50 + offsetYPercent;
       
-      await addStickerFromBlob(file, xPercent, yPercent);
+      await addStickerFromBlob(file, x, yPercent);
 
       addedCount++;
     }
@@ -270,12 +271,13 @@ export function handleMouseMove(e) {
   }
 
   if (state.isDragging) {
-    // マウス位置をパーセント値に変換
-    const xPercent = (e.clientX / window.innerWidth) * 100;
+    // X: 画面中央からのオフセット（px）、Y: パーセント値に変換
+    const centerX = window.innerWidth / 2;
+    const offsetX = e.clientX - centerX;
     const yPercent = (e.clientY / window.innerHeight) * 100;
-    const newXPercent = xPercent - state.dragStartXPercent;
+    const newX = offsetX - state.dragStartX;
     const newYPercent = yPercent - state.dragStartYPercent;
-    updateStickerPosition(state.selectedSticker, newXPercent, newYPercent);
+    updateStickerPosition(state.selectedSticker, newX, newYPercent);
 
     // ゴミ箱エリアとの重なり判定
     const isOver = isOverTrashBtn(e.clientX, e.clientY);
@@ -558,12 +560,13 @@ export function handleTouchMove(e) {
   if (state.isDragging && touches.length === 1) {
     e.preventDefault();
 
-    // タッチ位置をパーセント値に変換
-    const xPercent = (touches[0].clientX / window.innerWidth) * 100;
+    // X: 画面中央からのオフセット（px）、Y: パーセント値に変換
+    const centerX = window.innerWidth / 2;
+    const offsetX = touches[0].clientX - centerX;
     const yPercent = (touches[0].clientY / window.innerHeight) * 100;
-    const newXPercent = xPercent - state.dragStartXPercent;
+    const newX = offsetX - state.dragStartX;
     const newYPercent = yPercent - state.dragStartYPercent;
-    updateStickerPosition(state.selectedSticker, newXPercent, newYPercent);
+    updateStickerPosition(state.selectedSticker, newX, newYPercent);
 
     const isOver = isOverTrashBtn(touches[0].clientX, touches[0].clientY);
     setTrashDragOver(isOver);

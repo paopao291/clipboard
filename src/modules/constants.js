@@ -7,7 +7,7 @@ export const DB_CONFIG = {
 
 // シールのデフォルト設定
 export const STICKER_DEFAULTS = {
-  WIDTH: 200,
+  WIDTH: 200, // ピクセル値
   MIN_WIDTH: 50,
   MAX_WIDTH: 800,
   ROTATION: 0,
@@ -16,7 +16,7 @@ export const STICKER_DEFAULTS = {
 
 // サイズ変更の設定
 export const RESIZE_CONFIG = {
-  WHEEL_DELTA: 10,
+  WHEEL_DELTA: 10, // ホイール1スクロールで10px変更
   DEBOUNCE_MS: 500,
 };
 

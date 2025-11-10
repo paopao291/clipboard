@@ -118,11 +118,12 @@ class AppState {
    */
   startDragging(x, y) {
     this.isDragging = true;
-    // マウス位置をパーセント値に変換
-    const xPercent = (x / window.innerWidth) * 100;
+    // X: 画面中央からのオフセット（px）、Y: パーセント値に変換
+    const centerX = window.innerWidth / 2;
+    const offsetX = x - centerX;
     const yPercent = (y / window.innerHeight) * 100;
-    // ステッカーの中心からマウス位置までのオフセット（パーセント値）を保存
-    this.dragStartXPercent = xPercent - this.selectedSticker.xPercent;
+    // ステッカーの中心からマウス位置までのオフセットを保存
+    this.dragStartX = offsetX - this.selectedSticker.x;
     this.dragStartYPercent = yPercent - this.selectedSticker.yPercent;
   }
 
@@ -138,7 +139,7 @@ class AppState {
   /**
    * ピンチ開始
    * @param {number} distance - 初期距離
-   * @param {number} width - 初期幅
+   * @param {number} width - 初期幅（px）
    */
   startPinch(distance, width) {
     this.initialPinchDistance = distance;
