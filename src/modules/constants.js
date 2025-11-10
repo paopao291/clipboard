@@ -49,6 +49,7 @@ export const DOM_IDS = {
   HELP_MODAL: "helpModal",
   CLOSE_HELP: "closeHelp",
   TRASH_BTN: "trashBtn",
+  ADD_BTN: "addBtn",
 };
 
 // メッセージ

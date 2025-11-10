@@ -103,7 +103,7 @@ body {
     /* スマホ：ボタンサイズ調整 */
     .info-btn {
         top: 20px;
-        left: 20px;
+        right: 20px;
         width: 48px;
         height: 48px;
     }
@@ -111,6 +111,18 @@ body {
     .info-btn svg {
         width: 22px;
         height: 22px;
+    }
+
+    .add-btn {
+        bottom: 20px;
+        right: 20px;
+        width: 60px;
+        height: 60px;
+    }
+
+    .add-btn svg {
+        width: 30px;
+        height: 30px;
     }
 
     /* ヘルプモーダル */
@@ -151,29 +163,18 @@ body {
     transform: translateX(-50%);
     width: 44px;
     height: 44px;
-    background: rgba(255, 255, 255, 0.96);
-    border: none;
+    background-color: transparent;
+    border: 1px solid white;
     border-radius: 50%;
-    cursor: pointer;
+    cursor: default;
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 10000;
-    color: rgba(0, 0, 0, 0.4);
+    color: white;
     transition: all 0.25s var(--ease-out-expo);
-    box-shadow:
-        0 4px 16px rgba(0, 0, 0, 0.08),
-        0 1px 4px rgba(0, 0, 0, 0.04);
-}
-
-.trash-btn:hover {
-    color: #ff3b30;
-    transform: translateX(-50%) scale(1.05);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-}
-
-.trash-btn:active {
-    transform: translateX(-50%) scale(0.95);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+    pointer-events: none;
 }
 
 .trash-btn svg {
@@ -192,18 +193,11 @@ body {
     color: white;
     white-space: nowrap;
     pointer-events: none;
-    text-shadow:
-        0 1px 3px rgba(0, 0, 0, 0.3),
-        0 2px 8px rgba(0, 0, 0, 0.2);
     transition: all 0.2s var(--ease-out-expo);
 }
 
-.trash-btn:hover .trash-tooltip,
 .trash-btn.drag-over .trash-tooltip {
     color: #ff3b30;
-    text-shadow:
-        0 1px 3px rgba(0, 0, 0, 0.4),
-        0 2px 8px rgba(255, 59, 48, 0.3);
 }
 
 /* ドラッグ中のゴミ箱ハイライト */
@@ -215,14 +209,56 @@ body {
         0 2px 8px rgba(255, 59, 48, 0.15);
 }
 
+/* FAB（追加ボタン） */
+.add-btn {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 1px solid white;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    color: white;
+    transition: all 0.2s var(--ease-out-expo);
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.15),
+        0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.add-btn:hover {
+    transform: scale(1.05);
+    background: rgba(0, 0, 0, 0.9);
+    box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.2),
+        0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.add-btn:active {
+    transform: scale(0.95);
+    box-shadow:
+        0 1px 4px rgba(0, 0, 0, 0.12),
+        0 0px 2px rgba(0, 0, 0, 0.08);
+}
+
+.add-btn svg {
+    width: 26px;
+    height: 26px;
+}
+
 /* インフォボタン */
 .info-btn {
     position: fixed;
     top: 24px;
-    left: 24px;
+    right: 24px;
     width: 44px;
     height: 44px;
-    background: rgba(255, 255, 255, 0.96);
+    background: transparent;
     border: none;
     border-radius: 50%;
     cursor: pointer;
@@ -230,21 +266,19 @@ body {
     align-items: center;
     justify-content: center;
     z-index: 10000;
-    color: rgba(0, 0, 0, 0.4);
-    transition: all 0.25s var(--ease-out-expo);
-    box-shadow:
-        0 4px 16px rgba(0, 0, 0, 0.08),
-        0 1px 4px rgba(0, 0, 0, 0.04);
+    color: white;
+    transition: all 0.2s var(--ease-out-expo);
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1));
 }
 
 .info-btn:hover {
-    color: var(--accent);
     transform: scale(1.05);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
 }
 
 .info-btn:active {
     transform: scale(0.95);
+    filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.1));
 }
 
 .info-btn svg {

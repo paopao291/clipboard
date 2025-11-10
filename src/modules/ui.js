@@ -11,6 +11,7 @@ export const elements = {
   helpModal: null,
   closeHelp: null,
   trashBtn: null,
+  addBtn: null,
 };
 
 /**
@@ -25,6 +26,7 @@ export function initElements() {
   elements.helpModal = document.getElementById(DOM_IDS.HELP_MODAL);
   elements.closeHelp = document.getElementById(DOM_IDS.CLOSE_HELP);
   elements.trashBtn = document.getElementById(DOM_IDS.TRASH_BTN);
+  elements.addBtn = document.getElementById(DOM_IDS.ADD_BTN);
 }
 
 /**
@@ -72,24 +74,27 @@ export function hideHelp() {
 }
 
 /**
- * インフォボタンとゴミ箱ボタンの表示状態を更新
+ * ボタンの表示状態を更新
  */
 export function updateInfoButtonVisibility() {
-  // ステッカーがない場合：インフォボタン表示、ゴミ箱非表示
+  // ステッカーがない場合：インフォボタン+FAB表示、ゴミ箱非表示
   if (state.getStickerCount() === 0) {
     elements.infoBtn.style.display = "flex";
     elements.trashBtn.style.display = "none";
+    elements.addBtn.style.display = "flex";
     return;
   }
 
-  // ステッカーあり + 選択中：両方表示
-  // ステッカーあり + 未選択：両方非表示
+  // ステッカーあり + 選択中：インフォボタン+ゴミ箱表示、FAB非表示
+  // ステッカーあり + 未選択：FAB表示、インフォボタン+ゴミ箱非表示
   if (state.hasSelection()) {
     elements.infoBtn.style.display = "flex";
     elements.trashBtn.style.display = "flex";
+    elements.addBtn.style.display = "none";
   } else {
     elements.infoBtn.style.display = "none";
     elements.trashBtn.style.display = "none";
+    elements.addBtn.style.display = "flex";
   }
 }
 
