@@ -11,8 +11,8 @@ import { attachStickerEventListeners } from "./events.js";
 /**
  * Blobからシールを追加
  * @param {Blob} blob - 画像Blob
- * @param {number} x - X座標
- * @param {number} y - Y座標
+ * @param {number} x - 画面中央からのX座標オフセット
+ * @param {number} y - 画面中央からのY座標オフセット
  * @param {number} width - 幅
  * @param {number} rotation - 回転角度
  * @param {number|null} id - シールID
@@ -57,8 +57,8 @@ export async function addStickerFromBlob(
 /**
  * シール（画像）をDOMに追加
  * @param {string} url - 画像URL
- * @param {number} x - X座標
- * @param {number} y - Y座標
+ * @param {number} x - 画面中央からのX座標オフセット
+ * @param {number} y - 画面中央からのY座標オフセット
  * @param {number} width - 幅
  * @param {number} rotation - 回転角度
  * @param {number|null} id - シールID
@@ -98,9 +98,9 @@ export function addStickerToDOM(
 
   stickerDiv.appendChild(imgWrapper);
 
-  // スタイルを設定
-  stickerDiv.style.left = `${x}px`;
-  stickerDiv.style.top = `${y}px`;
+  // スタイルを設定（画面中央からのオフセット）
+  stickerDiv.style.left = `calc(50% + ${x}px)`;
+  stickerDiv.style.top = `calc(50% + ${y}px)`;
   stickerDiv.style.width = `${width}px`;
   stickerDiv.style.transform = `translate(-50%, -50%)`;
 
@@ -233,14 +233,14 @@ export async function bringToFront(sticker) {
 /**
  * シールの位置を更新
  * @param {Object} sticker - シールオブジェクト
- * @param {number} x - X座標
- * @param {number} y - Y座標
+ * @param {number} x - 画面中央からのX座標オフセット
+ * @param {number} y - 画面中央からのY座標オフセット
  */
 export function updateStickerPosition(sticker, x, y) {
   sticker.x = x;
   sticker.y = y;
-  sticker.element.style.left = `${x}px`;
-  sticker.element.style.top = `${y}px`;
+  sticker.element.style.left = `calc(50% + ${x}px)`;
+  sticker.element.style.top = `calc(50% + ${y}px)`;
 }
 
 /**

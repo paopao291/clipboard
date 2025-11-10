@@ -67,9 +67,11 @@ export async function handlePaste(e) {
       const blob = item.getAsFile();
       console.log("Image blob:", blob);
 
-      // タッチ位置があればその位置に、なければ中央に配置
-      const x = state.lastTouchX || window.innerWidth / 2;
-      const y = state.lastTouchY || window.innerHeight / 2;
+      // タッチ位置があればその位置に、なければ中央に配置（画面中央からのオフセット）
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+      const x = state.lastTouchX ? state.lastTouchX - centerX : 0;
+      const y = state.lastTouchY ? state.lastTouchY - centerY : 0;
 
       // Blobを追加
       await addStickerFromBlob(blob, x, y);
@@ -107,15 +109,17 @@ export async function handleFileSelect(e) {
 
   for (let file of files) {
     if (file.type.indexOf("image") !== -1) {
-      // 画像を少しずつずらして配置
+      // 画像を少しずつずらして配置（画面中央からのオフセット）
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
       const offsetX = addedCount * 30;
       const offsetY = addedCount * 30;
       const x = state.lastTouchX
-        ? state.lastTouchX + offsetX
-        : window.innerWidth / 2 + offsetX;
+        ? state.lastTouchX - centerX + offsetX
+        : offsetX;
       const y = state.lastTouchY
-        ? state.lastTouchY + offsetY
-        : window.innerHeight / 2 + offsetY;
+        ? state.lastTouchY - centerY + offsetY
+        : offsetY;
       await addStickerFromBlob(file, x, y);
 
       addedCount++;
@@ -262,8 +266,13 @@ export function handleMouseMove(e) {
   }
 
   if (state.isDragging) {
-    const newX = e.clientX - state.dragStartX;
-    const newY = e.clientY - state.dragStartY;
+    // 画面中央からのオフセットに変換
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+    const offsetX = e.clientX - centerX;
+    const offsetY = e.clientY - centerY;
+    const newX = offsetX - state.dragStartX;
+    const newY = offsetY - state.dragStartY;
     updateStickerPosition(state.selectedSticker, newX, newY);
 
     // ゴミ箱エリアとの重なり判定
@@ -547,8 +556,13 @@ export function handleTouchMove(e) {
   if (state.isDragging && touches.length === 1) {
     e.preventDefault();
 
-    const newX = touches[0].clientX - state.dragStartX;
-    const newY = touches[0].clientY - state.dragStartY;
+    // 画面中央からのオフセットに変換
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+    const offsetX = touches[0].clientX - centerX;
+    const offsetY = touches[0].clientY - centerY;
+    const newX = offsetX - state.dragStartX;
+    const newY = offsetY - state.dragStartY;
     updateStickerPosition(state.selectedSticker, newX, newY);
 
     const isOver = isOverTrashBtn(touches[0].clientX, touches[0].clientY);

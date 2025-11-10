@@ -113,13 +113,19 @@ class AppState {
 
   /**
    * ドラッグ開始
-   * @param {number} x - X座標
-   * @param {number} y - Y座標
+   * @param {number} x - 画面左上からの絶対X座標
+   * @param {number} y - 画面左上からの絶対Y座標
    */
   startDragging(x, y) {
     this.isDragging = true;
-    this.dragStartX = x - this.selectedSticker.x;
-    this.dragStartY = y - this.selectedSticker.y;
+    // 画面中央からのオフセットに変換
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+    const offsetX = x - centerX;
+    const offsetY = y - centerY;
+    // ステッカーの中心からマウス位置までのオフセットを保存
+    this.dragStartX = offsetX - this.selectedSticker.x;
+    this.dragStartY = offsetY - this.selectedSticker.y;
   }
 
   /**

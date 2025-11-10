@@ -1,4 +1,4 @@
-import { initDB, loadAllStickersFromDB } from "./modules/db.js";
+import { initDB, loadAllStickersFromDB, updateStickerInDB } from "./modules/db.js";
 import { PASTE_AREA_CONFIG } from "./modules/constants.js";
 import {
   initElements,
@@ -102,19 +102,43 @@ async function init() {
  */
 async function loadStickersFromDB() {
   const stickers = await loadAllStickersFromDB();
+  
+  // 座標系の変換が必要かチェック
+  const needsCoordinateConversion = !localStorage.getItem('coordinates_migrated_to_center');
+  const centerX = window.innerWidth / 2;
+  const centerY = window.innerHeight / 2;
 
-  stickers.forEach((stickerData) => {
+  for (const stickerData of stickers) {
     const url = URL.createObjectURL(stickerData.blob);
+    
+    // 旧座標系（左上基準）から新座標系（中央基準）に変換
+    let x = stickerData.x;
+    let y = stickerData.y;
+    
+    if (needsCoordinateConversion) {
+      // 左上基準の座標を中央基準のオフセットに変換
+      x = stickerData.x - centerX;
+      y = stickerData.y - centerY;
+      
+      // 変換後の座標をDBに保存
+      await updateStickerInDB(stickerData.id, { x, y });
+    }
+    
     addStickerToDOM(
       url,
-      stickerData.x,
-      stickerData.y,
+      x,
+      y,
       stickerData.width,
       stickerData.rotation,
       stickerData.id,
       stickerData.zIndex,
     );
-  });
+  }
+  
+  // 変換完了フラグを保存
+  if (needsCoordinateConversion && stickers.length > 0) {
+    localStorage.setItem('coordinates_migrated_to_center', 'true');
+  }
 }
 
 // 初期化実行
