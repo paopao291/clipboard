@@ -365,6 +365,7 @@ export function updateInfoButtonVisibility() {
   // ステッカーがない場合：インフォボタン+FAB表示、ゴミ箱非表示
   if (state.getStickerCount() === 0) {
     elements.infoBtn.classList.remove("hidden");
+    elements.infoBtn.classList.add("empty-state");
     elements.trashBtn.classList.add("hidden");
     elements.addBtn.classList.remove("hidden");
     return;
@@ -372,6 +373,7 @@ export function updateInfoButtonVisibility() {
 
   // ステッカーあり + 選択中：インフォボタン+ゴミ箱表示、FAB非表示
   // ステッカーあり + 未選択：FAB表示、インフォボタン+ゴミ箱非表示
+  elements.infoBtn.classList.remove("empty-state");
   if (state.hasSelection()) {
     elements.infoBtn.classList.remove("hidden");
     elements.trashBtn.classList.remove("hidden");
