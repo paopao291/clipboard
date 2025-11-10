@@ -33,6 +33,15 @@ export const HELP_CONFIG = {
   STORAGE_KEY: "hasVisited",
 };
 
+// ヘルプステッカーの設定
+export const HELP_STICKER_CONFIG = {
+  BASE_WIDTH: 420,
+  MIN_WIDTH: 60, // 小さく縮められるように
+  MAX_WIDTH_DESKTOP: 600,
+  MAX_WIDTH_MOBILE_PERCENT: 90, // 画面幅の90%
+  INITIAL_ROTATION: 3, // 初期角度
+};
+
 // ペーストエリアの設定
 export const PASTE_AREA_CONFIG = {
   FOCUS_DELAY_MS: 100,

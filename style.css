@@ -150,10 +150,6 @@ a, button {
     }
 
     /* ヘルプステッカーのスマホ対応 */
-    .sticker.help-sticker {
-        max-width: 90vw;
-    }
-
     .help-sticker-content {
         padding: 24px;
     }
@@ -356,8 +352,6 @@ a, button {
 
 /* ヘルプステッカー：操作方法をステッカーとして表示 */
 .sticker.help-sticker {
-    /* 通常のステッカーより大きく（初期値） */
-    max-width: 88vw;
     /* 外側のコンテナはクリック不可にして、中のwrapperでクリックを受ける */
     pointer-events: none;
 }

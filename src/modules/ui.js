@@ -1,4 +1,4 @@
-import { DOM_IDS, TOAST_CONFIG, HELP_CONFIG } from "./constants.js";
+import { DOM_IDS, TOAST_CONFIG, HELP_CONFIG, HELP_STICKER_CONFIG } from "./constants.js";
 import { state } from "../state.js";
 import { attachStickerEventListeners } from "./events.js";
 
@@ -157,17 +157,24 @@ export function showHelp() {
   stickerDiv.className = "sticker help-sticker appearing selected";
   stickerDiv.dataset.id = stickerId;
 
+  // 初期サイズを画面サイズに応じて調整
+  const isMobile = window.innerWidth <= 768;
+  const initialWidth = isMobile 
+    ? Math.min(HELP_STICKER_CONFIG.BASE_WIDTH, window.innerWidth * HELP_STICKER_CONFIG.MAX_WIDTH_MOBILE_PERCENT / 100) 
+    : HELP_STICKER_CONFIG.BASE_WIDTH;
+  const initialScale = initialWidth / HELP_STICKER_CONFIG.BASE_WIDTH;
+  
   // コンテンツラッパーを作成（回転とスケール用）
   const contentWrapper = document.createElement("div");
   contentWrapper.className = "help-sticker-wrapper";
-  contentWrapper.style.transform = `rotate(3deg) scale(1)`; // 初期角度とスケール
+  contentWrapper.style.transform = `rotate(${HELP_STICKER_CONFIG.INITIAL_ROTATION}deg) scale(${initialScale})`;
   contentWrapper.appendChild(helpContent);
   stickerDiv.appendChild(contentWrapper);
 
   // スタイルを設定（画面中央に配置）
   stickerDiv.style.left = `50%`;
   stickerDiv.style.top = `50%`;
-  stickerDiv.style.width = `420px`; // 固定幅
+  stickerDiv.style.width = `${HELP_STICKER_CONFIG.BASE_WIDTH}px`; // 固定幅
   stickerDiv.style.transform = `translate(-50%, -50%)`;
 
   // z-indexを設定
@@ -191,8 +198,8 @@ export function showHelp() {
     url: null, // 画像ではないのでnull
     x: 0, // 中央からのオフセット
     yPercent: 50,
-    width: 420,
-    rotation: -5, // 初期角度
+    width: initialWidth,
+    rotation: HELP_STICKER_CONFIG.INITIAL_ROTATION,
     zIndex: zIndex,
     element: stickerDiv,
     imgWrapper: contentWrapper, // 回転用のラッパー
@@ -209,8 +216,8 @@ export function showHelp() {
     exists: true,
     x: 0,
     yPercent: 50,
-    width: 420,
-    rotation: -5,
+    width: initialWidth,
+    rotation: HELP_STICKER_CONFIG.INITIAL_ROTATION,
     zIndex: zIndex,
   });
 }
@@ -244,7 +251,14 @@ export function clearHelpStickerState() {
  */
 export function restoreHelpSticker() {
   const savedState = getHelpStickerState();
+  
   if (!savedState || !savedState.exists) {
+    return;
+  }
+
+  // テンプレートが存在するか確認
+  if (!elements.helpStickerTemplate) {
+    console.error('ヘルプステッカーテンプレートが見つかりません');
     return;
   }
 
@@ -258,11 +272,21 @@ export function restoreHelpSticker() {
   stickerDiv.className = "sticker help-sticker";
   stickerDiv.dataset.id = stickerId;
 
+  // 復元時にもサイズ制約を適用
+  const isMobile = window.innerWidth <= 768;
+  const maxWidth = isMobile 
+    ? Math.min(HELP_STICKER_CONFIG.MAX_WIDTH_DESKTOP, window.innerWidth * HELP_STICKER_CONFIG.MAX_WIDTH_MOBILE_PERCENT / 100)
+    : HELP_STICKER_CONFIG.MAX_WIDTH_DESKTOP;
+  
+  const constrainedWidth = Math.max(
+    HELP_STICKER_CONFIG.MIN_WIDTH,
+    Math.min(maxWidth, savedState.width),
+  );
+  
   // コンテンツラッパーを作成（回転とスケール用）
   const contentWrapper = document.createElement("div");
   contentWrapper.className = "help-sticker-wrapper";
-  const baseWidth = 420;
-  const scale = savedState.width / baseWidth;
+  const scale = constrainedWidth / HELP_STICKER_CONFIG.BASE_WIDTH;
   contentWrapper.style.transform = `rotate(${savedState.rotation}deg) scale(${scale})`;
   contentWrapper.appendChild(helpContent);
   stickerDiv.appendChild(contentWrapper);
@@ -271,7 +295,7 @@ export function restoreHelpSticker() {
   stickerDiv.style.left = `calc(50% + ${savedState.x}px)`;
   stickerDiv.style.top = `${savedState.yPercent}%`;
   stickerDiv.style.transform = `translate(-50%, -50%)`;
-  stickerDiv.style.width = `${baseWidth}px`; // 固定幅
+  stickerDiv.style.width = `${HELP_STICKER_CONFIG.BASE_WIDTH}px`; // 固定幅
 
   // z-indexを設定
   stickerDiv.style.zIndex = savedState.zIndex;
@@ -289,7 +313,7 @@ export function restoreHelpSticker() {
     url: null,
     x: savedState.x,
     yPercent: savedState.yPercent,
-    width: savedState.width,
+    width: constrainedWidth, // 制約されたwidthを使用
     rotation: savedState.rotation,
     zIndex: savedState.zIndex,
     element: stickerDiv,

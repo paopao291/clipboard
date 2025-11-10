@@ -1,5 +1,5 @@
 import { state } from "../state.js";
-import { STICKER_DEFAULTS, MESSAGES } from "./constants.js";
+import { STICKER_DEFAULTS, MESSAGES, HELP_STICKER_CONFIG } from "./constants.js";
 import {
   saveStickerToDB,
   updateStickerInDB,
@@ -275,8 +275,7 @@ export function updateStickerRotation(sticker, rotation) {
   if (sticker.imgWrapper) {
     // ヘルプステッカーの場合はscaleも考慮
     if (sticker.isHelpSticker) {
-      const baseWidth = 420;
-      const scale = sticker.width / baseWidth;
+      const scale = sticker.width / HELP_STICKER_CONFIG.BASE_WIDTH;
       sticker.imgWrapper.style.transform = `rotate(${rotation}deg) scale(${scale})`;
     } else {
       sticker.imgWrapper.style.transform = `rotate(${rotation}deg)`;
@@ -292,18 +291,20 @@ export function updateStickerRotation(sticker, rotation) {
 export function updateStickerSize(sticker, width) {
   // ヘルプステッカーの場合はscaleを使用
   if (sticker.isHelpSticker) {
-    const baseWidth = 420; // 初期サイズ
-    const minWidth = 200;
-    const maxWidthByScreen = (window.innerWidth * 90) / 100; // 90vw
+    // デスクトップでは固定最大値、スマホでは画面幅に応じて
+    const isMobile = window.innerWidth <= 768;
+    const maxWidth = isMobile 
+      ? Math.min(HELP_STICKER_CONFIG.MAX_WIDTH_DESKTOP, window.innerWidth * HELP_STICKER_CONFIG.MAX_WIDTH_MOBILE_PERCENT / 100)
+      : HELP_STICKER_CONFIG.MAX_WIDTH_DESKTOP;
     
     const constrainedWidth = Math.max(
-      minWidth,
-      Math.min(maxWidthByScreen, width),
+      HELP_STICKER_CONFIG.MIN_WIDTH,
+      Math.min(maxWidth, width),
     );
     
-    const scale = constrainedWidth / baseWidth;
+    const scale = constrainedWidth / HELP_STICKER_CONFIG.BASE_WIDTH;
     sticker.width = constrainedWidth;
-    sticker.element.style.width = `${baseWidth}px`; // 固定幅
+    sticker.element.style.width = `${HELP_STICKER_CONFIG.BASE_WIDTH}px`; // 固定幅
     
     // scaleとrotationの両方を適用
     if (sticker.imgWrapper) {
