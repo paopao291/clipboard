@@ -315,6 +315,7 @@ export async function handleMouseUp(e) {
       if (state.isDragging && isOverTrashBtn(e.clientX, e.clientY)) {
         const stickerToDelete = state.selectedSticker;
         state.deselectAll();
+        setTrashDragOver(false); // ゴミ箱の状態をリセット
         await removeSticker(stickerToDelete.id);
         updateInfoButtonVisibility();
         state.endInteraction();
@@ -324,6 +325,8 @@ export async function handleMouseUp(e) {
       state.selectedSticker.element.classList.remove("rotating");
       await saveStickerChanges(state.selectedSticker);
     }
+    // ドラッグ終了時にゴミ箱の状態をリセット
+    setTrashDragOver(false);
     state.endInteraction();
   }
 }
@@ -622,6 +625,7 @@ export async function handleTouchEnd(e) {
         if (isOverTrashBtn(touch.clientX, touch.clientY)) {
           const stickerToDelete = state.selectedSticker;
           state.deselectAll();
+          setTrashDragOver(false); // ゴミ箱の状態をリセット
           await removeSticker(stickerToDelete.id);
           updateInfoButtonVisibility();
           state.endInteraction();
@@ -633,6 +637,8 @@ export async function handleTouchEnd(e) {
       state.selectedSticker.element.classList.remove("rotating");
       await saveStickerChanges(state.selectedSticker);
     }
+    // ドラッグ終了時にゴミ箱の状態をリセット
+    setTrashDragOver(false);
     state.endInteraction();
   }
 }

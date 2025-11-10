@@ -143,21 +143,78 @@ export function addStickerToDOM(
 }
 
 /**
- * シールを削除
+ * シールを削除（元に戻す機能付き）
  * @param {number} id - シールID
  */
 export async function removeSticker(id) {
   const sticker = state.removeSticker(id);
 
   if (sticker) {
-    sticker.element.remove();
+    // being-deletedクラスを削除（ゴミ箱ドラッグ時の赤い影を解除）
+    sticker.element.classList.remove("being-deleted");
 
-    // IndexedDBから削除
-    await deleteStickerFromDB(id);
+    // DOM要素を非表示にする（削除はしない）
+    sticker.element.style.display = "none";
 
     // インフォボタンの表示状態を更新
     updateInfoButtonVisibility();
+
+    // 削除データを一時保存（元に戻すために必要なデータ）
+    const stickerData = {
+      id: sticker.id,
+      url: sticker.url,
+      x: sticker.x,
+      y: sticker.y,
+      width: sticker.width,
+      rotation: sticker.rotation,
+      zIndex: sticker.zIndex,
+      element: sticker.element,
+      imgWrapper: sticker.imgWrapper,
+    };
+
+    let deleteTimeout = null;
+
+    // 「元に戻す」トーストを表示
+    showToast("削除しました", {
+      actionText: "元に戻す",
+      duration: 5000, // 5秒間表示
+      onAction: () => {
+        // タイムアウトをキャンセル
+        if (deleteTimeout) {
+          clearTimeout(deleteTimeout);
+        }
+        // 元に戻す処理
+        undoRemoveSticker(stickerData);
+      },
+    });
+
+    // 5秒後に完全削除（元に戻すが押されなかった場合）
+    deleteTimeout = setTimeout(async () => {
+      // DOM要素を完全に削除
+      sticker.element.remove();
+
+      // IndexedDBから削除
+      await deleteStickerFromDB(id);
+    }, 5300); // トーストのフェードアウト時間を考慮して少し長めに設定
   }
+}
+
+/**
+ * シールの削除を取り消す
+ * @param {Object} stickerData - シールデータ
+ */
+function undoRemoveSticker(stickerData) {
+  // DOM要素を再表示
+  stickerData.element.style.display = "";
+
+  // 状態に再追加
+  state.addSticker(stickerData);
+
+  // インフォボタンの表示状態を更新
+  updateInfoButtonVisibility();
+
+  // 元に戻したことを通知
+  showToast("元に戻しました");
 }
 
 /**
