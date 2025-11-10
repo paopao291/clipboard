@@ -7,8 +7,15 @@ import {
   updateStickerRotation,
   updateStickerSize,
   saveStickerChanges,
+  removeSticker,
 } from "./sticker.js";
-import { elements, showToast, updateInfoButtonVisibility } from "./ui.js";
+import {
+  elements,
+  showToast,
+  updateInfoButtonVisibility,
+  setTrashDragOver,
+  isOverTrashBtn,
+} from "./ui.js";
 import { showConfirmDialog } from "./dialog.js";
 
 let wheelTimeout = null;
@@ -149,6 +156,38 @@ export function handleStickerMouseDown(e, id) {
   const sticker = state.getStickerById(id);
   if (!sticker) return;
 
+  // 別のステッカーが選択中の場合は選択解除
+  if (state.selectedSticker && state.selectedSticker.id !== id) {
+    console.log("Different sticker clicked - deselecting current selection");
+    state.deselectAll();
+    updateInfoButtonVisibility();
+    return;
+  }
+
+  // 同じステッカーが既に選択されている場合
+  if (state.selectedSticker && state.selectedSticker.id === id) {
+    // クリック判定用のフラグを立てる（mouseupで判定）
+    state.possibleClick = true;
+    state.clickStartTime = Date.now();
+
+    // ドラッグ準備（実際のドラッグはmousemoveで開始）
+    state.dragPrepareX = e.clientX;
+    state.dragPrepareY = e.clientY;
+
+    if (e.shiftKey) {
+      const rect = sticker.element.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+
+      const angle =
+        Math.atan2(e.clientY - centerY, e.clientX - centerX) * (180 / Math.PI);
+      state.startRotating(angle);
+      sticker.element.classList.add("rotating");
+    }
+    return;
+  }
+
+  // 選択していない状態からの操作：自動選択
   state.selectSticker(sticker);
   updateInfoButtonVisibility();
   bringToFront(sticker);
@@ -176,10 +215,28 @@ export function handleStickerMouseDown(e, id) {
 export function handleMouseMove(e) {
   if (!state.selectedSticker) return;
 
+  // ドラッグ準備状態からドラッグ開始
+  if (state.possibleClick && state.dragPrepareX !== undefined) {
+    const moveDistance = Math.sqrt(
+      Math.pow(e.clientX - state.dragPrepareX, 2) +
+        Math.pow(e.clientY - state.dragPrepareY, 2),
+    );
+
+    // 5px以上動いたらドラッグ開始
+    if (moveDistance > 5) {
+      state.possibleClick = false;
+      state.startDragging(e.clientX, e.clientY); // ゴミ箱を表示
+    }
+  }
+
   if (state.isDragging) {
     const newX = e.clientX - state.dragStartX;
     const newY = e.clientY - state.dragStartY;
     updateStickerPosition(state.selectedSticker, newX, newY);
+
+    // ゴミ箱エリアとの重なり判定
+    const isOver = isOverTrashBtn(e.clientX, e.clientY);
+    setTrashDragOver(isOver);
   } else if (state.isRotating) {
     const rect = state.selectedSticker.element.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
@@ -197,8 +254,41 @@ export function handleMouseMove(e) {
  * @param {MouseEvent} e
  */
 export async function handleMouseUp(e) {
+  // クリック判定（選択中のステッカーをクリックで解除）
+  if (state.possibleClick && state.selectedSticker) {
+    const clickDuration = Date.now() - (state.clickStartTime || 0);
+    console.log("Click check:", {
+      clickDuration,
+      isDragging: state.isDragging,
+      isRotating: state.isRotating,
+    });
+    // 200ms以内かつドラッグしていない場合はクリックとみなす
+    if (clickDuration < 200 && !state.isDragging && !state.isRotating) {
+      console.log("Deselecting via click");
+      state.deselectAll();
+      updateInfoButtonVisibility();
+      state.possibleClick = false;
+      state.dragPrepareX = undefined;
+      state.dragPrepareY = undefined;
+      return;
+    }
+  }
+  state.possibleClick = false;
+  state.dragPrepareX = undefined;
+  state.dragPrepareY = undefined;
+
   if (state.isDragging || state.isRotating) {
     if (state.selectedSticker) {
+      // ゴミ箱エリアに重なっていたら削除
+      if (state.isDragging && isOverTrashBtn(e.clientX, e.clientY)) {
+        const stickerToDelete = state.selectedSticker;
+        state.deselectAll();
+        await removeSticker(stickerToDelete.id);
+        updateInfoButtonVisibility();
+        state.endInteraction();
+        return;
+      }
+
       state.selectedSticker.element.classList.remove("rotating");
       await saveStickerChanges(state.selectedSticker);
     }
@@ -217,6 +307,20 @@ export async function handleWheel(e, id) {
 
   const sticker = state.getStickerById(id);
   if (!sticker) return;
+
+  // 別のステッカーが選択中の場合は選択解除
+  if (state.selectedSticker && state.selectedSticker.id !== id) {
+    state.deselectAll();
+    updateInfoButtonVisibility();
+    return;
+  }
+
+  // 未選択の場合は自動選択
+  if (!state.selectedSticker) {
+    state.selectSticker(sticker);
+    updateInfoButtonVisibility();
+    bringToFront(sticker);
+  }
 
   const delta =
     e.deltaY > 0 ? -RESIZE_CONFIG.WHEEL_DELTA : RESIZE_CONFIG.WHEEL_DELTA;
@@ -242,9 +346,53 @@ export function handleStickerTouchStart(e, id) {
   const sticker = state.getStickerById(id);
   if (!sticker) return;
 
-  state.selectSticker(sticker);
-  updateInfoButtonVisibility();
-  bringToFront(sticker);
+  // 別のステッカーが選択中の場合は選択解除
+  if (state.selectedSticker && state.selectedSticker.id !== id) {
+    state.deselectAll();
+    updateInfoButtonVisibility();
+    return;
+  }
+
+  // 同じステッカーが既に選択されている場合
+  if (state.selectedSticker && state.selectedSticker.id === id) {
+    // タップ判定用のフラグを立てる（touchendで判定）
+    state.possibleTap = true;
+    state.tapStartTime = Date.now();
+
+    // ドラッグ準備（実際のドラッグはtouchmoveで開始）
+    const touches = e.touches;
+    if (touches.length === 1) {
+      state.touchPrepareX = touches[0].clientX;
+      state.touchPrepareY = touches[0].clientY;
+    } else if (touches.length === 2) {
+      // 2本指：拡大縮小と回転
+      const touch1 = touches[0];
+      const touch2 = touches[1];
+
+      // 初期距離を保存（拡大縮小用）
+      const dx = touch2.clientX - touch1.clientX;
+      const dy = touch2.clientY - touch1.clientY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      state.startPinch(distance, sticker.width);
+
+      // 初期角度を保存（回転用）
+      const angle =
+        Math.atan2(
+          touch2.clientY - touch1.clientY,
+          touch2.clientX - touch1.clientX,
+        ) *
+        (180 / Math.PI);
+      state.startRotating(angle);
+    }
+    return;
+  }
+
+  // 選択していない状態からの操作：自動選択
+  if (!state.selectedSticker) {
+    state.selectSticker(sticker);
+    updateInfoButtonVisibility();
+    bringToFront(sticker);
+  }
 
   const touches = e.touches;
 
@@ -282,12 +430,34 @@ export function handleTouchMove(e) {
 
   const touches = e.touches;
 
+  // ドラッグ準備状態からドラッグ開始
+  if (
+    state.possibleTap &&
+    state.touchPrepareX !== undefined &&
+    touches.length === 1
+  ) {
+    const moveDistance = Math.sqrt(
+      Math.pow(touches[0].clientX - state.touchPrepareX, 2) +
+        Math.pow(touches[0].clientY - state.touchPrepareY, 2),
+    );
+
+    // 10px以上動いたらドラッグ開始
+    if (moveDistance > 10) {
+      state.possibleTap = false;
+      state.startDragging(touches[0].clientX, touches[0].clientY);
+    }
+  }
+
   if (state.isDragging && touches.length === 1) {
     e.preventDefault();
 
     const newX = touches[0].clientX - state.dragStartX;
     const newY = touches[0].clientY - state.dragStartY;
     updateStickerPosition(state.selectedSticker, newX, newY);
+
+    // ゴミ箱ボタンとの重なり判定
+    const isOver = isOverTrashBtn(touches[0].clientX, touches[0].clientY);
+    setTrashDragOver(isOver);
   } else if (state.isRotating && touches.length === 2) {
     e.preventDefault();
 
@@ -319,8 +489,38 @@ export function handleTouchMove(e) {
  * @param {TouchEvent} e
  */
 export async function handleTouchEnd(e) {
+  // タップ判定（選択中のステッカーをタップで解除）
+  if (state.possibleTap && state.selectedSticker) {
+    const tapDuration = Date.now() - (state.tapStartTime || 0);
+    // 200ms以内かつドラッグしていない場合はタップとみなす
+    if (tapDuration < 200 && !state.isDragging) {
+      state.deselectAll();
+      updateInfoButtonVisibility();
+      state.possibleTap = false;
+      state.touchPrepareX = undefined;
+      state.touchPrepareY = undefined;
+      return;
+    }
+  }
+  state.possibleTap = false;
+  state.touchPrepareX = undefined;
+  state.touchPrepareY = undefined;
+
   if (state.isDragging || state.isRotating) {
     if (state.selectedSticker) {
+      // ゴミ箱エリアに重なっていたら削除
+      if (state.isDragging && e.changedTouches.length > 0) {
+        const touch = e.changedTouches[0];
+        if (isOverTrashBtn(touch.clientX, touch.clientY)) {
+          const stickerToDelete = state.selectedSticker;
+          state.deselectAll();
+          await removeSticker(stickerToDelete.id);
+          updateInfoButtonVisibility();
+          state.endInteraction();
+          return;
+        }
+      }
+
       state.selectedSticker.element.classList.remove("rotating");
       await saveStickerChanges(state.selectedSticker);
     }

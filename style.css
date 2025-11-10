@@ -100,23 +100,6 @@ body {
         -webkit-touch-callout: default; /* iOS Safari用: 長押しメニューを有効化 */
     }
 
-    /* スマホ：タッチ最適化 */
-    .delete-btn {
-        width: 36px;
-        height: 36px;
-        font-size: 18px;
-        opacity: 1;
-        transform: scale(1);
-        top: -14px;
-        right: -14px;
-        border: 2.5px solid white;
-        box-shadow: 0 4px 12px rgba(255, 59, 48, 0.3);
-    }
-
-    .delete-btn:active {
-        transform: scale(0.85);
-    }
-
     /* スマホ：ボタンサイズ調整 */
     .info-btn {
         bottom: 20px;
@@ -158,6 +141,72 @@ body {
         width: 34px;
         height: 34px;
     }
+}
+
+/* ゴミ箱ボタン */
+.trash-btn {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 44px;
+    height: 44px;
+    background: rgba(255, 255, 255, 0.96);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    color: rgba(0, 0, 0, 0.4);
+    transition: all 0.25s var(--ease-out-expo);
+    box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.08),
+        0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.trash-btn:hover {
+    color: #ff3b30;
+    transform: translateX(-50%) scale(1.05);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.trash-btn:active {
+    transform: translateX(-50%) scale(0.95);
+}
+
+.trash-btn svg {
+    width: 22px;
+    height: 22px;
+}
+
+/* ゴミ箱ラベル */
+.trash-tooltip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.5);
+    white-space: nowrap;
+    pointer-events: none;
+    transition: color 0.2s var(--ease-out-expo);
+}
+
+.trash-btn:hover .trash-tooltip,
+.trash-btn.drag-over .trash-tooltip {
+    color: #ff3b30;
+}
+
+/* ドラッグ中のゴミ箱ハイライト */
+.trash-btn.drag-over {
+    color: #ff3b30;
+    transform: translateX(-50%) scale(1.1);
+    box-shadow:
+        0 8px 24px rgba(255, 59, 48, 0.25),
+        0 2px 8px rgba(255, 59, 48, 0.15);
 }
 
 /* インフォボタン */
@@ -346,6 +395,17 @@ body {
     }
 }
 
+/* ゴミ箱に吸い込まれるアニメーション */
+.sticker.being-deleted img {
+    transition: all 0.25s var(--ease-out-expo);
+    transform: scale(0.5);
+    opacity: 0.6;
+}
+
+.sticker.being-deleted img {
+    filter: url(#outline-filter) drop-shadow(0 4px 16px rgba(255, 59, 48, 0.4));
+}
+
 /* 画像ラッパー：回転用コンテナ */
 .sticker-img-wrapper {
     width: 100%;
@@ -370,53 +430,13 @@ body {
 }
 
 .sticker.selected img {
-    /* 選択時はより強い影で浮き上がる */
-    filter: url(#outline-filter) drop-shadow(0 12px 32px rgba(0, 0, 0, 0.18));
+    /* 選択時は青い影で浮き上がる */
+    filter: url(#outline-filter) drop-shadow(0 12px 32px rgba(0, 122, 255, 0.4))
+        drop-shadow(0 4px 12px rgba(0, 122, 255, 0.2));
 }
 
 .sticker.rotating .sticker-img-wrapper {
     cursor: crosshair;
-}
-
-/* 削除ボタン：シンプルで美しい */
-.delete-btn {
-    position: absolute;
-    top: -12px;
-    right: -12px;
-    width: 28px;
-    height: 28px;
-    background: #ff3b30;
-    color: white;
-    border: 2px solid white;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    font-weight: 600;
-    opacity: 0;
-    transform: scale(0.8);
-    z-index: 1;
-    pointer-events: auto;
-    touch-action: auto;
-    transition: all 0.25s var(--ease-out-expo);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.sticker:hover .delete-btn,
-.sticker.selected .delete-btn {
-    opacity: 1;
-    transform: scale(1);
-}
-
-.delete-btn:hover {
-    transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(255, 59, 48, 0.4);
-}
-
-.delete-btn:active {
-    transform: scale(0.9);
 }
 
 /* 確認ダイアログ */
@@ -443,7 +463,7 @@ body {
 .confirm-dialog-content {
     background: white;
     border-radius: 20px;
-    padding: 32px;
+    padding: 24px;
     max-width: 340px;
     width: 88%;
     box-shadow:

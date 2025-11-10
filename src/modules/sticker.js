@@ -90,9 +90,6 @@ export function addStickerToDOM(
   const img = document.createElement("img");
   img.src = url;
 
-  // 削除ボタンを作成
-  const deleteBtn = createDeleteButton(stickerId);
-
   // 画像ラッパー（回転用）
   const imgWrapper = document.createElement("div");
   imgWrapper.className = "sticker-img-wrapper";
@@ -100,7 +97,6 @@ export function addStickerToDOM(
   imgWrapper.appendChild(img);
 
   stickerDiv.appendChild(imgWrapper);
-  stickerDiv.appendChild(deleteBtn);
 
   // スタイルを設定
   stickerDiv.style.left = `${x}px`;
@@ -144,33 +140,6 @@ export function addStickerToDOM(
   updateInfoButtonVisibility();
 
   return actualZIndex;
-}
-
-/**
- * 削除ボタンを作成
- * @param {number} stickerId - シールID
- * @returns {HTMLElement}
- */
-function createDeleteButton(stickerId) {
-  const deleteBtn = document.createElement("button");
-  deleteBtn.className = "delete-btn";
-  deleteBtn.innerHTML = "×";
-
-  // クリックイベント（PC用）
-  deleteBtn.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    removeSticker(stickerId);
-  });
-
-  // タッチイベント（スマホ用）
-  deleteBtn.addEventListener("touchend", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    removeSticker(stickerId);
-  });
-
-  return deleteBtn;
 }
 
 /**

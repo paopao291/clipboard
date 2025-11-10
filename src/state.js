@@ -1,168 +1,179 @@
-import { STICKER_DEFAULTS } from './modules/constants.js';
+import { STICKER_DEFAULTS } from "./modules/constants.js";
 
 /**
  * アプリケーションの状態管理
  */
 class AppState {
-    constructor() {
-        this.stickers = [];
+  constructor() {
+    this.stickers = [];
+    this.selectedSticker = null;
+    this.isDragging = false;
+    this.isRotating = false;
+    this.dragStartX = 0;
+    this.dragStartY = 0;
+    this.startAngle = 0;
+    this.lastTouchX = null;
+    this.lastTouchY = null;
+    this.zIndexCounter = STICKER_DEFAULTS.Z_INDEX_START;
+    this.initialPinchDistance = 0;
+    this.initialWidth = 0;
+    // タップ/クリック判定用（選択解除）
+    this.possibleTap = false;
+    this.tapStartTime = 0;
+    this.possibleClick = false;
+    this.clickStartTime = 0;
+    // ドラッグ準備座標
+    this.dragPrepareX = undefined;
+    this.dragPrepareY = undefined;
+    // タッチドラッグ準備座標
+    this.touchPrepareX = undefined;
+    this.touchPrepareY = undefined;
+  }
+
+  /**
+   * シールを追加
+   * @param {Object} sticker - シールオブジェクト
+   */
+  addSticker(sticker) {
+    this.stickers.push(sticker);
+  }
+
+  /**
+   * シールを削除
+   * @param {number} id - シールID
+   * @returns {Object|null} 削除されたシール
+   */
+  removeSticker(id) {
+    const index = this.stickers.findIndex((s) => s.id === id);
+    if (index !== -1) {
+      const sticker = this.stickers[index];
+
+      // 削除するステッカーが選択中だった場合、選択を解除
+      if (this.selectedSticker === sticker) {
         this.selectedSticker = null;
-        this.isDragging = false;
-        this.isRotating = false;
-        this.dragStartX = 0;
-        this.dragStartY = 0;
-        this.startAngle = 0;
-        this.lastTouchX = null;
-        this.lastTouchY = null;
-        this.zIndexCounter = STICKER_DEFAULTS.Z_INDEX_START;
-        this.initialPinchDistance = 0;
-        this.initialWidth = 0;
+      }
+
+      this.stickers.splice(index, 1);
+      return sticker;
+    }
+    return null;
+  }
+
+  /**
+   * IDでシールを取得
+   * @param {number} id - シールID
+   * @returns {Object|undefined}
+   */
+  getStickerById(id) {
+    return this.stickers.find((s) => s.id === id);
+  }
+
+  /**
+   * シールを選択
+   * @param {Object} sticker - シールオブジェクト
+   */
+  selectSticker(sticker) {
+    // すべての選択を解除
+    this.stickers.forEach((s) => s.element.classList.remove("selected"));
+
+    // 新しいシールを選択
+    if (sticker) {
+      sticker.element.classList.add("selected");
     }
 
-    /**
-     * シールを追加
-     * @param {Object} sticker - シールオブジェクト
-     */
-    addSticker(sticker) {
-        this.stickers.push(sticker);
+    this.selectedSticker = sticker;
+  }
+
+  /**
+   * 選択を解除
+   */
+  deselectAll() {
+    this.stickers.forEach((s) => s.element.classList.remove("selected"));
+    this.selectedSticker = null;
+  }
+
+  /**
+   * z-indexカウンターをインクリメント
+   * @returns {number} 新しいz-index
+   */
+  incrementZIndex() {
+    this.zIndexCounter++;
+    return this.zIndexCounter;
+  }
+
+  /**
+   * z-indexカウンターを更新（最大値を追跡）
+   * @param {number} zIndex - z-index値
+   */
+  updateZIndexCounter(zIndex) {
+    if (zIndex > this.zIndexCounter) {
+      this.zIndexCounter = zIndex;
     }
+  }
 
-    /**
-     * シールを削除
-     * @param {number} id - シールID
-     * @returns {Object|null} 削除されたシール
-     */
-    removeSticker(id) {
-        const index = this.stickers.findIndex(s => s.id === id);
-        if (index !== -1) {
-            const sticker = this.stickers[index];
+  /**
+   * ドラッグ開始
+   * @param {number} x - X座標
+   * @param {number} y - Y座標
+   */
+  startDragging(x, y) {
+    this.isDragging = true;
+    this.dragStartX = x - this.selectedSticker.x;
+    this.dragStartY = y - this.selectedSticker.y;
+  }
 
-            // 削除するステッカーが選択中だった場合、選択を解除
-            if (this.selectedSticker === sticker) {
-                this.selectedSticker = null;
-            }
+  /**
+   * 回転開始
+   * @param {number} angle - 開始角度
+   */
+  startRotating(angle) {
+    this.isRotating = true;
+    this.startAngle = angle - this.selectedSticker.rotation;
+  }
 
-            this.stickers.splice(index, 1);
-            return sticker;
-        }
-        return null;
-    }
+  /**
+   * ピンチ開始
+   * @param {number} distance - 初期距離
+   * @param {number} width - 初期幅
+   */
+  startPinch(distance, width) {
+    this.initialPinchDistance = distance;
+    this.initialWidth = width;
+  }
 
-    /**
-     * IDでシールを取得
-     * @param {number} id - シールID
-     * @returns {Object|undefined}
-     */
-    getStickerById(id) {
-        return this.stickers.find(s => s.id === id);
-    }
+  /**
+   * タッチ位置を記録
+   * @param {number} x - X座標
+   * @param {number} y - Y座標
+   */
+  setLastTouchPosition(x, y) {
+    this.lastTouchX = x;
+    this.lastTouchY = y;
+  }
 
-    /**
-     * シールを選択
-     * @param {Object} sticker - シールオブジェクト
-     */
-    selectSticker(sticker) {
-        // すべての選択を解除
-        this.stickers.forEach(s => s.element.classList.remove('selected'));
+  /**
+   * 操作を終了
+   */
+  endInteraction() {
+    this.isDragging = false;
+    this.isRotating = false;
+  }
 
-        // 新しいシールを選択
-        if (sticker) {
-            sticker.element.classList.add('selected');
-        }
+  /**
+   * シールの数を取得
+   * @returns {number}
+   */
+  getStickerCount() {
+    return this.stickers.length;
+  }
 
-        this.selectedSticker = sticker;
-    }
-
-    /**
-     * 選択を解除
-     */
-    deselectAll() {
-        this.stickers.forEach(s => s.element.classList.remove('selected'));
-        this.selectedSticker = null;
-    }
-
-    /**
-     * z-indexカウンターをインクリメント
-     * @returns {number} 新しいz-index
-     */
-    incrementZIndex() {
-        this.zIndexCounter++;
-        return this.zIndexCounter;
-    }
-
-    /**
-     * z-indexカウンターを更新（最大値を追跡）
-     * @param {number} zIndex - z-index値
-     */
-    updateZIndexCounter(zIndex) {
-        if (zIndex > this.zIndexCounter) {
-            this.zIndexCounter = zIndex;
-        }
-    }
-
-    /**
-     * ドラッグ開始
-     * @param {number} x - X座標
-     * @param {number} y - Y座標
-     */
-    startDragging(x, y) {
-        this.isDragging = true;
-        this.dragStartX = x - this.selectedSticker.x;
-        this.dragStartY = y - this.selectedSticker.y;
-    }
-
-    /**
-     * 回転開始
-     * @param {number} angle - 開始角度
-     */
-    startRotating(angle) {
-        this.isRotating = true;
-        this.startAngle = angle - this.selectedSticker.rotation;
-    }
-
-    /**
-     * ピンチ開始
-     * @param {number} distance - 初期距離
-     * @param {number} width - 初期幅
-     */
-    startPinch(distance, width) {
-        this.initialPinchDistance = distance;
-        this.initialWidth = width;
-    }
-
-    /**
-     * タッチ位置を記録
-     * @param {number} x - X座標
-     * @param {number} y - Y座標
-     */
-    setLastTouchPosition(x, y) {
-        this.lastTouchX = x;
-        this.lastTouchY = y;
-    }
-
-    /**
-     * 操作を終了
-     */
-    endInteraction() {
-        this.isDragging = false;
-        this.isRotating = false;
-    }
-
-    /**
-     * シールの数を取得
-     * @returns {number}
-     */
-    getStickerCount() {
-        return this.stickers.length;
-    }
-
-    /**
-     * 選択されているか確認
-     * @returns {boolean}
-     */
-    hasSelection() {
-        return this.selectedSticker !== null;
-    }
+  /**
+   * 選択されているか確認
+   * @returns {boolean}
+   */
+  hasSelection() {
+    return this.selectedSticker !== null;
+  }
 }
 
 // シングルトンインスタンスをエクスポート

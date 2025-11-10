@@ -58,6 +58,34 @@
                     inputmode="none"
                 ></textarea>
 
+                <!-- ゴミ箱ボタン -->
+                <button id="trashBtn" class="trash-btn" title="削除">
+                    <svg
+                        class="trash-icon"
+                        width="22"
+                        height="22"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                        <path
+                            d="M3 6H21M19 6V20C19 21 18 22 17 22H7C6 22 5 21 5 20V6M8 6V4C8 3 9 2 10 2H14C15 2 16 3 16 4V6"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        />
+                        <path
+                            d="M10 11V17M14 11V17"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        />
+                    </svg>
+                    <div class="trash-tooltip">ドラッグして削除</div>
+                </button>
+
                 <!-- インフォボタン -->
                 <button id="infoBtn" class="info-btn" title="操作方法">
                     <svg
@@ -106,7 +134,7 @@
                             <p><kbd>Shift</kbd> を押しながらドラッグ</p>
 
                             <h3>削除</h3>
-                            <p>×ボタンをクリック</p>
+                            <p>画像をドラッグして画面下のゴミ箱へ</p>
 
                             <h3>画像として保存</h3>
                             <p>スクリーンショットを撮影してください</p>
@@ -123,7 +151,7 @@
                             <p>2本指でピンチ</p>
 
                             <h3>削除</h3>
-                            <p>×ボタンをタップ</p>
+                            <p>画像をドラッグして画面下のゴミ箱へ</p>
 
                             <h3>画像として保存</h3>
                             <p>スクリーンショットを撮影してください</p>
