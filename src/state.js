@@ -144,6 +144,15 @@ class AppState {
   startPinch(distance, width) {
     this.initialPinchDistance = distance;
     this.initialWidth = width;
+    this.lastPinchDistance = distance; // 前フレームの距離を保存
+  }
+
+  /**
+   * ピンチ距離を更新
+   * @param {number} distance - 現在の距離
+   */
+  updatePinchDistance(distance) {
+    this.lastPinchDistance = distance;
   }
 
   /**

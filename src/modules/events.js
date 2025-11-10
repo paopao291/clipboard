@@ -20,6 +20,7 @@ import { showConfirmDialog } from "./dialog.js";
 import { absoluteToHybrid, getCenterCoordinates } from "./coordinate-utils.js";
 
 let wheelTimeout = null;
+let pinchAnimationFrame = null;
 
 /**
  * 2本指ピンチ操作を開始（共通処理）
@@ -549,13 +550,25 @@ export function handleTouchMove(e) {
     const touch1 = touches[0];
     const touch2 = touches[1];
 
-    // 拡大縮小
+    // requestAnimationFrameを使わず即座に反映（慣性を減らす）
+    if (!state.selectedSticker) return;
+
+    // リサイズ中クラスを追加（CSSトランジション無効化用）
+    state.selectedSticker.element.classList.add('resizing');
+    state.selectedSticker.element.classList.add('rotating');
+
+    // 拡大縮小：前フレームからの相対的な変化を計算
     const dx = touch2.clientX - touch1.clientX;
     const dy = touch2.clientY - touch1.clientY;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const scale = distance / state.initialPinchDistance;
-    const newWidth = state.initialWidth * scale;
+    const currentDistance = Math.sqrt(dx * dx + dy * dy);
+    
+    // 前フレームからのスケール変化を現在のサイズに適用
+    const deltaScale = currentDistance / state.lastPinchDistance;
+    const newWidth = state.selectedSticker.width * deltaScale;
     updateStickerSize(state.selectedSticker, newWidth);
+    
+    // 次のフレームのために距離を更新
+    state.updatePinchDistance(currentDistance);
 
     // 回転
     const angle =
@@ -612,7 +625,7 @@ export async function handleTouchEnd(e) {
         if (isOverTrashBtn(touch.clientX, touch.clientY)) {
           const stickerToDelete = state.selectedSticker;
           state.deselectAll();
-          setTrashDragOver(false); // ゴミ箱の状態をリセット
+          setTrashDragOver(false);
           await removeSticker(stickerToDelete.id);
           updateInfoButtonVisibility();
           state.endInteraction();
@@ -620,11 +633,12 @@ export async function handleTouchEnd(e) {
         }
       }
 
+      // リサイズ中クラスを削除（CSSトランジション復帰）
+      state.selectedSticker.element.classList.remove("rotating", "resizing");
+      
       // 変更を保存
-      state.selectedSticker.element.classList.remove("rotating");
       await saveStickerChanges(state.selectedSticker);
     }
-    // ドラッグ終了時にゴミ箱の状態をリセット
     setTrashDragOver(false);
     state.endInteraction();
   }

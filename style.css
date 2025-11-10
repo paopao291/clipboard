@@ -438,8 +438,22 @@ a, button {
     cursor: default;
     user-select: none;
     overflow: visible;
-    will-change: transform;
+    will-change: transform, width;
+    /* GPU加速を強制 */
+    transform: translateZ(0);
     /* z-indexはJavaScriptで動的に設定されます */
+}
+
+/* リサイズ中はトランジションを無効化（パフォーマンス改善） */
+.sticker.resizing,
+.sticker.resizing * {
+    transition: none !important;
+}
+
+/* リサイズ中はより積極的にGPU加速 */
+.sticker.resizing {
+    will-change: width, transform;
+    /* containは使わない（影がクリップされるため） */
 }
 
 /* 追加時のアニメーション */
@@ -471,8 +485,12 @@ a, button {
     width: 100%;
     height: 100%;
     position: relative;
-    transition: transform 0.1s linear;
+    transition: transform 0.03s linear;
     cursor: grab;
+    will-change: transform;
+    /* GPU加速を強制 */
+    transform: translateZ(0);
+    backface-visibility: hidden;
 }
 
 .sticker-img-wrapper:active {
@@ -487,6 +505,11 @@ a, button {
     /* 常に軽い影でステッカー感を演出 */
     filter: url(#outline-filter) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1));
     transition: filter 0.3s var(--ease-out-expo);
+    /* GPU加速を強制 */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    /* 画像のスムーズレンダリング */
+    image-rendering: auto;
 }
 
 .sticker.selected img {
