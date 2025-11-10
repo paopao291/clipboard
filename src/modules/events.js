@@ -310,6 +310,23 @@ export async function handleMouseUp(e) {
 
       state.selectedSticker.element.classList.remove("rotating");
       await saveStickerChanges(state.selectedSticker);
+
+      // ドラッグ終了時に画面外判定
+      if (state.isDragging) {
+        const rect = state.selectedSticker.element.getBoundingClientRect();
+        const isCompletelyOutside = 
+          rect.right <= 0 || 
+          rect.left >= window.innerWidth || 
+          rect.bottom <= 0 || 
+          rect.top >= window.innerHeight;
+        
+        if (isCompletelyOutside) {
+          // 中央に戻す
+          updateStickerPosition(state.selectedSticker, 0, 50);
+          await saveStickerChanges(state.selectedSticker);
+          showToast("画面外に出たため中央に戻しました");
+        }
+      }
     }
     // ドラッグ終了時にゴミ箱の状態をリセット
     setTrashDragOver(false);
@@ -637,6 +654,23 @@ export async function handleTouchEnd(e) {
       
       // 変更を保存
       await saveStickerChanges(state.selectedSticker);
+
+      // ドラッグ終了時に画面外判定
+      if (state.isDragging) {
+        const rect = state.selectedSticker.element.getBoundingClientRect();
+        const isCompletelyOutside = 
+          rect.right <= 0 || 
+          rect.left >= window.innerWidth || 
+          rect.bottom <= 0 || 
+          rect.top >= window.innerHeight;
+        
+        if (isCompletelyOutside) {
+          // 中央に戻す
+          updateStickerPosition(state.selectedSticker, 0, 50);
+          await saveStickerChanges(state.selectedSticker);
+          showToast("画面外に出たため中央に戻しました");
+        }
+      }
     }
     setTrashDragOver(false);
     state.endInteraction();
