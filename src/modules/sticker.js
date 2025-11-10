@@ -203,18 +203,27 @@ export async function removeSticker(id) {
  * シールの削除を取り消す
  * @param {Object} stickerData - シールデータ
  */
-function undoRemoveSticker(stickerData) {
+async function undoRemoveSticker(stickerData) {
   // DOM要素を再表示
   stickerData.element.style.display = "";
 
+  // 中央に移動
+  updateStickerPosition(stickerData, 0, 50);
+
   // 状態に再追加
   state.addSticker(stickerData);
+
+  // 選択状態にする
+  state.selectSticker(stickerData);
+
+  // 最前面に移動
+  await bringToFront(stickerData);
 
   // インフォボタンの表示状態を更新
   updateInfoButtonVisibility();
 
   // 元に戻したことを通知
-  showToast("元に戻しました");
+  showToast("戻しました");
 }
 
 /**
