@@ -327,9 +327,9 @@ export async function handleMouseUp(e) {
         const visibleRatioX = visibleWidth / stickerWidth;
         const visibleRatioY = visibleHeight / stickerHeight;
         
-        // 90%以上が画面外に出ている、または見えている部分が16px未満の場合は中央に戻す
+        // 90%以上が画面外に出ている、または見えている部分が20px未満の場合は中央に戻す
         const isMostlyOutside = visibleRatioX < 0.1 || visibleRatioY < 0.1 || 
-                                visibleWidth < 16 || visibleHeight < 16;
+                                visibleWidth < 20 || visibleHeight < 20;
         
         if (isMostlyOutside) {
           // 中央に戻す
