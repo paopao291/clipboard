@@ -647,8 +647,13 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
     pointer-events: auto;
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 24px;
     max-width: 90%;
+}
+
+/* アクションボタンがある場合は右paddingを小さく */
+.toast:has(.toast-action) {
+    padding-right: 12px;
 }
 
 .toast-message {
@@ -689,6 +694,11 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
         padding: 10px 16px;
         max-width: 85%;
         gap: 12px;
+    }
+
+    /* アクションボタンがある場合は右paddingを小さく */
+    .toast:has(.toast-action) {
+        padding-right: 10px;
     }
 
     .toast-message {
