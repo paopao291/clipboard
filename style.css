@@ -579,8 +579,9 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
 
 .confirm-dialog-content {
     background: white;
-    border-radius: 24px;
-    padding: 24px;
+    border-radius: 30px;
+    padding: 16px;
+    padding-top: 28px;
     max-width: min(420px, 85%);
     width: 85%;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
