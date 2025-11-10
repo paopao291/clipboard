@@ -360,7 +360,7 @@ a, button {
 .help-content {
     background: white;
     border-radius: 28px;
-    padding: 48px;
+    padding: 24px;
     max-width: 420px;
     width: 88%;
     max-height: 75vh;
@@ -379,8 +379,8 @@ a, button {
 
 .close-help {
     position: absolute;
-    top: 20px;
-    right: 20px;
+    top: 24px;
+    right: 24px;
     width: 36px;
     height: 36px;
     background: rgba(0, 0, 0, 0.06);
@@ -408,6 +408,7 @@ a, button {
 .help-content h2 {
     font-size: 32px;
     font-weight: 700;
+    line-height: 1;
     color: var(--text-primary);
     margin-bottom: 36px;
     letter-spacing: -0.8px;
