@@ -454,6 +454,13 @@ a, button {
 .sticker.resizing {
     will-change: width, transform;
     /* containは使わない（影がクリップされるため） */
+    /* 最前面に表示 */
+    z-index: 999999 !important;
+}
+
+/* ピンチ中は他のステッカーへのタッチを無効化 */
+body:has(.sticker.resizing) .sticker:not(.resizing) {
+    pointer-events: none !important;
 }
 
 /* 追加時のアニメーション */

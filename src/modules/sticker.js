@@ -259,9 +259,13 @@ export function updateStickerRotation(sticker, rotation) {
  * @param {number} width - 幅（px）
  */
 export function updateStickerSize(sticker, width) {
+  // 画面幅に応じた最大サイズを計算
+  const maxWidthByScreen = (window.innerWidth * STICKER_DEFAULTS.MAX_WIDTH_PERCENT) / 100;
+  const effectiveMaxWidth = Math.min(STICKER_DEFAULTS.MAX_WIDTH, maxWidthByScreen);
+  
   const constrainedWidth = Math.max(
     STICKER_DEFAULTS.MIN_WIDTH,
-    Math.min(STICKER_DEFAULTS.MAX_WIDTH, width),
+    Math.min(effectiveMaxWidth, width),
   );
 
   sticker.width = constrainedWidth;

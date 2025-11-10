@@ -20,7 +20,6 @@ import { showConfirmDialog } from "./dialog.js";
 import { absoluteToHybrid, getCenterCoordinates } from "./coordinate-utils.js";
 
 let wheelTimeout = null;
-let pinchAnimationFrame = null;
 
 /**
  * 2本指ピンチ操作を開始（共通処理）

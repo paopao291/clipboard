@@ -9,7 +9,8 @@ export const DB_CONFIG = {
 export const STICKER_DEFAULTS = {
   WIDTH: 200, // ピクセル値
   MIN_WIDTH: 50,
-  MAX_WIDTH: 800,
+  MAX_WIDTH: 600, // 画面幅の最大値は後で計算
+  MAX_WIDTH_PERCENT: 80, // 画面幅の80%まで
   ROTATION: 0,
   Z_INDEX_START: 10,
 };
