@@ -478,6 +478,12 @@ a, button {
     z-index: 6000 !important;
 }
 
+/* クリック時の押し込み効果 */
+.sticker.click-feedback img {
+    transform: scale(0.98);
+    transition: transform 0.1s ease-out;
+}
+
 /* リサイズ中はトランジションを無効化（パフォーマンス改善） */
 .sticker.resizing,
 .sticker.resizing * {
