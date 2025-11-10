@@ -36,7 +36,7 @@ body {
         "Hiragino Kaku Gothic ProN", sans-serif;
     background:
         radial-gradient(circle, rgba(0, 0, 0, 0.15) 1px, transparent 1px),
-        #e5e7eb;
+        #f7f7f4;
     background-size: 24px 24px;
     background-position: 0 0;
     overflow: hidden;
@@ -55,6 +55,25 @@ a, button {
 #app {
     width: 100%;
     height: 100%;
+}
+
+/* 選択時のオーバーレイ */
+.selection-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.15);
+    z-index: 5000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s var(--ease-out-expo);
+}
+
+.selection-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .mobile-hint {
@@ -178,7 +197,7 @@ a, button {
     z-index: 10000;
     color: white;
     transition: all 0.3s var(--ease-out-expo);
-    filter: drop-shadow(0 0px 4px rgba(0, 0, 0, 0.4));
+    filter: drop-shadow(0 0px 2px rgba(0, 0, 0, 0.2));
     pointer-events: none;
     opacity: 1;
     visibility: visible;
@@ -203,7 +222,7 @@ a, button {
     left: 50%;
     transform: translateX(-50%);
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 400;
     color: white;
     white-space: nowrap;
     pointer-events: none;
@@ -279,7 +298,7 @@ a, button {
     z-index: 10000;
     color: white;
     transition: all 0.3s var(--ease-out-expo);
-    filter: drop-shadow(0 0px 4px rgba(0, 0, 0, 0.4));
+    filter: drop-shadow(0 0px 2px rgba(0, 0, 0, 0.2));
     opacity: 1;
     visibility: visible;
     transform: scale(1);
@@ -444,6 +463,11 @@ a, button {
     /* z-indexはJavaScriptで動的に設定されます */
 }
 
+/* 選択中のステッカーはオーバーレイより前面に */
+.sticker.selected {
+    z-index: 6000 !important;
+}
+
 /* リサイズ中はトランジションを無効化（パフォーマンス改善） */
 .sticker.resizing,
 .sticker.resizing * {
@@ -480,11 +504,8 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
 /* ゴミ箱に吸い込まれるアニメーション */
 .sticker.being-deleted img {
     transition: all 0.25s var(--ease-out-expo);
-    transform: scale(0.5);
-    opacity: 0.6;
-    /* 赤い影で削除を示唆 */
-    filter: url(#outline-filter) drop-shadow(0 8px 24px rgba(255, 59, 48, 0.5))
-        drop-shadow(0 4px 12px rgba(255, 59, 48, 0.3)) !important;
+    transform: scale(0.4);
+    opacity: 0.7;
 }
 
 /* 画像ラッパー：回転用コンテナ */
@@ -519,17 +540,7 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
     image-rendering: auto;
 }
 
-.sticker.selected img {
-    /* 選択時は青い影で浮き上がる */
-    filter: url(#outline-filter) drop-shadow(0 12px 32px rgba(0, 122, 255, 0.4))
-        drop-shadow(0 4px 12px rgba(0, 122, 255, 0.4));
-}
-
-/* ゴミ箱にドラッグオーバー時は赤い影を優先 */
-.sticker.selected.being-deleted img {
-    filter: url(#outline-filter) drop-shadow(0 8px 24px rgba(255, 59, 48, 0.5))
-        drop-shadow(0 4px 20px rgba(255, 59, 48, 0.8)) !important;
-}
+/* 選択時・削除ドラッグ時のシャドウは不要（オーバーレイで表現） */
 
 .sticker.rotating .sticker-img-wrapper {
     cursor: crosshair;

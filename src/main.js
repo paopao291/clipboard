@@ -1,5 +1,6 @@
 import { initDB, loadAllStickersFromDB, updateStickerInDB } from "./modules/db.js";
 import { PASTE_AREA_CONFIG, STICKER_DEFAULTS } from "./modules/constants.js";
+import { state } from "./state.js";
 import {
   initElements,
   showHelp,
@@ -61,6 +62,12 @@ async function init() {
     if (e.key === "Escape" && elements.helpModal.classList.contains("show")) {
       hideHelp();
     }
+  });
+
+  // オーバーレイのクリックで選択解除
+  elements.selectionOverlay.addEventListener("click", () => {
+    state.deselectAll();
+    updateInfoButtonVisibility();
   });
 
   // キャンバスのタッチイベント（スマホでフォーカス）

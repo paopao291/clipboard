@@ -1,4 +1,5 @@
 import { STICKER_DEFAULTS } from "./modules/constants.js";
+import { showOverlay, hideOverlay } from "./modules/ui.js";
 
 /**
  * アプリケーションの状態管理
@@ -79,6 +80,8 @@ class AppState {
     // 新しいシールを選択
     if (sticker) {
       sticker.element.classList.add("selected");
+      // オーバーレイを表示
+      showOverlay();
     }
 
     this.selectedSticker = sticker;
@@ -90,6 +93,8 @@ class AppState {
   deselectAll() {
     this.stickers.forEach((s) => s.element.classList.remove("selected"));
     this.selectedSticker = null;
+    // オーバーレイを非表示
+    hideOverlay();
   }
 
   /**

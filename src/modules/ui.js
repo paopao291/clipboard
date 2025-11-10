@@ -12,6 +12,7 @@ export const elements = {
   closeHelp: null,
   trashBtn: null,
   addBtn: null,
+  selectionOverlay: null,
 };
 
 /**
@@ -27,6 +28,7 @@ export function initElements() {
   elements.closeHelp = document.getElementById(DOM_IDS.CLOSE_HELP);
   elements.trashBtn = document.getElementById(DOM_IDS.TRASH_BTN);
   elements.addBtn = document.getElementById(DOM_IDS.ADD_BTN);
+  elements.selectionOverlay = document.getElementById("selectionOverlay");
 }
 
 /**
@@ -207,4 +209,36 @@ export function isOverTrashBtn(x, y) {
     y >= trashRect.top &&
     y <= trashRect.bottom
   );
+}
+
+/**
+ * オーバーレイを表示
+ */
+export function showOverlay() {
+  if (elements.selectionOverlay) {
+    elements.selectionOverlay.classList.add("visible");
+  }
+}
+
+/**
+ * オーバーレイを非表示
+ */
+export function hideOverlay() {
+  if (elements.selectionOverlay) {
+    elements.selectionOverlay.classList.remove("visible", "delete-mode");
+  }
+}
+
+/**
+ * オーバーレイを削除モードに切り替え
+ * @param {boolean} isDeleteMode - 削除モードかどうか
+ */
+export function setOverlayDeleteMode(isDeleteMode) {
+  if (elements.selectionOverlay) {
+    if (isDeleteMode) {
+      elements.selectionOverlay.classList.add("delete-mode");
+    } else {
+      elements.selectionOverlay.classList.remove("delete-mode");
+    }
+  }
 }

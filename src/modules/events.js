@@ -15,6 +15,7 @@ import {
   updateInfoButtonVisibility,
   setTrashDragOver,
   isOverTrashBtn,
+  setOverlayDeleteMode,
 } from "./ui.js";
 import { showConfirmDialog } from "./dialog.js";
 import { absoluteToHybrid, getCenterCoordinates } from "./coordinate-utils.js";
@@ -261,6 +262,7 @@ export function handleMouseMove(e) {
     // ゴミ箱エリアとの重なり判定
     const isOver = isOverTrashBtn(e.clientX, e.clientY);
     setTrashDragOver(isOver);
+    setOverlayDeleteMode(isOver);
   } else if (state.isRotating) {
     const rect = state.selectedSticker.element.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
@@ -302,6 +304,7 @@ export async function handleMouseUp(e) {
         const stickerToDelete = state.selectedSticker;
         state.deselectAll();
         setTrashDragOver(false); // ゴミ箱の状態をリセット
+        setOverlayDeleteMode(false);
         await removeSticker(stickerToDelete.id);
         updateInfoButtonVisibility();
         state.endInteraction();
@@ -355,6 +358,7 @@ export async function handleMouseUp(e) {
     }
     // ドラッグ終了時にゴミ箱の状態をリセット
     setTrashDragOver(false);
+    setOverlayDeleteMode(false);
     state.endInteraction();
   }
 }
@@ -582,6 +586,7 @@ export function handleTouchMove(e) {
 
     const isOver = isOverTrashBtn(touches[0].clientX, touches[0].clientY);
     setTrashDragOver(isOver);
+    setOverlayDeleteMode(isOver);
   }
 
   // ピンチ中の処理
@@ -667,6 +672,7 @@ export async function handleTouchEnd(e) {
           const stickerToDelete = state.selectedSticker;
           state.deselectAll();
           setTrashDragOver(false);
+          setOverlayDeleteMode(false);
           await removeSticker(stickerToDelete.id);
           updateInfoButtonVisibility();
           state.endInteraction();
@@ -723,6 +729,7 @@ export async function handleTouchEnd(e) {
       }
     }
     setTrashDragOver(false);
+    setOverlayDeleteMode(false);
     state.endInteraction();
   }
 }
