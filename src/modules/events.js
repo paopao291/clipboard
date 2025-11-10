@@ -1,5 +1,5 @@
 import { state } from "../state.js";
-import { RESIZE_CONFIG, PASTE_AREA_CONFIG, MESSAGES } from "./constants.js";
+import { RESIZE_CONFIG, PASTE_AREA_CONFIG, MESSAGES, INTERACTION_CONFIG } from "./constants.js";
 import {
   addStickerFromBlob,
   bringToFront,
@@ -17,6 +17,7 @@ import {
   isOverTrashBtn,
 } from "./ui.js";
 import { showConfirmDialog } from "./dialog.js";
+import { absoluteToHybrid, getCenterCoordinates } from "./coordinate-utils.js";
 
 let wheelTimeout = null;
 
@@ -47,51 +48,31 @@ function startPinchGesture(touch1, touch2, targetSticker) {
 export async function handlePaste(e) {
   e.preventDefault();
 
-  console.log("Paste event triggered");
-  console.log("clipboardData:", e.clipboardData);
-  console.log("items:", e.clipboardData?.items);
-
   const items = e.clipboardData.items;
   let hasImage = false;
 
   if (!items) {
-    console.error("clipboardData.items is not available");
     showToast("ペースト機能が利用できません");
     return;
   }
 
   for (let item of items) {
-    console.log("Item type:", item.type);
     if (item.type.indexOf("image") !== -1) {
       hasImage = true;
       const blob = item.getAsFile();
-      console.log("Image blob:", blob);
 
-      // タッチ位置があればその位置に、なければ中央に配置
-      // X: 画面中央からのオフセット（px）、Y: パーセント値
-      const centerX = window.innerWidth / 2;
-      const x = state.lastTouchX ? state.lastTouchX - centerX : 0;
-      const yPercent = state.lastTouchY 
-        ? (state.lastTouchY / window.innerHeight) * 100 
-        : 50;
+      const coords = state.lastTouchX && state.lastTouchY
+        ? absoluteToHybrid(state.lastTouchX, state.lastTouchY)
+        : getCenterCoordinates();
 
-      // Blobを追加
-      await addStickerFromBlob(blob, x, yPercent);
-
+      await addStickerFromBlob(blob, coords.x, coords.yPercent);
       showToast(MESSAGES.IMAGE_ADDED);
-
-      // ペーストエリアのフォーカスを外す
       elements.pasteArea.blur();
-
       break;
     }
   }
 
-  // 画像以外がペーストされた場合
   if (!hasImage) {
-    console.log("No image found in clipboard");
-
-    // 確認ダイアログを表示
     showConfirmDialog("クリップボードに画像がありません", "写真を選択", () => {
       elements.galleryInput.click();
     });
@@ -112,20 +93,22 @@ export async function handleFileSelect(e) {
   for (let file of files) {
     if (file.type.indexOf("image") !== -1) {
       // 画像を少しずつずらして配置
-      // X: 画面中央からのオフセット（px）、Y: パーセント値
-      const offsetXPx = addedCount * 30;
-      const offsetYPx = addedCount * 30;
-      const centerX = window.innerWidth / 2;
-      const offsetYPercent = (offsetYPx / window.innerHeight) * 100;
+      const offsetXPx = addedCount * INTERACTION_CONFIG.STICKER_OFFSET_PX;
+      const offsetYPx = addedCount * INTERACTION_CONFIG.STICKER_OFFSET_PX;
       
-      const x = state.lastTouchX
-        ? state.lastTouchX - centerX + offsetXPx
-        : offsetXPx;
-      const yPercent = state.lastTouchY
-        ? ((state.lastTouchY + offsetYPx) / window.innerHeight) * 100
-        : 50 + offsetYPercent;
+      let coords;
+      if (state.lastTouchX && state.lastTouchY) {
+        coords = absoluteToHybrid(
+          state.lastTouchX + offsetXPx,
+          state.lastTouchY + offsetYPx
+        );
+      } else {
+        const center = getCenterCoordinates();
+        const offsetYPercent = (offsetYPx / window.innerHeight) * 100;
+        coords = { x: offsetXPx, yPercent: center.yPercent + offsetYPercent };
+      }
       
-      await addStickerFromBlob(file, x, yPercent);
+      await addStickerFromBlob(file, coords.x, coords.yPercent);
 
       addedCount++;
     }
@@ -197,7 +180,6 @@ export function handleStickerMouseDown(e, id) {
 
   // 別のステッカーが選択中の場合は選択解除
   if (state.selectedSticker && state.selectedSticker.id !== id) {
-    console.log("Different sticker clicked - deselecting current selection");
     state.deselectAll();
     updateInfoButtonVisibility();
     return;
@@ -263,20 +245,17 @@ export function handleMouseMove(e) {
         Math.pow(e.clientY - state.dragPrepareY, 2),
     );
 
-    // 5px以上動いたらドラッグ開始
-    if (moveDistance > 5) {
+    // 閾値以上動いたらドラッグ開始
+    if (moveDistance > INTERACTION_CONFIG.DRAG_THRESHOLD_PX) {
       state.possibleClick = false;
-      state.startDragging(e.clientX, e.clientY); // ゴミ箱を表示
+      state.startDragging(e.clientX, e.clientY);
     }
   }
 
   if (state.isDragging) {
-    // X: 画面中央からのオフセット（px）、Y: パーセント値に変換
-    const centerX = window.innerWidth / 2;
-    const offsetX = e.clientX - centerX;
-    const yPercent = (e.clientY / window.innerHeight) * 100;
-    const newX = offsetX - state.dragStartX;
-    const newYPercent = yPercent - state.dragStartYPercent;
+    const coords = absoluteToHybrid(e.clientX, e.clientY);
+    const newX = coords.x - state.dragStartX;
+    const newYPercent = coords.yPercent - state.dragStartYPercent;
     updateStickerPosition(state.selectedSticker, newX, newYPercent);
 
     // ゴミ箱エリアとの重なり判定
@@ -302,14 +281,8 @@ export async function handleMouseUp(e) {
   // クリック判定（選択中のステッカーをクリックで解除）
   if (state.possibleClick && state.selectedSticker) {
     const clickDuration = Date.now() - (state.clickStartTime || 0);
-    console.log("Click check:", {
-      clickDuration,
-      isDragging: state.isDragging,
-      isRotating: state.isRotating,
-    });
-    // 200ms以内かつドラッグしていない場合はクリックとみなす
-    if (clickDuration < 200 && !state.isDragging && !state.isRotating) {
-      console.log("Deselecting via click");
+    // 閾値以内かつドラッグしていない場合はクリックとみなす
+    if (clickDuration < INTERACTION_CONFIG.TAP_MAX_DURATION_MS && !state.isDragging && !state.isRotating) {
       state.deselectAll();
       updateInfoButtonVisibility();
       state.possibleClick = false;
@@ -532,7 +505,7 @@ export function handleTouchMove(e) {
       Math.pow(touches[0].clientX - state.canvasTapX, 2) +
         Math.pow(touches[0].clientY - state.canvasTapY, 2),
     );
-    if (moveDistance > 10) {
+    if (moveDistance > INTERACTION_CONFIG.TAP_THRESHOLD_PX) {
       state.canvasTapPending = false;
     }
   }
@@ -550,7 +523,7 @@ export function handleTouchMove(e) {
         Math.pow(touches[0].clientY - state.touchPrepareY, 2),
     );
 
-    if (moveDistance > 10) {
+    if (moveDistance > INTERACTION_CONFIG.TAP_THRESHOLD_PX) {
       state.possibleTap = false;
       state.startDragging(touches[0].clientX, touches[0].clientY);
     }
@@ -560,12 +533,9 @@ export function handleTouchMove(e) {
   if (state.isDragging && touches.length === 1) {
     e.preventDefault();
 
-    // X: 画面中央からのオフセット（px）、Y: パーセント値に変換
-    const centerX = window.innerWidth / 2;
-    const offsetX = touches[0].clientX - centerX;
-    const yPercent = (touches[0].clientY / window.innerHeight) * 100;
-    const newX = offsetX - state.dragStartX;
-    const newYPercent = yPercent - state.dragStartYPercent;
+    const coords = absoluteToHybrid(touches[0].clientX, touches[0].clientY);
+    const newX = coords.x - state.dragStartX;
+    const newYPercent = coords.yPercent - state.dragStartYPercent;
     updateStickerPosition(state.selectedSticker, newX, newYPercent);
 
     const isOver = isOverTrashBtn(touches[0].clientX, touches[0].clientY);
@@ -604,7 +574,7 @@ export async function handleTouchEnd(e) {
   // 空白エリアタップ判定：選択解除
   if (state.canvasTapPending) {
     const tapDuration = Date.now() - (state.canvasTapStartTime || 0);
-    if (tapDuration < 200) {
+    if (tapDuration < INTERACTION_CONFIG.TAP_MAX_DURATION_MS) {
       state.deselectAll();
       updateInfoButtonVisibility();
       elements.pasteArea.focus();
@@ -618,7 +588,7 @@ export async function handleTouchEnd(e) {
   // ステッカータップ判定：選択解除
   if (state.possibleTap && state.selectedSticker) {
     const tapDuration = Date.now() - (state.tapStartTime || 0);
-    if (tapDuration < 200 && !state.isDragging) {
+    if (tapDuration < INTERACTION_CONFIG.TAP_MAX_DURATION_MS && !state.isDragging) {
       state.deselectAll();
       updateInfoButtonVisibility();
       state.possibleTap = false;

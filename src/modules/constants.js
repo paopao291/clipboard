@@ -39,6 +39,14 @@ export const PASTE_AREA_CONFIG = {
   TOUCH_SIZE: 100,
 };
 
+// ドラッグ・タップ判定の設定
+export const INTERACTION_CONFIG = {
+  DRAG_THRESHOLD_PX: 5, // ドラッグ開始の閾値（px）
+  TAP_THRESHOLD_PX: 10, // タップ判定の移動閾値（px）
+  TAP_MAX_DURATION_MS: 200, // タップ判定の最大時間（ms）
+  STICKER_OFFSET_PX: 30, // 複数画像追加時のオフセット（px）
+};
+
 // DOM要素のID
 export const DOM_IDS = {
   CANVAS: "canvas",

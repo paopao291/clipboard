@@ -113,15 +113,15 @@ class AppState {
 
   /**
    * ドラッグ開始
-   * @param {number} x - 画面左上からの絶対X座標
-   * @param {number} y - 画面左上からの絶対Y座標
+   * @param {number} clientX - 画面左上からの絶対X座標
+   * @param {number} clientY - 画面左上からの絶対Y座標
    */
-  startDragging(x, y) {
+  startDragging(clientX, clientY) {
     this.isDragging = true;
-    // X: 画面中央からのオフセット（px）、Y: パーセント値に変換
+    // 絶対座標をハイブリッド座標に変換
     const centerX = window.innerWidth / 2;
-    const offsetX = x - centerX;
-    const yPercent = (y / window.innerHeight) * 100;
+    const offsetX = clientX - centerX;
+    const yPercent = (clientY / window.innerHeight) * 100;
     // ステッカーの中心からマウス位置までのオフセットを保存
     this.dragStartX = offsetX - this.selectedSticker.x;
     this.dragStartYPercent = yPercent - this.selectedSticker.yPercent;
