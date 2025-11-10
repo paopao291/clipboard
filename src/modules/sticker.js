@@ -143,7 +143,7 @@ export function addStickerToDOM(
 }
 
 /**
- * シールを削除（元に戻す機能付き）
+ * シールを削除（戻す機能付き）
  * @param {number} id - シールID
  */
 export async function removeSticker(id) {
@@ -159,7 +159,7 @@ export async function removeSticker(id) {
     // インフォボタンの表示状態を更新
     updateInfoButtonVisibility();
 
-    // 削除データを一時保存（元に戻すために必要なデータ）
+    // 削除データを一時保存（戻すために必要なデータ）
     const stickerData = {
       id: sticker.id,
       url: sticker.url,
@@ -174,21 +174,21 @@ export async function removeSticker(id) {
 
     let deleteTimeout = null;
 
-    // 「元に戻す」トーストを表示
+    // 「戻す」トーストを表示
     showToast("削除しました", {
-      actionText: "元に戻す",
+      actionText: "戻す",
       duration: 5000, // 5秒間表示
       onAction: () => {
         // タイムアウトをキャンセル
         if (deleteTimeout) {
           clearTimeout(deleteTimeout);
         }
-        // 元に戻す処理
+        // 戻す処理
         undoRemoveSticker(stickerData);
       },
     });
 
-    // 5秒後に完全削除（元に戻すが押されなかった場合）
+    // 5秒後に完全削除（戻すが押されなかった場合）
     deleteTimeout = setTimeout(async () => {
       // DOM要素を完全に削除
       sticker.element.remove();
@@ -221,9 +221,6 @@ async function undoRemoveSticker(stickerData) {
 
   // インフォボタンの表示状態を更新
   updateInfoButtonVisibility();
-
-  // 元に戻したことを通知
-  showToast("戻しました");
 }
 
 /**
