@@ -693,7 +693,7 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
         font-size: 13px;
         padding: 10px 16px;
         max-width: 85%;
-        gap: 12px;
+        gap: 20px;
     }
 
     /* アクションボタンがある場合は右paddingを小さく */
