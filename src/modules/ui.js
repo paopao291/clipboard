@@ -79,22 +79,22 @@ export function hideHelp() {
 export function updateInfoButtonVisibility() {
   // ステッカーがない場合：インフォボタン+FAB表示、ゴミ箱非表示
   if (state.getStickerCount() === 0) {
-    elements.infoBtn.style.display = "flex";
-    elements.trashBtn.style.display = "none";
-    elements.addBtn.style.display = "flex";
+    elements.infoBtn.classList.remove("hidden");
+    elements.trashBtn.classList.add("hidden");
+    elements.addBtn.classList.remove("hidden");
     return;
   }
 
   // ステッカーあり + 選択中：インフォボタン+ゴミ箱表示、FAB非表示
   // ステッカーあり + 未選択：FAB表示、インフォボタン+ゴミ箱非表示
   if (state.hasSelection()) {
-    elements.infoBtn.style.display = "flex";
-    elements.trashBtn.style.display = "flex";
-    elements.addBtn.style.display = "none";
+    elements.infoBtn.classList.remove("hidden");
+    elements.trashBtn.classList.remove("hidden");
+    elements.addBtn.classList.add("hidden");
   } else {
-    elements.infoBtn.style.display = "none";
-    elements.trashBtn.style.display = "none";
-    elements.addBtn.style.display = "flex";
+    elements.infoBtn.classList.add("hidden");
+    elements.trashBtn.classList.add("hidden");
+    elements.addBtn.classList.remove("hidden");
   }
 }
 
