@@ -7,6 +7,7 @@ import {
   hideHelp,
   updateInfoButtonVisibility,
   showInitialHelp,
+  restoreHelpSticker,
   elements,
 } from "./modules/ui.js";
 import {
@@ -49,18 +50,17 @@ async function init() {
 
   // ボタンイベント
   elements.infoBtn.addEventListener("click", showHelp);
-  elements.closeHelp.addEventListener("click", hideHelp);
   elements.addBtn.addEventListener("click", () => {
     elements.galleryInput.click();
   });
-  elements.helpModal.addEventListener("click", (e) => {
-    if (e.target === elements.helpModal) hideHelp();
-  });
 
-  // Escキーでヘルプを閉じる
+  // Escキーでヘルプステッカーを閉じる
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && elements.helpModal.classList.contains("show")) {
-      hideHelp();
+    if (e.key === "Escape") {
+      const helpSticker = document.querySelector('.help-sticker');
+      if (helpSticker) {
+        hideHelp();
+      }
     }
   });
 
@@ -91,6 +91,9 @@ async function init() {
 
   // IndexedDBから自動読み込み
   await loadStickersFromDB();
+
+  // ヘルプステッカーを復元
+  restoreHelpSticker();
 
   // インフォボタンの初期表示状態を設定
   updateInfoButtonVisibility();

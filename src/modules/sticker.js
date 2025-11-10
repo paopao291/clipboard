@@ -5,7 +5,7 @@ import {
   updateStickerInDB,
   deleteStickerFromDB,
 } from "./db.js";
-import { elements, showToast, updateInfoButtonVisibility } from "./ui.js";
+import { elements, showToast, updateInfoButtonVisibility, updateHelpStickerState, clearHelpStickerState } from "./ui.js";
 import { attachStickerEventListeners } from "./events.js";
 
 /**
@@ -159,6 +159,11 @@ export async function removeSticker(id) {
     // インフォボタンの表示状態を更新
     updateInfoButtonVisibility();
 
+    // ヘルプステッカーの場合はlocalStorageから削除
+    if (sticker.isHelpSticker) {
+      clearHelpStickerState();
+    }
+
     // 削除データを一時保存（戻すために必要なデータ）
     const stickerData = {
       id: sticker.id,
@@ -170,6 +175,7 @@ export async function removeSticker(id) {
       zIndex: sticker.zIndex,
       element: sticker.element,
       imgWrapper: sticker.imgWrapper,
+      isHelpSticker: sticker.isHelpSticker,
     };
 
     let deleteTimeout = null;
@@ -193,8 +199,10 @@ export async function removeSticker(id) {
       // DOM要素を完全に削除
       sticker.element.remove();
 
-      // IndexedDBから削除
-      await deleteStickerFromDB(id);
+      // ヘルプステッカーでない場合のみIndexedDBから削除
+      if (!sticker.isHelpSticker) {
+        await deleteStickerFromDB(id);
+      }
     }, 5300); // トーストのフェードアウト時間を考慮して少し長めに設定
   }
 }
@@ -219,6 +227,11 @@ async function undoRemoveSticker(stickerData) {
   // 最前面に移動
   await bringToFront(stickerData);
 
+  // ヘルプステッカーの場合は状態を復元
+  if (stickerData.isHelpSticker) {
+    updateHelpStickerState(stickerData);
+  }
+
   // インフォボタンの表示状態を更新
   updateInfoButtonVisibility();
 }
@@ -232,8 +245,10 @@ export async function bringToFront(sticker) {
   sticker.element.style.zIndex = newZIndex;
   sticker.zIndex = newZIndex;
 
-  // IndexedDBに保存
-  await updateStickerInDB(sticker.id, { zIndex: newZIndex });
+  // ヘルプステッカーはDBに保存しない
+  if (!sticker.isHelpSticker) {
+    await updateStickerInDB(sticker.id, { zIndex: newZIndex });
+  }
 }
 
 /**
@@ -256,7 +271,17 @@ export function updateStickerPosition(sticker, x, yPercent) {
  */
 export function updateStickerRotation(sticker, rotation) {
   sticker.rotation = rotation;
-  sticker.imgWrapper.style.transform = `rotate(${rotation}deg)`;
+  // ヘルプステッカーなどimgWrapperがない場合はスキップ
+  if (sticker.imgWrapper) {
+    // ヘルプステッカーの場合はscaleも考慮
+    if (sticker.isHelpSticker) {
+      const baseWidth = 420;
+      const scale = sticker.width / baseWidth;
+      sticker.imgWrapper.style.transform = `rotate(${rotation}deg) scale(${scale})`;
+    } else {
+      sticker.imgWrapper.style.transform = `rotate(${rotation}deg)`;
+    }
+  }
 }
 
 /**
@@ -265,6 +290,29 @@ export function updateStickerRotation(sticker, rotation) {
  * @param {number} width - 幅（px）
  */
 export function updateStickerSize(sticker, width) {
+  // ヘルプステッカーの場合はscaleを使用
+  if (sticker.isHelpSticker) {
+    const baseWidth = 420; // 初期サイズ
+    const minWidth = 200;
+    const maxWidthByScreen = (window.innerWidth * 90) / 100; // 90vw
+    
+    const constrainedWidth = Math.max(
+      minWidth,
+      Math.min(maxWidthByScreen, width),
+    );
+    
+    const scale = constrainedWidth / baseWidth;
+    sticker.width = constrainedWidth;
+    sticker.element.style.width = `${baseWidth}px`; // 固定幅
+    
+    // scaleとrotationの両方を適用
+    if (sticker.imgWrapper) {
+      sticker.imgWrapper.style.transform = `rotate(${sticker.rotation}deg) scale(${scale})`;
+    }
+    return;
+  }
+  
+  // 通常のステッカー
   // 画面幅に応じた最大サイズを計算
   const maxWidthByScreen = (window.innerWidth * STICKER_DEFAULTS.MAX_WIDTH_PERCENT) / 100;
   const effectiveMaxWidth = Math.min(STICKER_DEFAULTS.MAX_WIDTH, maxWidthByScreen);
@@ -283,6 +331,12 @@ export function updateStickerSize(sticker, width) {
  * @param {Object} sticker - シールオブジェクト
  */
 export async function saveStickerChanges(sticker) {
+  // ヘルプステッカーはlocalStorageに保存
+  if (sticker.isHelpSticker) {
+    updateHelpStickerState(sticker);
+    return;
+  }
+  
   await updateStickerInDB(sticker.id, {
     x: sticker.x,
     yPercent: sticker.yPercent,

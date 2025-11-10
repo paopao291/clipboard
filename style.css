@@ -149,38 +149,52 @@ a, button {
         height: 30px;
     }
 
-    /* ヘルプモーダル */
-    .help-content {
-        padding: 36px 28px;
-        border-radius: 24px;
-        width: 90%;
+    /* ヘルプステッカーのスマホ対応 */
+    .sticker.help-sticker {
+        max-width: 90vw;
     }
 
-    .help-content h2 {
-        font-size: 26px;
-        margin-bottom: 28px;
+    .help-sticker-content {
+        padding: 24px;
+    }
+
+    .help-sticker-content h2 {
+        font-size: 24px;
+        margin-bottom: 24px;
         letter-spacing: -0.5px;
     }
 
     .help-section h3 {
-        font-size: 17px;
-        margin-top: 20px;
+        font-size: 16px;
+        margin-top: 18px;
     }
 
     .help-section p {
-        font-size: 15px;
+        font-size: 13px;
     }
 
-    .close-help {
-        top: 16px;
-        right: 16px;
-        width: 34px;
-        height: 34px;
+    /* トーストのスマホ対応 */
+    .toast {
+        top: 20px;
+        font-size: 13px;
+        padding: 10px 16px;
+        max-width: 85%;
+        gap: 20px;
     }
 
-    .close-help svg {
-        width: 16px;
-        height: 16px;
+    /* アクションボタンがある場合は右paddingを小さく */
+    .toast:has(.toast-action) {
+        padding-right: 10px;
+    }
+
+    .toast-message {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+
+    .toast-action {
+        font-size: 12px;
+        padding: 5px 14px;
     }
 }
 
@@ -190,8 +204,8 @@ a, button {
     bottom: 24px;
     left: 50%;
     transform: translateX(-50%) scale(1);
-    width: 44px;
-    height: 44px;
+    width: 56px;
+    height: 56px;
     background-color: transparent;
     border: 1px solid white;
     border-radius: 50%;
@@ -340,86 +354,45 @@ a, button {
     cursor: default;
 }
 
-/* ヘルプモーダル：完璧な初回体験 */
-.help-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
+/* ヘルプステッカー：操作方法をステッカーとして表示 */
+.sticker.help-sticker {
+    /* 通常のステッカーより大きく（初期値） */
+    max-width: 88vw;
+    /* 外側のコンテナはクリック不可にして、中のwrapperでクリックを受ける */
+    pointer-events: none;
+}
+
+/* ヘルプステッカーのラッパー（回転とスケール用） */
+.help-sticker-wrapper {
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.25);
-    backdrop-filter: blur(12px);
-    z-index: 15000;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: all 0.4s var(--ease-out-expo);
+    transition: transform 0.2s var(--ease-out-expo);
+    /* ここがクリック可能な領域（scaleが適用される層） */
+    pointer-events: auto;
+    cursor: grab;
 }
 
-.help-modal.show {
-    display: flex;
-    opacity: 1;
+.help-sticker-wrapper:active {
+    cursor: grabbing;
 }
 
-.help-content {
+/* ヘルプステッカーの中身 */
+.help-sticker-content {
     background: white;
-    border-radius: 28px;
     padding: 24px;
-    max-width: 420px;
-    width: 88%;
+    width: 100%;
     max-height: 75vh;
     overflow-y: auto;
     position: relative;
-    box-shadow:
-        0 32px 96px rgba(0, 0, 0, 0.15),
-        0 8px 32px rgba(0, 0, 0, 0.08);
-    transform: scale(0.92) translateY(20px);
-    transition: all 0.5s var(--ease-out-expo);
+    filter: url(#outline-filter) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1));
 }
 
-.help-modal.show .help-content {
-    transform: scale(1) translateY(0);
-}
-
-.close-help {
-    position: absolute;
-    top: 24px;
-    right: 24px;
-    width: 36px;
-    height: 36px;
-    background: rgba(0, 0, 0, 0.06);
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: rgba(0, 0, 0, 0.5);
-    transition: all 0.2s var(--ease-out-expo);
-}
-
-.close-help svg {
-    width: 18px;
-    height: 18px;
-}
-
-.close-help:hover {
-    background: rgba(0, 0, 0, 0.1);
-    color: rgba(0, 0, 0, 0.8);
-    transform: rotate(90deg);
-}
-
-.close-help:active {
-    transform: scale(0.9) rotate(90deg);
-}
-
-.help-content h2 {
-    font-size: 32px;
+.help-sticker-content h2 {
+    font-size: 28px;
     font-weight: 700;
-    line-height: 1;
+    line-height: 1.2;
     color: var(--text-primary);
-    margin-bottom: 36px;
+    margin-bottom: 28px;
     letter-spacing: -0.8px;
 }
 
@@ -428,11 +401,11 @@ a, button {
 }
 
 .help-section h3 {
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: 6px;
-    margin-top: 24px;
+    margin-bottom: 8px;
+    margin-top: 20px;
     letter-spacing: -0.3px;
 }
 
@@ -441,24 +414,50 @@ a, button {
 }
 
 .help-section p {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 400;
     color: var(--text-secondary);
     line-height: 1.6;
     letter-spacing: -0.1px;
+    margin-bottom: 0;
+}
+
+.help-section p small {
+    font-size: 12px;
+    opacity: 0.7;
+    font-style: italic;
 }
 
 .help-section kbd {
     display: inline-block;
-    padding: 4px 9px;
+    padding: 4px 8px;
     background: rgba(0, 0, 0, 0.06);
     border: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: 6px;
     font-family: "SF Mono", "Menlo", monospace;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--text-primary);
     letter-spacing: 0.2px;
+}
+
+/* スクロールバーのスタイル */
+.help-sticker-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.help-sticker-content::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 10px;
+}
+
+.help-sticker-content::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+}
+
+.help-sticker-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.25);
 }
 
 /* ステッカー */
@@ -523,10 +522,26 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
 }
 
 /* ゴミ箱に吸い込まれるアニメーション */
+.sticker.being-deleted {
+    transition: 
+        left 0.25s var(--ease-out-expo),
+        top 0.25s var(--ease-out-expo),
+        transform 0.25s var(--ease-out-expo),
+        opacity 0.25s var(--ease-out-expo);
+}
+
+/* 通常のステッカー（画像） */
 .sticker.being-deleted img {
+    transform: scale(0.5);
+    opacity: 0.4;
     transition: all 0.25s var(--ease-out-expo);
+}
+
+/* ヘルプステッカー */
+.sticker.help-sticker.being-deleted .help-sticker-content {
     transform: scale(0.4);
     opacity: 0.4;
+    transition: all 0.25s var(--ease-out-expo);
 }
 
 /* 画像ラッパー：回転用コンテナ */
@@ -715,30 +730,4 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
 .toast-action:active {
     transform: scale(0.95);
     background: rgba(255, 255, 255, 0.25);
-}
-
-/* スマホでの調整 */
-@media (max-width: 768px) {
-    .toast {
-        top: 20px;
-        font-size: 13px;
-        padding: 10px 16px;
-        max-width: 85%;
-        gap: 20px;
-    }
-
-    /* アクションボタンがある場合は右paddingを小さく */
-    .toast:has(.toast-action) {
-        padding-right: 10px;
-    }
-
-    .toast-message {
-        flex: 0 0 auto;
-        white-space: nowrap;
-    }
-
-    .toast-action {
-        font-size: 12px;
-        padding: 5px 14px;
-    }
 }

@@ -1,5 +1,6 @@
 import { DOM_IDS, TOAST_CONFIG, HELP_CONFIG } from "./constants.js";
 import { state } from "../state.js";
+import { attachStickerEventListeners } from "./events.js";
 
 // DOM要素の取得
 export const elements = {
@@ -8,12 +9,15 @@ export const elements = {
   cameraInput: null,
   pasteArea: null,
   infoBtn: null,
-  helpModal: null,
-  closeHelp: null,
   trashBtn: null,
   addBtn: null,
   selectionOverlay: null,
+  helpStickerTemplate: null,
 };
+
+// ゴミ箱の中心座標（キャッシュ）
+let trashCenterX = null;
+let trashCenterY = null;
 
 /**
  * DOM要素を初期化
@@ -24,11 +28,29 @@ export function initElements() {
   elements.cameraInput = document.getElementById(DOM_IDS.CAMERA_INPUT);
   elements.pasteArea = document.getElementById(DOM_IDS.PASTE_AREA);
   elements.infoBtn = document.getElementById(DOM_IDS.INFO_BTN);
-  elements.helpModal = document.getElementById(DOM_IDS.HELP_MODAL);
-  elements.closeHelp = document.getElementById(DOM_IDS.CLOSE_HELP);
   elements.trashBtn = document.getElementById(DOM_IDS.TRASH_BTN);
   elements.addBtn = document.getElementById(DOM_IDS.ADD_BTN);
   elements.selectionOverlay = document.getElementById("selectionOverlay");
+  elements.helpStickerTemplate = document.getElementById("helpStickerTemplate");
+  
+  // ゴミ箱の中心座標を計算（初期化時に一度だけ）
+  updateTrashCenter();
+}
+
+/**
+ * ゴミ箱の中心座標を更新
+ */
+function updateTrashCenter() {
+  if (elements.trashBtn) {
+    const rect = elements.trashBtn.getBoundingClientRect();
+    trashCenterX = rect.left + rect.width / 2;
+    trashCenterY = rect.top + rect.height / 2;
+  }
+}
+
+// ウィンドウリサイズ時にゴミ箱の座標を再計算
+if (typeof window !== 'undefined') {
+  window.addEventListener('resize', updateTrashCenter);
 }
 
 /**
@@ -109,17 +131,207 @@ function hideToast(toast) {
 }
 
 /**
- * ヘルプモーダルを表示
+ * ヘルプステッカーを表示
  */
 export function showHelp() {
-  elements.helpModal.classList.add("show");
+  // まず選択中のステッカーがあれば選択解除
+  if (state.selectedSticker) {
+    state.deselectAll();
+  }
+
+  // 既にヘルプステッカーが存在する場合は削除
+  const existingHelpSticker = document.querySelector('.help-sticker');
+  if (existingHelpSticker) {
+    const stickerId = parseInt(existingHelpSticker.dataset.id);
+    state.removeSticker(stickerId);
+    existingHelpSticker.remove();
+  }
+
+  // テンプレートをクローン
+  const template = elements.helpStickerTemplate.content.cloneNode(true);
+  const helpContent = template.querySelector('.help-sticker-content');
+
+  // ステッカーコンテナを作成
+  const stickerId = Date.now();
+  const stickerDiv = document.createElement("div");
+  stickerDiv.className = "sticker help-sticker appearing selected";
+  stickerDiv.dataset.id = stickerId;
+
+  // コンテンツラッパーを作成（回転とスケール用）
+  const contentWrapper = document.createElement("div");
+  contentWrapper.className = "help-sticker-wrapper";
+  contentWrapper.style.transform = `rotate(3deg) scale(1)`; // 初期角度とスケール
+  contentWrapper.appendChild(helpContent);
+  stickerDiv.appendChild(contentWrapper);
+
+  // スタイルを設定（画面中央に配置）
+  stickerDiv.style.left = `50%`;
+  stickerDiv.style.top = `50%`;
+  stickerDiv.style.width = `420px`; // 固定幅
+  stickerDiv.style.transform = `translate(-50%, -50%)`;
+
+  // z-indexを設定
+  const zIndex = state.incrementZIndex();
+  stickerDiv.style.zIndex = zIndex;
+
+  // アニメーション終了後にappearingクラスを削除
+  setTimeout(() => {
+    stickerDiv.classList.remove("appearing");
+  }, 400);
+
+  // イベントリスナーを登録（通常のステッカーと同じイベントハンドラーを使用）
+  attachStickerEventListeners(stickerDiv, stickerId);
+
+  // DOMに追加
+  elements.canvas.appendChild(stickerDiv);
+
+  // 状態に追加（imgWrapperの代わりにcontentWrapperを使用）
+  state.addSticker({
+    id: stickerId,
+    url: null, // 画像ではないのでnull
+    x: 0, // 中央からのオフセット
+    yPercent: 50,
+    width: 420,
+    rotation: -5, // 初期角度
+    zIndex: zIndex,
+    element: stickerDiv,
+    imgWrapper: contentWrapper, // 回転用のラッパー
+    isHelpSticker: true, // ヘルプステッカーであることを示すフラグ
+  });
+
+  // 選択状態にする（オーバーレイ表示）
+  state.selectSticker(state.getStickerById(stickerId));
+  showOverlay();
+  updateInfoButtonVisibility();
+
+  // ヘルプステッカーの状態を保存
+  saveHelpStickerState({
+    exists: true,
+    x: 0,
+    yPercent: 50,
+    width: 420,
+    rotation: -5,
+    zIndex: zIndex,
+  });
 }
 
 /**
- * ヘルプモーダルを非表示
+ * ヘルプステッカーの状態をlocalStorageに保存
+ * @param {Object} helpState - ヘルプステッカーの状態
+ */
+function saveHelpStickerState(helpState) {
+  localStorage.setItem('helpStickerState', JSON.stringify(helpState));
+}
+
+/**
+ * ヘルプステッカーの状態をlocalStorageから取得
+ * @returns {Object|null}
+ */
+function getHelpStickerState() {
+  const savedData = localStorage.getItem('helpStickerState');
+  return savedData ? JSON.parse(savedData) : null;
+}
+
+/**
+ * ヘルプステッカーの状態を削除
+ */
+export function clearHelpStickerState() {
+  localStorage.removeItem('helpStickerState');
+}
+
+/**
+ * 保存されたヘルプステッカーを復元
+ */
+export function restoreHelpSticker() {
+  const savedState = getHelpStickerState();
+  if (!savedState || !savedState.exists) {
+    return;
+  }
+
+  // テンプレートをクローン
+  const template = elements.helpStickerTemplate.content.cloneNode(true);
+  const helpContent = template.querySelector('.help-sticker-content');
+
+  // ステッカーコンテナを作成
+  const stickerId = Date.now();
+  const stickerDiv = document.createElement("div");
+  stickerDiv.className = "sticker help-sticker";
+  stickerDiv.dataset.id = stickerId;
+
+  // コンテンツラッパーを作成（回転とスケール用）
+  const contentWrapper = document.createElement("div");
+  contentWrapper.className = "help-sticker-wrapper";
+  const baseWidth = 420;
+  const scale = savedState.width / baseWidth;
+  contentWrapper.style.transform = `rotate(${savedState.rotation}deg) scale(${scale})`;
+  contentWrapper.appendChild(helpContent);
+  stickerDiv.appendChild(contentWrapper);
+
+  // スタイルを設定（保存された位置に配置）
+  stickerDiv.style.left = `calc(50% + ${savedState.x}px)`;
+  stickerDiv.style.top = `${savedState.yPercent}%`;
+  stickerDiv.style.transform = `translate(-50%, -50%)`;
+  stickerDiv.style.width = `${baseWidth}px`; // 固定幅
+
+  // z-indexを設定
+  stickerDiv.style.zIndex = savedState.zIndex;
+  state.updateZIndexCounter(savedState.zIndex);
+
+  // イベントリスナーを登録
+  attachStickerEventListeners(stickerDiv, stickerId);
+
+  // DOMに追加
+  elements.canvas.appendChild(stickerDiv);
+
+  // 状態に追加
+  state.addSticker({
+    id: stickerId,
+    url: null,
+    x: savedState.x,
+    yPercent: savedState.yPercent,
+    width: savedState.width,
+    rotation: savedState.rotation,
+    zIndex: savedState.zIndex,
+    element: stickerDiv,
+    imgWrapper: contentWrapper,
+    isHelpSticker: true,
+  });
+}
+
+/**
+ * ヘルプモーダルを非表示（互換性のため残す）
  */
 export function hideHelp() {
-  elements.helpModal.classList.remove("show");
+  // 新しい実装ではヘルプステッカーを削除することで非表示にする
+  const helpSticker = document.querySelector('.help-sticker');
+  if (helpSticker) {
+    const stickerId = parseInt(helpSticker.dataset.id);
+    state.removeSticker(stickerId);
+    helpSticker.remove();
+    hideOverlay();
+    updateInfoButtonVisibility();
+    // ヘルプステッカーの状態を削除
+    clearHelpStickerState();
+  }
+}
+
+/**
+ * ヘルプステッカーの状態を更新
+ * @param {Object} sticker - ヘルプステッカーオブジェクト
+ */
+export function updateHelpStickerState(sticker) {
+  if (!sticker || !sticker.isHelpSticker) {
+    return;
+  }
+
+  saveHelpStickerState({
+    exists: true,
+    x: sticker.x,
+    yPercent: sticker.yPercent,
+    width: sticker.width,
+    rotation: sticker.rotation,
+    zIndex: sticker.zIndex,
+  });
 }
 
 /**
@@ -186,9 +398,79 @@ export function setTrashDragOver(isOver) {
   // ドラッグ中のステッカーに吸い込みアニメーション
   if (state.selectedSticker && state.selectedSticker.element) {
     if (isOver) {
+      // キャッシュされたゴミ箱の中心座標を使用
+      if (trashCenterX !== null && trashCenterY !== null) {
+        const stickerRect = state.selectedSticker.element.getBoundingClientRect();
+        const originX = ((trashCenterX - stickerRect.left) / stickerRect.width) * 100;
+        const originY = ((trashCenterY - stickerRect.top) / stickerRect.height) * 100;
+        
+        // 通常のステッカー
+        const img = state.selectedSticker.element.querySelector('img');
+        if (img) {
+          img.style.transformOrigin = `${originX}% ${originY}%`;
+        }
+        
+        // ヘルプステッカー
+        const helpContent = state.selectedSticker.element.querySelector('.help-sticker-content');
+        if (helpContent) {
+          helpContent.style.transformOrigin = `${originX}% ${originY}%`;
+        }
+        
+        // ステッカーをゴミ箱の中心に移動
+        // 元の位置を保存（x, yPercentベース）
+        state.selectedSticker.element.dataset.originalX = state.selectedSticker.x;
+        state.selectedSticker.element.dataset.originalYPercent = state.selectedSticker.yPercent;
+        
+        // ゴミ箱の中心に移動（絶対座標）
+        state.selectedSticker.element.style.left = `${trashCenterX}px`;
+        state.selectedSticker.element.style.top = `${trashCenterY}px`;
+      }
+      
       state.selectedSticker.element.classList.add("being-deleted");
     } else {
+      // 元の位置に戻す
+      if (state.selectedSticker.element.dataset.originalX !== undefined) {
+        const x = parseFloat(state.selectedSticker.element.dataset.originalX);
+        const yPercent = parseFloat(state.selectedSticker.element.dataset.originalYPercent);
+        
+        state.selectedSticker.element.style.left = `calc(50% + ${x}px)`;
+        state.selectedSticker.element.style.top = `${yPercent}%`;
+        
+        delete state.selectedSticker.element.dataset.originalX;
+        delete state.selectedSticker.element.dataset.originalYPercent;
+      }
+      
       state.selectedSticker.element.classList.remove("being-deleted");
+    }
+  }
+}
+
+/**
+ * ドラッグ終了時にtransform-originと位置をリセット
+ */
+export function resetStickerTransformOrigin() {
+  if (state.selectedSticker && state.selectedSticker.element) {
+    // transform-originをリセット
+    const img = state.selectedSticker.element.querySelector('img');
+    if (img) {
+      img.style.transformOrigin = '';
+    }
+    
+    const helpContent = state.selectedSticker.element.querySelector('.help-sticker-content');
+    if (helpContent) {
+      helpContent.style.transformOrigin = '';
+    }
+    
+    // 保存された元の位置があれば戻す
+    if (state.selectedSticker.element.dataset.originalX !== undefined) {
+      const x = parseFloat(state.selectedSticker.element.dataset.originalX);
+      const yPercent = parseFloat(state.selectedSticker.element.dataset.originalYPercent);
+      
+      state.selectedSticker.element.style.left = `calc(50% + ${x}px)`;
+      state.selectedSticker.element.style.top = `${yPercent}%`;
+      
+      delete state.selectedSticker.element.dataset.originalX;
+      delete state.selectedSticker.element.dataset.originalYPercent;
     }
   }
 }

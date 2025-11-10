@@ -133,26 +133,9 @@
                     </svg>
                 </button>
 
-                <!-- ヘルプモーダル -->
-                <div id="helpModal" class="help-modal">
-                    <div class="help-content">
-                        <button id="closeHelp" class="close-help">
-                            <svg
-                                width="18"
-                                height="18"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    d="M18 6L6 18M6 6L18 18"
-                                    stroke="currentColor"
-                                    stroke-width="2.5"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                />
-                            </svg>
-                        </button>
+                <!-- ヘルプステッカー用テンプレート（非表示） -->
+                <template id="helpStickerTemplate">
+                    <div class="help-sticker-content">
                         <h2>操作方法</h2>
 
                         <div class="help-section desktop-hint">
@@ -173,7 +156,8 @@
                             <p><kbd>Shift</kbd> を押しながらドラッグ</p>
 
                             <h3>削除</h3>
-                            <p>画像をドラッグして画面下のゴミ箱へ</p>
+                            <p>画像をドラッグして画面下のゴミ箱へ<br>
+                            <small>（このステッカーも削除できます！）</small></p>
                         </div>
 
                         <div class="help-section mobile-hint">
@@ -188,10 +172,11 @@
                             <p>2本指でピンチ</p>
 
                             <h3>削除</h3>
-                            <p>画像をドラッグして画面下のゴミ箱へ</p>
+                            <p>画像をドラッグして画面下のゴミ箱へ<br>
+                            <small>（このステッカーも削除できます！）</small></p>
                         </div>
                     </div>
-                </div>
+                </template>
             </div>
         </div>
 

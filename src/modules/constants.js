@@ -55,8 +55,6 @@ export const DOM_IDS = {
   CAMERA_INPUT: "cameraInput",
   PASTE_AREA: "pasteArea",
   INFO_BTN: "infoBtn",
-  HELP_MODAL: "helpModal",
-  CLOSE_HELP: "closeHelp",
   TRASH_BTN: "trashBtn",
   ADD_BTN: "addBtn",
 };

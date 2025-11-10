@@ -16,6 +16,7 @@ import {
   setTrashDragOver,
   isOverTrashBtn,
   setOverlayDeleteMode,
+  resetStickerTransformOrigin,
 } from "./ui.js";
 import { showConfirmDialog } from "./dialog.js";
 import { absoluteToHybrid, getCenterCoordinates } from "./coordinate-utils.js";
@@ -254,15 +255,18 @@ export function handleMouseMove(e) {
   }
 
   if (state.isDragging) {
-    const coords = absoluteToHybrid(e.clientX, e.clientY);
-    const newX = coords.x - state.dragStartX;
-    const newYPercent = coords.yPercent - state.dragStartYPercent;
-    updateStickerPosition(state.selectedSticker, newX, newYPercent);
-
     // ゴミ箱エリアとの重なり判定
     const isOver = isOverTrashBtn(e.clientX, e.clientY);
     setTrashDragOver(isOver);
     setOverlayDeleteMode(isOver);
+    
+    // ゴミ箱に重なっていない時だけ位置を更新
+    if (!isOver) {
+      const coords = absoluteToHybrid(e.clientX, e.clientY);
+      const newX = coords.x - state.dragStartX;
+      const newYPercent = coords.yPercent - state.dragStartYPercent;
+      updateStickerPosition(state.selectedSticker, newX, newYPercent);
+    }
   } else if (state.isRotating) {
     const rect = state.selectedSticker.element.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
@@ -359,6 +363,7 @@ export async function handleMouseUp(e) {
     // ドラッグ終了時にゴミ箱の状態をリセット
     setTrashDragOver(false);
     setOverlayDeleteMode(false);
+    resetStickerTransformOrigin();
     state.endInteraction();
   }
 }
@@ -579,14 +584,17 @@ export function handleTouchMove(e) {
   if (state.isDragging && touches.length === 1) {
     e.preventDefault();
 
-    const coords = absoluteToHybrid(touches[0].clientX, touches[0].clientY);
-    const newX = coords.x - state.dragStartX;
-    const newYPercent = coords.yPercent - state.dragStartYPercent;
-    updateStickerPosition(state.selectedSticker, newX, newYPercent);
-
     const isOver = isOverTrashBtn(touches[0].clientX, touches[0].clientY);
     setTrashDragOver(isOver);
     setOverlayDeleteMode(isOver);
+    
+    // ゴミ箱に重なっていない時だけ位置を更新
+    if (!isOver) {
+      const coords = absoluteToHybrid(touches[0].clientX, touches[0].clientY);
+      const newX = coords.x - state.dragStartX;
+      const newYPercent = coords.yPercent - state.dragStartYPercent;
+      updateStickerPosition(state.selectedSticker, newX, newYPercent);
+    }
   }
 
   // ピンチ中の処理
@@ -730,6 +738,7 @@ export async function handleTouchEnd(e) {
     }
     setTrashDragOver(false);
     setOverlayDeleteMode(false);
+    resetStickerTransformOrigin();
     state.endInteraction();
   }
 }
