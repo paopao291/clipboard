@@ -23,6 +23,7 @@ import {
   handlePasteAreaInput,
   handlePasteAreaKeydown,
   handleCanvasWheel,
+  setAddButtonTriggered,
 } from "./modules/events.js";
 import { addStickerToDOM } from "./modules/sticker.js";
 
@@ -51,6 +52,7 @@ async function init() {
   // ボタンイベント
   elements.infoBtn.addEventListener("click", showHelp);
   elements.addBtn.addEventListener("click", () => {
+    setAddButtonTriggered();
     elements.galleryInput.click();
   });
 

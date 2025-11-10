@@ -22,6 +22,14 @@ import { showConfirmDialog } from "./dialog.js";
 import { absoluteToHybrid, getCenterCoordinates } from "./coordinate-utils.js";
 
 let wheelTimeout = null;
+let addButtonTriggered = false; // 右下の追加ボタンから呼ばれたかのフラグ
+
+/**
+ * 右下の追加ボタンが押されたことを記録
+ */
+export function setAddButtonTriggered() {
+  addButtonTriggered = true;
+}
 
 /**
  * 2本指ピンチ操作を開始（共通処理）
@@ -99,7 +107,13 @@ export async function handleFileSelect(e) {
       const offsetYPx = addedCount * INTERACTION_CONFIG.STICKER_OFFSET_PX;
       
       let coords;
-      if (state.lastTouchX && state.lastTouchY) {
+      // 右下の追加ボタンから：常に画面中央
+      // ペースト失敗のダイアログから：最後のタッチ位置（あれば）、なければ中央
+      if (addButtonTriggered) {
+        const center = getCenterCoordinates();
+        const offsetYPercent = (offsetYPx / window.innerHeight) * 100;
+        coords = { x: offsetXPx, yPercent: center.yPercent + offsetYPercent };
+      } else if (state.lastTouchX && state.lastTouchY) {
         coords = absoluteToHybrid(
           state.lastTouchX + offsetXPx,
           state.lastTouchY + offsetYPx
@@ -120,6 +134,9 @@ export async function handleFileSelect(e) {
     showToast(MESSAGES.IMAGES_ADDED(addedCount));
   }
 
+  // フラグをリセット
+  addButtonTriggered = false;
+  
   // 入力をリセット
   e.target.value = "";
 }
