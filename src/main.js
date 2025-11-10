@@ -103,31 +103,52 @@ async function init() {
 async function loadStickersFromDB() {
   const stickers = await loadAllStickersFromDB();
   
-  // 座標系の変換が必要かチェック
-  const needsCoordinateConversion = !localStorage.getItem('coordinates_migrated_to_center');
-  const centerX = window.innerWidth / 2;
-  const centerY = window.innerHeight / 2;
+  // パーセント値への変換が必要かチェック
+  const needsPercentConversion = !localStorage.getItem('coordinates_migrated_to_percent');
+  const screenWidth = window.innerWidth;
+  const screenHeight = window.innerHeight;
 
   for (const stickerData of stickers) {
     const url = URL.createObjectURL(stickerData.blob);
     
-    // 旧座標系（左上基準）から新座標系（中央基準）に変換
-    let x = stickerData.x;
-    let y = stickerData.y;
+    let xPercent, yPercent;
     
-    if (needsCoordinateConversion) {
-      // 左上基準の座標を中央基準のオフセットに変換
-      x = stickerData.x - centerX;
-      y = stickerData.y - centerY;
+    // すでにパーセント値で保存されているかチェック
+    if (stickerData.xPercent !== undefined && stickerData.yPercent !== undefined) {
+      // パーセント値で保存されている場合
+      xPercent = stickerData.xPercent;
+      yPercent = stickerData.yPercent;
+    } else if (needsPercentConversion) {
+      // 旧形式（ピクセル値）からパーセント値に変換
+      // x, y が存在する場合（中央基準オフセット or 左上基準の座標）
+      if (stickerData.x !== undefined && stickerData.y !== undefined) {
+        // 中央基準のオフセット値からパーセント値に変換
+        // 注: 以前の中央基準実装では calc(50% + x px) だったので
+        // x, y はオフセット値として扱う
+        const centerXPx = screenWidth / 2;
+        const centerYPx = screenHeight / 2;
+        const absoluteX = centerXPx + stickerData.x;
+        const absoluteY = centerYPx + stickerData.y;
+        xPercent = (absoluteX / screenWidth) * 100;
+        yPercent = (absoluteY / screenHeight) * 100;
+      } else {
+        // デフォルト（中央）
+        xPercent = 50;
+        yPercent = 50;
+      }
       
       // 変換後の座標をDBに保存
-      await updateStickerInDB(stickerData.id, { x, y });
+      await updateStickerInDB(stickerData.id, { xPercent, yPercent });
+    } else {
+      // 変換済みだがパーセント値がない場合（エラー時のフォールバック）
+      xPercent = 50;
+      yPercent = 50;
     }
     
     addStickerToDOM(
       url,
-      x,
-      y,
+      xPercent,
+      yPercent,
       stickerData.width,
       stickerData.rotation,
       stickerData.id,
@@ -136,8 +157,8 @@ async function loadStickersFromDB() {
   }
   
   // 変換完了フラグを保存
-  if (needsCoordinateConversion && stickers.length > 0) {
-    localStorage.setItem('coordinates_migrated_to_center', 'true');
+  if (needsPercentConversion && stickers.length > 0) {
+    localStorage.setItem('coordinates_migrated_to_percent', 'true');
   }
 }
 

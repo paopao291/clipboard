@@ -11,8 +11,8 @@ import { attachStickerEventListeners } from "./events.js";
 /**
  * Blobからシールを追加
  * @param {Blob} blob - 画像Blob
- * @param {number} x - 画面中央からのX座標オフセット
- * @param {number} y - 画面中央からのY座標オフセット
+ * @param {number} xPercent - 画面幅に対するX座標の割合（0-100）
+ * @param {number} yPercent - 画面高さに対するY座標の割合（0-100）
  * @param {number} width - 幅
  * @param {number} rotation - 回転角度
  * @param {number|null} id - シールID
@@ -20,8 +20,8 @@ import { attachStickerEventListeners } from "./events.js";
  */
 export async function addStickerFromBlob(
   blob,
-  x,
-  y,
+  xPercent,
+  yPercent,
   width = STICKER_DEFAULTS.WIDTH,
   rotation = STICKER_DEFAULTS.ROTATION,
   id = null,
@@ -33,20 +33,20 @@ export async function addStickerFromBlob(
   // DOMに追加
   const actualZIndex = addStickerToDOM(
     url,
-    x,
-    y,
+    xPercent,
+    yPercent,
     width,
     rotation,
     stickerId,
     zIndex,
   );
 
-  // IndexedDBに保存
+  // IndexedDBに保存（パーセント値で保存）
   await saveStickerToDB({
     id: stickerId,
     blob: blob,
-    x: x,
-    y: y,
+    xPercent: xPercent,
+    yPercent: yPercent,
     width: width,
     rotation: rotation,
     zIndex: actualZIndex,
@@ -57,8 +57,8 @@ export async function addStickerFromBlob(
 /**
  * シール（画像）をDOMに追加
  * @param {string} url - 画像URL
- * @param {number} x - 画面中央からのX座標オフセット
- * @param {number} y - 画面中央からのY座標オフセット
+ * @param {number} xPercent - 画面幅に対するX座標の割合（0-100）
+ * @param {number} yPercent - 画面高さに対するY座標の割合（0-100）
  * @param {number} width - 幅
  * @param {number} rotation - 回転角度
  * @param {number|null} id - シールID
@@ -67,8 +67,8 @@ export async function addStickerFromBlob(
  */
 export function addStickerToDOM(
   url,
-  x,
-  y,
+  xPercent,
+  yPercent,
   width = STICKER_DEFAULTS.WIDTH,
   rotation = STICKER_DEFAULTS.ROTATION,
   id = null,
@@ -98,9 +98,9 @@ export function addStickerToDOM(
 
   stickerDiv.appendChild(imgWrapper);
 
-  // スタイルを設定（画面中央からのオフセット）
-  stickerDiv.style.left = `calc(50% + ${x}px)`;
-  stickerDiv.style.top = `calc(50% + ${y}px)`;
+  // スタイルを設定（パーセント値で配置）
+  stickerDiv.style.left = `${xPercent}%`;
+  stickerDiv.style.top = `${yPercent}%`;
   stickerDiv.style.width = `${width}px`;
   stickerDiv.style.transform = `translate(-50%, -50%)`;
 
@@ -127,8 +127,8 @@ export function addStickerToDOM(
   state.addSticker({
     id: stickerId,
     url: url,
-    x: x,
-    y: y,
+    xPercent: xPercent,
+    yPercent: yPercent,
     width: width,
     rotation: rotation,
     zIndex: actualZIndex,
@@ -163,8 +163,8 @@ export async function removeSticker(id) {
     const stickerData = {
       id: sticker.id,
       url: sticker.url,
-      x: sticker.x,
-      y: sticker.y,
+      xPercent: sticker.xPercent,
+      yPercent: sticker.yPercent,
       width: sticker.width,
       rotation: sticker.rotation,
       zIndex: sticker.zIndex,
@@ -233,14 +233,14 @@ export async function bringToFront(sticker) {
 /**
  * シールの位置を更新
  * @param {Object} sticker - シールオブジェクト
- * @param {number} x - 画面中央からのX座標オフセット
- * @param {number} y - 画面中央からのY座標オフセット
+ * @param {number} xPercent - 画面幅に対するX座標の割合（0-100）
+ * @param {number} yPercent - 画面高さに対するY座標の割合（0-100）
  */
-export function updateStickerPosition(sticker, x, y) {
-  sticker.x = x;
-  sticker.y = y;
-  sticker.element.style.left = `calc(50% + ${x}px)`;
-  sticker.element.style.top = `calc(50% + ${y}px)`;
+export function updateStickerPosition(sticker, xPercent, yPercent) {
+  sticker.xPercent = xPercent;
+  sticker.yPercent = yPercent;
+  sticker.element.style.left = `${xPercent}%`;
+  sticker.element.style.top = `${yPercent}%`;
 }
 
 /**
@@ -274,8 +274,8 @@ export function updateStickerSize(sticker, width) {
  */
 export async function saveStickerChanges(sticker) {
   await updateStickerInDB(sticker.id, {
-    x: sticker.x,
-    y: sticker.y,
+    xPercent: sticker.xPercent,
+    yPercent: sticker.yPercent,
     width: sticker.width,
     rotation: sticker.rotation,
   });

@@ -118,14 +118,12 @@ class AppState {
    */
   startDragging(x, y) {
     this.isDragging = true;
-    // 画面中央からのオフセットに変換
-    const centerX = window.innerWidth / 2;
-    const centerY = window.innerHeight / 2;
-    const offsetX = x - centerX;
-    const offsetY = y - centerY;
-    // ステッカーの中心からマウス位置までのオフセットを保存
-    this.dragStartX = offsetX - this.selectedSticker.x;
-    this.dragStartY = offsetY - this.selectedSticker.y;
+    // マウス位置をパーセント値に変換
+    const xPercent = (x / window.innerWidth) * 100;
+    const yPercent = (y / window.innerHeight) * 100;
+    // ステッカーの中心からマウス位置までのオフセット（パーセント値）を保存
+    this.dragStartXPercent = xPercent - this.selectedSticker.xPercent;
+    this.dragStartYPercent = yPercent - this.selectedSticker.yPercent;
   }
 
   /**
