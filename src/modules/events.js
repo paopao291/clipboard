@@ -127,20 +127,71 @@ export function handleCanvasMouseDown(e) {
  */
 export function handleCanvasTouchStart(e) {
   if (e.target === elements.canvas || e.target === elements.pasteArea) {
-    const touch = e.touches[0];
-    state.setLastTouchPosition(touch.clientX, touch.clientY);
+    const touches = e.touches;
+    
+    // 1本指の場合
+    if (touches.length === 1) {
+      const touch = touches[0];
+      state.setLastTouchPosition(touch.clientX, touch.clientY);
 
-    // ペーストエリアをタッチ位置に移動
-    elements.pasteArea.style.left = `${touch.clientX - 50}px`;
-    elements.pasteArea.style.top = `${touch.clientY - 50}px`;
-    elements.pasteArea.style.width = `${PASTE_AREA_CONFIG.TOUCH_SIZE}px`;
-    elements.pasteArea.style.height = `${PASTE_AREA_CONFIG.TOUCH_SIZE}px`;
+      // ペーストエリアをタッチ位置に移動
+      elements.pasteArea.style.left = `${touch.clientX - 50}px`;
+      elements.pasteArea.style.top = `${touch.clientY - 50}px`;
+      elements.pasteArea.style.width = `${PASTE_AREA_CONFIG.TOUCH_SIZE}px`;
+      elements.pasteArea.style.height = `${PASTE_AREA_CONFIG.TOUCH_SIZE}px`;
 
-    state.deselectAll();
-    updateInfoButtonVisibility();
+      // 選択中のステッカーがない場合のみペーストエリアにフォーカス
+      if (!state.selectedSticker) {
+        elements.pasteArea.focus();
+      } else {
+        // 選択中のステッカーがある場合は、タップとして確定するまで選択解除しない
+        // （2本目の指を追加してピンチできるようにするため）
+        state.canvasTapPending = true;
+        state.canvasTapStartTime = Date.now();
+        state.canvasTapX = touch.clientX;
+        state.canvasTapY = touch.clientY;
+      }
+    }
+  }
+}
 
-    // ペーストエリアにフォーカス
-    elements.pasteArea.focus();
+/**
+ * ドキュメント全体のタッチスタート（2本指ピンチ検出用）
+ * @param {TouchEvent} e
+ */
+export function handleDocumentTouchStart(e) {
+  const touches = e.touches;
+  
+  // 選択中のステッカーがあり、2本指でタッチした場合
+  if (state.selectedSticker && touches.length === 2) {
+    // ステッカー要素上でのタッチはhandleStickerTouchStartで処理されるのでスキップ
+    const stickerElements = document.querySelectorAll('.sticker');
+    for (let stickerEl of stickerElements) {
+      if (stickerEl.contains(e.target)) {
+        return;
+      }
+    }
+
+    // 空白エリアでの2本指ピンチ：選択中のステッカーを操作
+    e.preventDefault();
+    
+    const touch1 = touches[0];
+    const touch2 = touches[1];
+
+    // 初期距離を保存（拡大縮小用）
+    const dx = touch2.clientX - touch1.clientX;
+    const dy = touch2.clientY - touch1.clientY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    state.startPinch(distance, state.selectedSticker.width);
+
+    // 初期角度を保存（回転用）
+    const angle =
+      Math.atan2(
+        touch2.clientY - touch1.clientY,
+        touch2.clientX - touch1.clientX,
+      ) *
+      (180 / Math.PI);
+    state.startRotating(angle);
   }
 }
 
@@ -302,20 +353,21 @@ export async function handleMouseUp(e) {
  * @param {number} id - シールID
  */
 export async function handleWheel(e, id) {
+  // Ctrl/Cmdキーが押されている場合はページズーム（デフォルト動作）を優先
+  if (e.ctrlKey || e.metaKey) {
+    return;
+  }
+
   e.preventDefault();
   e.stopPropagation();
 
   const sticker = state.getStickerById(id);
   if (!sticker) return;
 
-  // 別のステッカーが選択中の場合は選択解除
-  if (state.selectedSticker && state.selectedSticker.id !== id) {
-    state.deselectAll();
-    updateInfoButtonVisibility();
-    return;
-  }
+  // 選択中のステッカーがある場合は、カーソル位置に関わらず選択中のステッカーを拡大縮小
+  const targetSticker = state.selectedSticker || sticker;
 
-  // 未選択の場合は自動選択
+  // 未選択の場合は自動選択（カーソル位置のステッカーを選択）
   if (!state.selectedSticker) {
     state.selectSticker(sticker);
     updateInfoButtonVisibility();
@@ -324,13 +376,40 @@ export async function handleWheel(e, id) {
 
   const delta =
     e.deltaY > 0 ? -RESIZE_CONFIG.WHEEL_DELTA : RESIZE_CONFIG.WHEEL_DELTA;
-  const newWidth = sticker.width + delta;
-  updateStickerSize(sticker, newWidth);
+  const newWidth = targetSticker.width + delta;
+  updateStickerSize(targetSticker, newWidth);
 
   // デバウンスしてDBに保存
   if (wheelTimeout) clearTimeout(wheelTimeout);
   wheelTimeout = setTimeout(async () => {
-    await saveStickerChanges(sticker);
+    await saveStickerChanges(targetSticker);
+  }, RESIZE_CONFIG.DEBOUNCE_MS);
+}
+
+/**
+ * キャンバス全体のホイールイベント（選択中のステッカーを拡大縮小）
+ * @param {WheelEvent} e
+ */
+export async function handleCanvasWheel(e) {
+  // Ctrl/Cmdキーが押されている場合はページズーム（デフォルト動作）を優先
+  if (e.ctrlKey || e.metaKey) {
+    return;
+  }
+
+  // 選択中のステッカーがある場合のみ処理
+  if (!state.selectedSticker) return;
+
+  e.preventDefault();
+
+  const delta =
+    e.deltaY > 0 ? -RESIZE_CONFIG.WHEEL_DELTA : RESIZE_CONFIG.WHEEL_DELTA;
+  const newWidth = state.selectedSticker.width + delta;
+  updateStickerSize(state.selectedSticker, newWidth);
+
+  // デバウンスしてDBに保存
+  if (wheelTimeout) clearTimeout(wheelTimeout);
+  wheelTimeout = setTimeout(async () => {
+    await saveStickerChanges(state.selectedSticker);
   }, RESIZE_CONFIG.DEBOUNCE_MS);
 }
 
@@ -346,10 +425,40 @@ export function handleStickerTouchStart(e, id) {
   const sticker = state.getStickerById(id);
   if (!sticker) return;
 
-  // 別のステッカーが選択中の場合は選択解除
+  // 選択中のステッカーがある場合は、カーソル位置に関わらず選択中のステッカーを操作対象にする
+  const targetSticker = state.selectedSticker || sticker;
+
+  // 別のステッカーが選択中の場合でも、選択中のステッカーを操作
   if (state.selectedSticker && state.selectedSticker.id !== id) {
-    state.deselectAll();
-    updateInfoButtonVisibility();
+    // 選択中のステッカーを操作対象とする（選択解除しない）
+    const touches = e.touches;
+    
+    if (touches.length === 1) {
+      // 1本指：タップ判定用のフラグを立てる
+      state.possibleTap = true;
+      state.tapStartTime = Date.now();
+      state.touchPrepareX = touches[0].clientX;
+      state.touchPrepareY = touches[0].clientY;
+    } else if (touches.length === 2) {
+      // 2本指：拡大縮小と回転
+      const touch1 = touches[0];
+      const touch2 = touches[1];
+
+      // 初期距離を保存（拡大縮小用）
+      const dx = touch2.clientX - touch1.clientX;
+      const dy = touch2.clientY - touch1.clientY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      state.startPinch(distance, targetSticker.width);
+
+      // 初期角度を保存（回転用）
+      const angle =
+        Math.atan2(
+          touch2.clientY - touch1.clientY,
+          touch2.clientX - touch1.clientX,
+        ) *
+        (180 / Math.PI);
+      state.startRotating(angle);
+    }
     return;
   }
 
@@ -373,7 +482,7 @@ export function handleStickerTouchStart(e, id) {
       const dx = touch2.clientX - touch1.clientX;
       const dy = touch2.clientY - touch1.clientY;
       const distance = Math.sqrt(dx * dx + dy * dy);
-      state.startPinch(distance, sticker.width);
+      state.startPinch(distance, targetSticker.width);
 
       // 初期角度を保存（回転用）
       const angle =
@@ -408,7 +517,7 @@ export function handleStickerTouchStart(e, id) {
     const dx = touch2.clientX - touch1.clientX;
     const dy = touch2.clientY - touch1.clientY;
     const distance = Math.sqrt(dx * dx + dy * dy);
-    state.startPinch(distance, sticker.width);
+    state.startPinch(distance, targetSticker.width);
 
     // 初期角度を保存（回転用）
     const angle =
@@ -426,9 +535,55 @@ export function handleStickerTouchStart(e, id) {
  * @param {TouchEvent} e
  */
 export function handleTouchMove(e) {
-  if (!state.selectedSticker) return;
-
   const touches = e.touches;
+
+  // 選択中のステッカーがあり、2本指になった場合、まだピンチ操作が開始されていなければ開始
+  if (
+    state.selectedSticker &&
+    touches.length === 2 &&
+    !state.isRotating &&
+    !state.isDragging
+  ) {
+    // キャンバスタップ待機をキャンセル
+    state.canvasTapPending = false;
+    
+    // ステッカータップ待機もキャンセル
+    state.possibleTap = false;
+    state.touchPrepareX = undefined;
+    state.touchPrepareY = undefined;
+
+    const touch1 = touches[0];
+    const touch2 = touches[1];
+
+    // 初期距離を保存（拡大縮小用）
+    const dx = touch2.clientX - touch1.clientX;
+    const dy = touch2.clientY - touch1.clientY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    state.startPinch(distance, state.selectedSticker.width);
+
+    // 初期角度を保存（回転用）
+    const angle =
+      Math.atan2(
+        touch2.clientY - touch1.clientY,
+        touch2.clientX - touch1.clientX,
+      ) *
+      (180 / Math.PI);
+    state.startRotating(angle);
+    return;
+  }
+
+  // キャンバスタップ待機中に移動した場合、タップをキャンセル
+  if (state.canvasTapPending && touches.length === 1) {
+    const moveDistance = Math.sqrt(
+      Math.pow(touches[0].clientX - state.canvasTapX, 2) +
+        Math.pow(touches[0].clientY - state.canvasTapY, 2),
+    );
+    if (moveDistance > 10) {
+      state.canvasTapPending = false;
+    }
+  }
+
+  if (!state.selectedSticker) return;
 
   // ドラッグ準備状態からドラッグ開始
   if (
@@ -489,6 +644,23 @@ export function handleTouchMove(e) {
  * @param {TouchEvent} e
  */
 export async function handleTouchEnd(e) {
+  // キャンバスタップ判定（空白エリアをタップで選択解除）
+  if (state.canvasTapPending) {
+    const tapDuration = Date.now() - (state.canvasTapStartTime || 0);
+    // 200ms以内の場合はタップとみなして選択解除
+    if (tapDuration < 200) {
+      state.deselectAll();
+      updateInfoButtonVisibility();
+      
+      // ペーストエリアにフォーカス
+      elements.pasteArea.focus();
+    }
+    state.canvasTapPending = false;
+    state.canvasTapX = undefined;
+    state.canvasTapY = undefined;
+    return;
+  }
+
   // タップ判定（選択中のステッカーをタップで解除）
   if (state.possibleTap && state.selectedSticker) {
     const tapDuration = Date.now() - (state.tapStartTime || 0);

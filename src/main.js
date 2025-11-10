@@ -20,6 +20,8 @@ import {
   handlePasteAreaBlur,
   handlePasteAreaInput,
   handlePasteAreaKeydown,
+  handleCanvasWheel,
+  handleDocumentTouchStart,
 } from "./modules/events.js";
 import { addStickerToDOM } from "./modules/sticker.js";
 
@@ -68,11 +70,19 @@ async function init() {
   // キャンバスのクリックイベント（選択解除）
   elements.canvas.addEventListener("mousedown", handleCanvasMouseDown);
 
+  // キャンバスのホイールイベント（選択中のステッカーを拡大縮小）
+  elements.canvas.addEventListener("wheel", handleCanvasWheel, {
+    passive: false,
+  });
+
   // マウスイベント
   document.addEventListener("mousemove", handleMouseMove);
   document.addEventListener("mouseup", handleMouseUp);
 
   // タッチイベント
+  document.addEventListener("touchstart", handleDocumentTouchStart, {
+    passive: false,
+  });
   document.addEventListener("touchmove", handleTouchMove, { passive: false });
   document.addEventListener("touchend", handleTouchEnd);
 
