@@ -10,6 +10,61 @@ import { attachStickerEventListeners } from "./events.js";
 import { isPhysicsActive, addPhysicsBody, removePhysicsBody } from "./physics.js";
 
 /**
+ * ステッカーの基準幅を取得
+ * @param {Object} sticker - シールオブジェクト
+ * @returns {number} 基準幅
+ */
+function getBaseWidth(sticker) {
+  return sticker.isHelpSticker 
+    ? HELP_STICKER_CONFIG.BASE_WIDTH 
+    : STICKER_DEFAULTS.BASE_WIDTH;
+}
+
+/**
+ * ステッカーのscaleを計算
+ * @param {Object} sticker - シールオブジェクト
+ * @returns {number} scale値
+ */
+function calculateScale(sticker) {
+  return sticker.width / getBaseWidth(sticker);
+}
+
+/**
+ * ステッカーのサイズ制限設定を取得
+ * @param {Object} sticker - シールオブジェクト
+ * @returns {Object} {minWidth, maxWidth}
+ */
+function getSizeConstraints(sticker) {
+  if (sticker.isHelpSticker) {
+    const isMobile = window.innerWidth <= 768;
+    const maxWidth = isMobile 
+      ? Math.min(HELP_STICKER_CONFIG.MAX_WIDTH_DESKTOP, window.innerWidth * HELP_STICKER_CONFIG.MAX_WIDTH_MOBILE_PERCENT / 100)
+      : HELP_STICKER_CONFIG.MAX_WIDTH_DESKTOP;
+    return {
+      minWidth: HELP_STICKER_CONFIG.MIN_WIDTH,
+      maxWidth: maxWidth,
+    };
+  } else {
+    const maxWidthByScreen = (window.innerWidth * STICKER_DEFAULTS.MAX_WIDTH_PERCENT) / 100;
+    return {
+      minWidth: STICKER_DEFAULTS.MIN_WIDTH,
+      maxWidth: Math.min(STICKER_DEFAULTS.MAX_WIDTH, maxWidthByScreen),
+    };
+  }
+}
+
+/**
+ * ステッカーのtransformを適用（回転とスケール）
+ * @param {Object} sticker - シールオブジェクト
+ */
+function applyStickerTransform(sticker) {
+  if (sticker.imgWrapper) {
+    const scale = calculateScale(sticker);
+    sticker.imgWrapper.style.transform = `rotate(${sticker.rotation}deg) scale(${scale})`;
+  }
+}
+
+/**
  * Blobからシールを追加
  * @param {Blob} blob - 画像Blob
  * @param {number} x - 画面中央からのX座標オフセット（px）
@@ -101,8 +156,6 @@ export function addStickerToDOM(
   // 画像ラッパー（回転とスケール用）
   const imgWrapper = document.createElement("div");
   imgWrapper.className = "sticker-img-wrapper";
-  const scale = width / STICKER_DEFAULTS.BASE_WIDTH;
-  imgWrapper.style.transform = `rotate(${rotation}deg) scale(${scale})`;
   imgWrapper.appendChild(img);
 
   stickerDiv.appendChild(imgWrapper);
@@ -145,6 +198,9 @@ export function addStickerToDOM(
     imgWrapper: imgWrapper,
   };
   state.addSticker(stickerObject);
+  
+  // transformを適用（scaleと回転）
+  applyStickerTransform(stickerObject);
 
   // 物理モードが有効な場合は物理ボディを追加
   if (isPhysicsActive()) {
@@ -294,15 +350,7 @@ export function updateStickerPosition(sticker, x, yPercent) {
  */
 export function updateStickerRotation(sticker, rotation) {
   sticker.rotation = rotation;
-  // imgWrapperがない場合はスキップ
-  if (sticker.imgWrapper) {
-    // scaleも考慮（ヘルプステッカーと通常シール共通）
-    const baseWidth = sticker.isHelpSticker 
-      ? HELP_STICKER_CONFIG.BASE_WIDTH 
-      : STICKER_DEFAULTS.BASE_WIDTH;
-    const scale = sticker.width / baseWidth;
-    sticker.imgWrapper.style.transform = `rotate(${rotation}deg) scale(${scale})`;
-  }
+  applyStickerTransform(sticker);
 }
 
 /**
@@ -311,41 +359,18 @@ export function updateStickerRotation(sticker, rotation) {
  * @param {number} width - 幅（px）
  */
 export function updateStickerSize(sticker, width) {
-  // ヘルプステッカーと通常ステッカーで基準幅を切り替え
-  const baseWidth = sticker.isHelpSticker 
-    ? HELP_STICKER_CONFIG.BASE_WIDTH 
-    : STICKER_DEFAULTS.BASE_WIDTH;
+  // サイズ制限を取得
+  const { minWidth, maxWidth } = getSizeConstraints(sticker);
   
-  // 最大・最小サイズも切り替え
-  const minWidth = sticker.isHelpSticker 
-    ? HELP_STICKER_CONFIG.MIN_WIDTH 
-    : STICKER_DEFAULTS.MIN_WIDTH;
-  
-  let maxWidth;
-  if (sticker.isHelpSticker) {
-    const isMobile = window.innerWidth <= 768;
-    maxWidth = isMobile 
-      ? Math.min(HELP_STICKER_CONFIG.MAX_WIDTH_DESKTOP, window.innerWidth * HELP_STICKER_CONFIG.MAX_WIDTH_MOBILE_PERCENT / 100)
-      : HELP_STICKER_CONFIG.MAX_WIDTH_DESKTOP;
-  } else {
-    const maxWidthByScreen = (window.innerWidth * STICKER_DEFAULTS.MAX_WIDTH_PERCENT) / 100;
-    maxWidth = Math.min(STICKER_DEFAULTS.MAX_WIDTH, maxWidthByScreen);
-  }
-  
-  // サイズを制限
-  const constrainedWidth = Math.max(minWidth, Math.min(maxWidth, width));
-  
-  // 論理的なサイズを保存
-  sticker.width = constrainedWidth;
+  // サイズを制限して保存
+  sticker.width = Math.max(minWidth, Math.min(maxWidth, width));
   
   // 固定幅を設定
+  const baseWidth = getBaseWidth(sticker);
   sticker.element.style.width = `${baseWidth}px`;
   
-  // scaleを計算して適用
-  const scale = constrainedWidth / baseWidth;
-  if (sticker.imgWrapper) {
-    sticker.imgWrapper.style.transform = `rotate(${sticker.rotation}deg) scale(${scale})`;
-  }
+  // transformを適用（scaleと回転）
+  applyStickerTransform(sticker);
 }
 
 /**

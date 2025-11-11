@@ -1,38 +1,44 @@
 /**
  * 物理エンジンモジュール
  * Matter.jsを使用してフレークシールのような物理演出を実装
+ * 
+ * 【機能】
+ * - PC: 固定の下向き重力のみ
+ * - スマホ: ジャイロセンサーによる重力方向制御
+ * - 全てのシールに物理演算を適用（transform: scale方式で最適化）
  */
 
 import { state } from "../state.js";
 import { PHYSICS_CONFIG, STICKER_DEFAULTS, HELP_STICKER_CONFIG } from "./constants.js";
 
 // Matter.jsモジュール
-const { Engine, Render, World, Bodies, Body, Events, Runner, Mouse, MouseConstraint } = Matter;
+const { Engine, World, Bodies, Body, Events, Runner } = Matter;
 
+// ========================================
 // 物理エンジンの状態
+// ========================================
 let engine = null;
 let world = null;
 let runner = null;
 let walls = [];
-let mouseConstraint = null;
 let isPhysicsEnabled = false;
 
 // シールIDと物理ボディのマッピング
 const stickerBodyMap = new Map();
 
-// マウス位置（PC用風の効果）
-let mousePosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-
-// 重力制御用（スマホのジャイロ用）
+// ========================================
+// ジャイロセンサー関連（スマホ用）
+// ========================================
 let targetGravity = { 
   x: PHYSICS_CONFIG.GYRO.INITIAL_X, 
   y: PHYSICS_CONFIG.GYRO.INITIAL_Y 
 };
-let isGyroActive = false; // ジャイロが実際に動作しているか
-
-// ジャイロ対応
-let isGyroAvailable = false;
+let isGyroActive = false;
 let gyroPermissionGranted = false;
+
+// ========================================
+// 初期化・制御
+// ========================================
 
 /**
  * 物理エンジンを初期化
@@ -58,8 +64,6 @@ export function initPhysicsEngine() {
   
   // 更新ループを設定
   Events.on(engine, "afterUpdate", syncDOMWithPhysics);
-  
-  console.log("物理エンジン初期化完了");
 }
 
 /**
@@ -99,7 +103,6 @@ export function updateWalls() {
 export function enablePhysics() {
   if (isPhysicsEnabled) return;
   
-  console.log("物理モード開始");
   isPhysicsEnabled = true;
   
   // PC用: 重力を下向きに設定
@@ -108,8 +111,6 @@ export function enablePhysics() {
   engine.gravity.y = Y;
   engine.gravity.scale = SCALE;
   isGyroActive = false; // 初期はジャイロ無効（PC想定）
-  
-  console.log("PC重力設定:", engine.gravity, "isGyroActive:", isGyroActive);
   
   // 全てのシールに物理ボディを追加（ヘルプステッカーも含む）
   state.stickers.forEach(sticker => {
@@ -132,7 +133,6 @@ export function enablePhysics() {
 export function disablePhysics() {
   if (!isPhysicsEnabled) return;
   
-  console.log("物理モード停止");
   isPhysicsEnabled = false;
   isGyroActive = false;
   
@@ -155,6 +155,10 @@ export function disablePhysics() {
   removeEventListeners();
 }
 
+// ========================================
+// 物理ボディ管理
+// ========================================
+
 /**
  * シールに物理ボディを追加
  * @param {Object} sticker - シールオブジェクト
@@ -165,13 +169,16 @@ export function addPhysicsBody(sticker) {
   // 既に物理ボディがある場合はスキップ
   if (stickerBodyMap.has(sticker.id)) return;
   
-  // シールの現在位置と実際のサイズを取得（画面座標）
-  const rect = sticker.element.getBoundingClientRect();
-  const x = rect.left + rect.width / 2;
-  const y = rect.top + rect.height / 2;
+  // シールの中心位置を取得
+  const containerRect = sticker.element.getBoundingClientRect();
+  const x = containerRect.left + containerRect.width / 2;
+  const y = containerRect.top + containerRect.height / 2;
   
-  // 実際の表示サイズから半径を計算（ヘルプステッカーのscaleも考慮）
-  const radius = rect.width / 2;
+  // 実際の表示サイズを取得（imgWrapper/help-sticker-wrapperのサイズ）
+  const wrapperRect = sticker.imgWrapper 
+    ? sticker.imgWrapper.getBoundingClientRect() 
+    : containerRect;
+  const radius = wrapperRect.width / 2;
   
   // 円形の物理ボディを作成
   const { RESTITUTION, FRICTION, FRICTION_AIR, DENSITY } = PHYSICS_CONFIG.BODY;
@@ -201,6 +208,10 @@ export function removePhysicsBody(stickerId) {
     stickerBodyMap.delete(stickerId);
   }
 }
+
+// ========================================
+// 同期・更新処理
+// ========================================
 
 /**
  * 物理ボディとDOMを同期
@@ -280,26 +291,37 @@ function updateStickerProperties(sticker, x, yPercent, rotation) {
  * @param {number} rotation - 回転角度
  */
 function updateStickerDOM(sticker, x, yPercent, rotation) {
+  // 位置を更新
   sticker.element.style.left = `calc(50% + ${x}px)`;
   sticker.element.style.top = `${yPercent}%`;
   
+  // 回転とスケールを更新
   if (sticker.imgWrapper) {
-    // scaleも含める（ヘルプステッカーと通常シール共通）
-    const baseWidth = sticker.isHelpSticker 
-      ? HELP_STICKER_CONFIG.BASE_WIDTH
-      : STICKER_DEFAULTS.BASE_WIDTH;
+    const baseWidth = getBaseWidth(sticker);
     const scale = sticker.width / baseWidth;
     sticker.imgWrapper.style.transform = `rotate(${rotation}deg) scale(${scale})`;
   }
 }
 
 /**
+ * ステッカーの基準幅を取得
+ * @param {Object} sticker - シールオブジェクト
+ * @returns {number} 基準幅
+ */
+function getBaseWidth(sticker) {
+  return sticker.isHelpSticker 
+    ? HELP_STICKER_CONFIG.BASE_WIDTH 
+    : STICKER_DEFAULTS.BASE_WIDTH;
+}
+
+// ========================================
+// イベントハンドラ
+// ========================================
+
+/**
  * イベントリスナーをセットアップ
  */
 function setupEventListeners() {
-  // マウス移動イベント（風の効果を無効化したのでコメントアウト）
-  // window.addEventListener("mousemove", handleMouseMove);
-  
   // ジャイロイベント
   window.addEventListener("deviceorientation", handleDeviceOrientation);
   
@@ -311,61 +333,8 @@ function setupEventListeners() {
  * イベントリスナーを解除
  */
 function removeEventListeners() {
-  // window.removeEventListener("mousemove", handleMouseMove);
   window.removeEventListener("deviceorientation", handleDeviceOrientation);
   window.removeEventListener("resize", updateWalls);
-}
-
-/**
- * マウス移動ハンドラ（PC用風の効果）
- */
-function handleMouseMove(e) {
-  mousePosition.x = e.clientX;
-  mousePosition.y = e.clientY;
-}
-
-/**
- * マウスカーソルによる風の効果を適用（PC用）
- */
-function applyWindForce() {
-  const { RADIUS: windRadius, STRENGTH: windStrength } = PHYSICS_CONFIG.WIND;
-  
-  stickerBodyMap.forEach((body) => {
-    const force = calculateWindForce(body, mousePosition, windRadius, windStrength);
-    
-    if (force) {
-      Body.applyForce(body, body.position, force);
-    }
-  });
-}
-
-/**
- * 風の力を計算
- * @param {Object} body - 物理ボディ
- * @param {Object} mousePos - マウス位置 {x, y}
- * @param {number} radius - 風の影響範囲
- * @param {number} strength - 風の強さ
- * @returns {Object|null} 力のベクトル {x, y} または null
- */
-function calculateWindForce(body, mousePos, radius, strength) {
-  const dx = body.position.x - mousePos.x;
-  const dy = body.position.y - mousePos.y;
-  const distance = Math.sqrt(dx * dx + dy * dy);
-  
-  // 風の影響範囲外または原点の場合
-  if (distance >= radius || distance === 0) {
-    return null;
-  }
-  
-  // 距離が近いほど強い力（逆二乗則的な減衰）
-  const forceMagnitude = strength * (radius - distance) / distance;
-  const normalizedDx = dx / distance;
-  const normalizedDy = dy / distance;
-  
-  return {
-    x: normalizedDx * forceMagnitude * body.mass,
-    y: normalizedDy * forceMagnitude * body.mass,
-  };
 }
 
 /**
@@ -381,13 +350,11 @@ function handleDeviceOrientation(e) {
   
   // betaとgammaがnullの場合はPCなので処理しない
   if (beta === null || gamma === null) {
-    console.log("ジャイロ値なし（PC）");
     return;
   }
   
   // ジャイロが実際に値を返している場合、ジャイロモードを有効化
   if (!isGyroActive) {
-    console.log("ジャイロモード有効化");
     isGyroActive = true;
   }
   
@@ -433,8 +400,7 @@ function updateGravity() {
 async function checkGyroAvailability() {
   // DeviceOrientationEventが存在するかチェック
   if (!window.DeviceOrientationEvent) {
-    isGyroAvailable = false;
-    console.log("ジャイロセンサー非対応");
+    gyroPermissionGranted = false;
     return;
   }
   
@@ -443,20 +409,19 @@ async function checkGyroAvailability() {
     try {
       const permission = await DeviceOrientationEvent.requestPermission();
       gyroPermissionGranted = permission === "granted";
-      isGyroAvailable = gyroPermissionGranted;
-      console.log("ジャイロ許可:", gyroPermissionGranted);
     } catch (error) {
-      console.log("ジャイロ許可エラー:", error);
-      isGyroAvailable = false;
+      gyroPermissionGranted = false;
     }
   } else {
-    // PCでは存在してもジャイロは動作しないので、許可フラグはtrueだが
-    // 実際の動作はisGyroActiveで判定
-    isGyroAvailable = true;
+    // Android/PCでは自動的に許可
+    // ただし、PCではbeta/gammaがnullなので実際には動作しない
     gyroPermissionGranted = true;
-    console.log("DeviceOrientationEvent利用可能（PC/Android）");
   }
 }
+
+// ========================================
+// 外部公開API
+// ========================================
 
 /**
  * 物理モードが有効かどうか

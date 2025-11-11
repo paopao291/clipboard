@@ -200,12 +200,10 @@ function togglePhysicsMode() {
     disablePhysics();
     state.disablePhysicsMode();
     elements.physicsBtn.classList.remove("active");
-    console.log("物理モード: OFF");
   } else {
     enablePhysics();
     state.enablePhysicsMode();
     elements.physicsBtn.classList.add("active");
-    console.log("物理モード: ON");
   }
 }
 
