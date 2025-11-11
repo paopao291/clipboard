@@ -130,7 +130,7 @@ export function enablePhysics() {
 /**
  * 物理モードを無効化
  */
-export function disablePhysics() {
+export async function disablePhysics() {
   if (!isPhysicsEnabled) return;
   
   isPhysicsEnabled = false;
@@ -140,11 +140,20 @@ export function disablePhysics() {
   Runner.stop(runner);
   
   // 全ての物理ボディを削除し、現在の位置でDOMを固定
+  const stickersToSave = [];
   stickerBodyMap.forEach((body, stickerId) => {
     const sticker = state.getStickerById(stickerId);
     if (sticker) {
       // 現在の物理位置をDOMに反映して固定
       syncStickerFromPhysics(sticker, body);
+      
+      // ヘルプステッカーでない場合は保存対象に追加
+      if (!sticker.isHelpSticker) {
+        stickersToSave.push(sticker);
+      } else {
+        // ヘルプステッカーの場合はlocalStorageに保存
+        updateHelpStickerState(sticker);
+      }
     }
     World.remove(world, body);
   });
@@ -153,6 +162,34 @@ export function disablePhysics() {
   
   // イベントリスナーを解除
   removeEventListeners();
+  
+  // 全ステッカーの位置をDBに保存
+  await saveAllStickerPositions(stickersToSave);
+}
+
+/**
+ * ヘルプステッカーの状態を更新
+ * @param {Object} sticker - ヘルプステッカーオブジェクト
+ */
+function updateHelpStickerState(sticker) {
+  import("./ui.js").then(({ updateHelpStickerState }) => {
+    updateHelpStickerState(sticker);
+  });
+}
+
+/**
+ * 全ステッカーの位置をDBに保存
+ * @param {Array} stickers - 保存するステッカーの配列
+ * @returns {Promise<void>}
+ */
+async function saveAllStickerPositions(stickers) {
+  const { saveStickerChanges } = await import("./sticker.js");
+  
+  const promises = stickers.map((sticker) => {
+    return saveStickerChanges(sticker);
+  });
+  
+  await Promise.all(promises);
 }
 
 // ========================================

@@ -25,6 +25,7 @@ import {
   setStickerPhysicsPosition,
   applyStickerVelocity,
 } from "./physics.js";
+import { stopAutoLayout } from "./layout.js";
 
 let wheelTimeout = null;
 let addButtonTriggered = false; // 右下の追加ボタンから呼ばれたかのフラグ
@@ -322,6 +323,9 @@ export function handleCanvasTouchStart(e) {
 export async function handleStickerMouseDown(e, id) {
   e.preventDefault();
   e.stopPropagation();
+  
+  // レイアウトアニメーション中なら停止
+  stopAutoLayout();
 
   const sticker = state.getStickerById(id);
   if (!sticker) return;
@@ -614,6 +618,9 @@ export async function handleCanvasWheel(e) {
 export async function handleStickerTouchStart(e, id) {
   e.preventDefault();
   e.stopPropagation();
+  
+  // レイアウトアニメーション中なら停止
+  stopAutoLayout();
 
   const sticker = state.getStickerById(id);
   if (!sticker) return;

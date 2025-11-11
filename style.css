@@ -345,11 +345,11 @@ a, button {
 .physics-btn {
     position: fixed;
     bottom: 24px;
-    left: 24px;
+    left: 92px; /* レイアウトボタン(56px) + 間隔(12px) + 左マージン(24px) */
     width: 56px;
     height: 56px;
     background: rgba(255, 255, 255, 0.95);
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    border: none;
     border-radius: 50%;
     cursor: pointer;
     display: flex;
@@ -373,13 +373,15 @@ a, button {
     pointer-events: none;
 }
 
-.physics-btn:not(.hidden):hover {
-    transform: scale(1.05);
-    background: rgba(255, 255, 255, 1);
-    border-color: rgba(0, 0, 0, 0.15);
-    box-shadow:
-        0 4px 12px rgba(0, 0, 0, 0.15),
-        0 2px 4px rgba(0, 0, 0, 0.1);
+@media (hover: hover) { 
+    .physics-btn:not(.hidden):hover {
+        transform: scale(1.05);
+        background: rgba(255, 255, 255, 1);
+        border-color: rgba(0, 0, 0, 0.15);
+        box-shadow:
+            0 4px 12px rgba(0, 0, 0, 0.15),
+            0 2px 4px rgba(0, 0, 0, 0.1);
+    }
 }
 
 .physics-btn:not(.hidden):active {
@@ -406,6 +408,77 @@ a, button {
 }
 
 .physics-btn svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* 自動レイアウトボタン */
+.layout-btn {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    width: 56px;
+    height: 56px;
+    background: rgba(255, 255, 255, 0.95);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    color: #333;
+    transition: all 0.3s var(--ease-out-expo);
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.1),
+        0 1px 2px rgba(0, 0, 0, 0.06);
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1);
+}
+
+.layout-btn.hidden {
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.8);
+    pointer-events: none;
+}
+
+@media (hover: hover) { 
+    .layout-btn:not(.hidden):hover {
+        transform: scale(1.05);
+        background: rgba(255, 255, 255, 1);
+        border-color: rgba(0, 0, 0, 0.15);
+        box-shadow:
+            0 4px 12px rgba(0, 0, 0, 0.15),
+            0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+}
+
+.layout-btn:not(.hidden):active {
+    transform: scale(0.95);
+    box-shadow:
+        0 1px 4px rgba(0, 0, 0, 0.1),
+        0 0px 2px rgba(0, 0, 0, 0.06);
+}
+
+.layout-btn.active:not(.hidden) {
+    background: rgba(34, 197, 94, 0.95);
+    border-color: rgba(34, 197, 94, 0.3);
+    color: white;
+    box-shadow:
+        0 4px 16px rgba(34, 197, 94, 0.4),
+        0 2px 8px rgba(34, 197, 94, 0.3);
+}
+
+.layout-btn.active:not(.hidden):hover {
+    background: rgba(34, 197, 94, 1);
+    box-shadow:
+        0 6px 20px rgba(34, 197, 94, 0.5),
+        0 3px 10px rgba(34, 197, 94, 0.4);
+}
+
+.layout-btn svg {
     width: 24px;
     height: 24px;
 }

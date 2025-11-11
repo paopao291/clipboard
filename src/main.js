@@ -27,6 +27,7 @@ import {
 } from "./modules/events.js";
 import { addStickerToDOM } from "./modules/sticker.js";
 import { initPhysicsEngine, enablePhysics, disablePhysics, isPhysicsActive } from "./modules/physics.js";
+import { startAutoLayout, isLayoutRunning } from "./modules/layout.js";
 
 /**
  * アプリケーションの初期化
@@ -62,6 +63,9 @@ async function init() {
   
   // 物理モードボタンイベント
   elements.physicsBtn.addEventListener("click", togglePhysicsMode);
+  
+  // 自動レイアウトボタンイベント
+  elements.layoutBtn.addEventListener("click", handleLayoutButton);
 
   // Escキーでヘルプステッカーを閉じる
   document.addEventListener("keydown", (e) => {
@@ -138,6 +142,32 @@ async function loadStickersFromDB() {
       x = stickerData.x;
       yPercent = stickerData.yPercent;
       width = stickerData.width;
+      
+      // 異常な値をチェックして修正
+      let needsFixing = false;
+      
+      if (!isFinite(x) || Math.abs(x) > 10000) {
+        console.warn(`DBから読み込んだステッカー${stickerData.id}のx座標が異常: ${x} → 0に修正`);
+        x = 0;
+        needsFixing = true;
+      }
+      
+      if (!isFinite(yPercent) || Math.abs(yPercent) > 200) {
+        console.warn(`DBから読み込んだステッカー${stickerData.id}のyPercent座標が異常: ${yPercent} → 50に修正`);
+        yPercent = 50;
+        needsFixing = true;
+      }
+      
+      if (!isFinite(width) || width < 10 || width > 5000) {
+        console.warn(`DBから読み込んだステッカー${stickerData.id}のwidth が異常: ${width} → デフォルトに修正`);
+        width = STICKER_DEFAULTS.WIDTH;
+        needsFixing = true;
+      }
+      
+      // 修正した場合はDBにも保存
+      if (needsFixing) {
+        await updateStickerInDB(stickerData.id, { x, yPercent, width });
+      }
     } else if (needsConversion) {
       // 旧形式からの変換
       if (stickerData.xPercent !== undefined && stickerData.yPercent !== undefined) {
@@ -195,10 +225,10 @@ async function loadStickersFromDB() {
 /**
  * 物理モードを切り替え
  */
-function togglePhysicsMode() {
+async function togglePhysicsMode() {
   if (isPhysicsActive()) {
     // 物理モード OFF
-    disablePhysics();
+    await disablePhysics();
     state.disablePhysicsMode();
     elements.physicsBtn.classList.remove("active");
     
@@ -223,6 +253,45 @@ function togglePhysicsMode() {
   
   // ボタンの表示状態を更新
   updateInfoButtonVisibility();
+}
+
+/**
+ * 自動レイアウトボタンハンドラ
+ */
+async function handleLayoutButton() {
+  // 既に実行中なら何もしない
+  if (isLayoutRunning()) {
+    return;
+  }
+
+  // ステッカーが2個未満なら何もしない
+  if (state.getStickerCount() < 2) {
+    return;
+  }
+
+  // 物理モードが有効な場合は無効化
+  if (isPhysicsActive()) {
+    disablePhysics();
+    state.disablePhysicsMode();
+    elements.physicsBtn.classList.remove("active");
+  }
+
+  // 選択状態を解除
+  state.deselectAll();
+  updateInfoButtonVisibility();
+
+  // ボタンをアクティブ状態に
+  elements.layoutBtn.classList.add("active");
+  elements.layoutBtn.disabled = true;
+
+  try {
+    // 自動レイアウトを実行
+    await startAutoLayout();
+  } finally {
+    // ボタンを元の状態に戻す
+    elements.layoutBtn.classList.remove("active");
+    elements.layoutBtn.disabled = false;
+  }
 }
 
 // 初期化実行

@@ -12,6 +12,7 @@ export const elements = {
   trashBtn: null,
   addBtn: null,
   physicsBtn: null,
+  layoutBtn: null,
   selectionOverlay: null,
   helpStickerTemplate: null,
 };
@@ -32,6 +33,7 @@ export function initElements() {
   elements.trashBtn = document.getElementById(DOM_IDS.TRASH_BTN);
   elements.addBtn = document.getElementById(DOM_IDS.ADD_BTN);
   elements.physicsBtn = document.getElementById("physicsBtn");
+  elements.layoutBtn = document.getElementById("layoutBtn");
   elements.selectionOverlay = document.getElementById("selectionOverlay");
   elements.helpStickerTemplate = document.getElementById("helpStickerTemplate");
   
@@ -380,11 +382,12 @@ export function updateInfoButtonVisibility() {
       elements.addBtn.classList.remove("hidden");
     }
     elements.physicsBtn.classList.remove("hidden");
+    elements.layoutBtn.classList.add("hidden"); // ステッカーがないときは非表示
     return;
   }
 
-  // ステッカーあり + 選択中：インフォボタン+ゴミ箱表示、FAB+物理ボタン非表示
-  // ステッカーあり + 未選択：FAB+物理ボタン表示、インフォボタン+ゴミ箱非表示
+  // ステッカーあり + 選択中：インフォボタン+ゴミ箱表示、FAB+物理ボタン+レイアウトボタン非表示
+  // ステッカーあり + 未選択：FAB+物理ボタン+レイアウトボタン表示、インフォボタン+ゴミ箱非表示
   elements.infoBtn.classList.remove("empty-state");
   if (state.hasSelection()) {
     elements.infoBtn.classList.remove("hidden");
@@ -393,6 +396,7 @@ export function updateInfoButtonVisibility() {
       elements.addBtn.classList.add("hidden");
     }
     elements.physicsBtn.classList.add("hidden");
+    elements.layoutBtn.classList.add("hidden");
   } else {
     elements.infoBtn.classList.add("hidden");
     elements.trashBtn.classList.add("hidden");
@@ -400,6 +404,12 @@ export function updateInfoButtonVisibility() {
       elements.addBtn.classList.remove("hidden");
     }
     elements.physicsBtn.classList.remove("hidden");
+    // ステッカーが2個以上ある場合のみレイアウトボタンを表示
+    if (state.getStickerCount() >= 2) {
+      elements.layoutBtn.classList.remove("hidden");
+    } else {
+      elements.layoutBtn.classList.add("hidden");
+    }
   }
 }
 
