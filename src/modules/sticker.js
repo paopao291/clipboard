@@ -98,10 +98,11 @@ export function addStickerToDOM(
   const img = document.createElement("img");
   img.src = url;
 
-  // 画像ラッパー（回転用）
+  // 画像ラッパー（回転とスケール用）
   const imgWrapper = document.createElement("div");
   imgWrapper.className = "sticker-img-wrapper";
-  imgWrapper.style.transform = `rotate(${rotation}deg)`;
+  const scale = width / STICKER_DEFAULTS.BASE_WIDTH;
+  imgWrapper.style.transform = `rotate(${rotation}deg) scale(${scale})`;
   imgWrapper.appendChild(img);
 
   stickerDiv.appendChild(imgWrapper);
@@ -109,7 +110,7 @@ export function addStickerToDOM(
   // スタイルを設定（X:画面中央基準のピクセル値、Y:パーセント値）
   stickerDiv.style.left = `calc(50% + ${x}px)`;
   stickerDiv.style.top = `${yPercent}%`;
-  stickerDiv.style.width = `${width}px`;
+  stickerDiv.style.width = `${STICKER_DEFAULTS.BASE_WIDTH}px`; // 固定幅
   stickerDiv.style.transform = `translate(-50%, -50%)`;
 
   // z-indexを設定
@@ -293,15 +294,14 @@ export function updateStickerPosition(sticker, x, yPercent) {
  */
 export function updateStickerRotation(sticker, rotation) {
   sticker.rotation = rotation;
-  // ヘルプステッカーなどimgWrapperがない場合はスキップ
+  // imgWrapperがない場合はスキップ
   if (sticker.imgWrapper) {
-    // ヘルプステッカーの場合はscaleも考慮
-    if (sticker.isHelpSticker) {
-      const scale = sticker.width / HELP_STICKER_CONFIG.BASE_WIDTH;
-      sticker.imgWrapper.style.transform = `rotate(${rotation}deg) scale(${scale})`;
-    } else {
-      sticker.imgWrapper.style.transform = `rotate(${rotation}deg)`;
-    }
+    // scaleも考慮（ヘルプステッカーと通常シール共通）
+    const baseWidth = sticker.isHelpSticker 
+      ? HELP_STICKER_CONFIG.BASE_WIDTH 
+      : STICKER_DEFAULTS.BASE_WIDTH;
+    const scale = sticker.width / baseWidth;
+    sticker.imgWrapper.style.transform = `rotate(${rotation}deg) scale(${scale})`;
   }
 }
 
@@ -311,42 +311,41 @@ export function updateStickerRotation(sticker, rotation) {
  * @param {number} width - 幅（px）
  */
 export function updateStickerSize(sticker, width) {
-  // ヘルプステッカーの場合はscaleを使用
+  // ヘルプステッカーと通常ステッカーで基準幅を切り替え
+  const baseWidth = sticker.isHelpSticker 
+    ? HELP_STICKER_CONFIG.BASE_WIDTH 
+    : STICKER_DEFAULTS.BASE_WIDTH;
+  
+  // 最大・最小サイズも切り替え
+  const minWidth = sticker.isHelpSticker 
+    ? HELP_STICKER_CONFIG.MIN_WIDTH 
+    : STICKER_DEFAULTS.MIN_WIDTH;
+  
+  let maxWidth;
   if (sticker.isHelpSticker) {
-    // デスクトップでは固定最大値、スマホでは画面幅に応じて
     const isMobile = window.innerWidth <= 768;
-    const maxWidth = isMobile 
+    maxWidth = isMobile 
       ? Math.min(HELP_STICKER_CONFIG.MAX_WIDTH_DESKTOP, window.innerWidth * HELP_STICKER_CONFIG.MAX_WIDTH_MOBILE_PERCENT / 100)
       : HELP_STICKER_CONFIG.MAX_WIDTH_DESKTOP;
-    
-    const constrainedWidth = Math.max(
-      HELP_STICKER_CONFIG.MIN_WIDTH,
-      Math.min(maxWidth, width),
-    );
-    
-    const scale = constrainedWidth / HELP_STICKER_CONFIG.BASE_WIDTH;
-    sticker.width = constrainedWidth;
-    sticker.element.style.width = `${HELP_STICKER_CONFIG.BASE_WIDTH}px`; // 固定幅
-    
-    // scaleとrotationの両方を適用
-    if (sticker.imgWrapper) {
-      sticker.imgWrapper.style.transform = `rotate(${sticker.rotation}deg) scale(${scale})`;
-    }
-    return;
+  } else {
+    const maxWidthByScreen = (window.innerWidth * STICKER_DEFAULTS.MAX_WIDTH_PERCENT) / 100;
+    maxWidth = Math.min(STICKER_DEFAULTS.MAX_WIDTH, maxWidthByScreen);
   }
   
-  // 通常のステッカー
-  // 画面幅に応じた最大サイズを計算
-  const maxWidthByScreen = (window.innerWidth * STICKER_DEFAULTS.MAX_WIDTH_PERCENT) / 100;
-  const effectiveMaxWidth = Math.min(STICKER_DEFAULTS.MAX_WIDTH, maxWidthByScreen);
+  // サイズを制限
+  const constrainedWidth = Math.max(minWidth, Math.min(maxWidth, width));
   
-  const constrainedWidth = Math.max(
-    STICKER_DEFAULTS.MIN_WIDTH,
-    Math.min(effectiveMaxWidth, width),
-  );
-
+  // 論理的なサイズを保存
   sticker.width = constrainedWidth;
-  sticker.element.style.width = `${constrainedWidth}px`;
+  
+  // 固定幅を設定
+  sticker.element.style.width = `${baseWidth}px`;
+  
+  // scaleを計算して適用
+  const scale = constrainedWidth / baseWidth;
+  if (sticker.imgWrapper) {
+    sticker.imgWrapper.style.transform = `rotate(${sticker.rotation}deg) scale(${scale})`;
+  }
 }
 
 /**

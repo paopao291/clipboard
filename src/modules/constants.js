@@ -7,7 +7,8 @@ export const DB_CONFIG = {
 
 // シールのデフォルト設定
 export const STICKER_DEFAULTS = {
-  WIDTH: 200, // ピクセル値
+  BASE_WIDTH: 200, // 基準幅（固定、scaleで拡大縮小）
+  WIDTH: 200, // ピクセル値（論理的なサイズ）
   MIN_WIDTH: 50,
   MAX_WIDTH: 600, // 画面幅の最大値は後で計算
   MAX_WIDTH_PERCENT: 80, // 画面幅の80%まで

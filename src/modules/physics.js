@@ -4,7 +4,7 @@
  */
 
 import { state } from "../state.js";
-import { PHYSICS_CONFIG } from "./constants.js";
+import { PHYSICS_CONFIG, STICKER_DEFAULTS, HELP_STICKER_CONFIG } from "./constants.js";
 
 // Matter.jsモジュール
 const { Engine, Render, World, Bodies, Body, Events, Runner, Mouse, MouseConstraint } = Matter;
@@ -165,11 +165,13 @@ export function addPhysicsBody(sticker) {
   // 既に物理ボディがある場合はスキップ
   if (stickerBodyMap.has(sticker.id)) return;
   
-  // シールの現在位置を取得（画面座標）
+  // シールの現在位置と実際のサイズを取得（画面座標）
   const rect = sticker.element.getBoundingClientRect();
   const x = rect.left + rect.width / 2;
   const y = rect.top + rect.height / 2;
-  const radius = sticker.width / 2;
+  
+  // 実際の表示サイズから半径を計算（ヘルプステッカーのscaleも考慮）
+  const radius = rect.width / 2;
   
   // 円形の物理ボディを作成
   const { RESTITUTION, FRICTION, FRICTION_AIR, DENSITY } = PHYSICS_CONFIG.BODY;
@@ -282,7 +284,12 @@ function updateStickerDOM(sticker, x, yPercent, rotation) {
   sticker.element.style.top = `${yPercent}%`;
   
   if (sticker.imgWrapper) {
-    sticker.imgWrapper.style.transform = `rotate(${rotation}deg)`;
+    // scaleも含める（ヘルプステッカーと通常シール共通）
+    const baseWidth = sticker.isHelpSticker 
+      ? HELP_STICKER_CONFIG.BASE_WIDTH
+      : STICKER_DEFAULTS.BASE_WIDTH;
+    const scale = sticker.width / baseWidth;
+    sticker.imgWrapper.style.transform = `rotate(${rotation}deg) scale(${scale})`;
   }
 }
 
