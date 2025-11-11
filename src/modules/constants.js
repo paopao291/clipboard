@@ -77,32 +77,31 @@ export const MESSAGES = {
 
 // 物理エンジンの設定
 export const PHYSICS_CONFIG = {
-  // 重力
-  GRAVITY_X: 0,
-  GRAVITY_Y: 1, // Matter.jsでは正の値 = 下向き
+  // 重力（PC用）
+  GRAVITY: {
+    X: 0,
+    Y: 1,           // 正の値 = 下向き
+    SCALE: 0.001,   // 重力の強さ
+  },
   
   // 壁
   WALL_THICKNESS: 50,
   
   // 物理ボディのプロパティ
   BODY: {
-    RESTITUTION: 0.4, // 反発係数
-    FRICTION: 0.05,   // 摩擦
-    FRICTION_AIR: 0.01, // 空気抵抗
-    DENSITY: 0.002,   // 密度
-  },
-  
-  // 風の効果（PC用）
-  WIND: {
-    RADIUS: 200,      // 影響範囲（px）
-    STRENGTH: 0.0003, // 強さ
+    RESTITUTION: 0.2, // 反発係数（ほんの少し跳ねる）
+    FRICTION: 0.08,   // 摩擦
+    FRICTION_AIR: 0.015, // 空気抵抗（少し減らして軽やかに）
+    DENSITY: 0.002,   // 密度（少し軽く）
   },
   
   // ジャイロ（スマホ用）
   GYRO: {
-    STRENGTH: 0.8,    // 重力の強さ係数
-    NEUTRAL_BETA: 15,  // 中立位置（度）- 平行時が中立
-    DEFAULT_GRAVITY: 0.1, // 平行時の下向き重力（やや下に落ちる）
+    STRENGTH: 0.8,         // 重力の強さ係数
+    NEUTRAL_BETA: 15,      // 中立位置（度）
+    DEFAULT_GRAVITY: 0.1,  // 平行時の下向き重力
+    INITIAL_X: 0,          // 初期X重力
+    INITIAL_Y: 0.1,        // 初期Y重力（デフォルトと同じ）
   },
   
   // 重力の更新

@@ -25,8 +25,8 @@ let mousePosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 
 // 重力制御用（スマホのジャイロ用）
 let targetGravity = { 
-  x: PHYSICS_CONFIG.GRAVITY_X, 
-  y: PHYSICS_CONFIG.GRAVITY_Y 
+  x: PHYSICS_CONFIG.GYRO.INITIAL_X, 
+  y: PHYSICS_CONFIG.GYRO.INITIAL_Y 
 };
 let isGyroActive = false; // ジャイロが実際に動作しているか
 
@@ -39,10 +39,12 @@ let gyroPermissionGranted = false;
  */
 export function initPhysicsEngine() {
   // エンジンを作成（下向きの重力を設定）
+  const { X, Y, SCALE } = PHYSICS_CONFIG.GRAVITY;
   engine = Engine.create({
     gravity: { 
-      x: PHYSICS_CONFIG.GRAVITY_X, 
-      y: PHYSICS_CONFIG.GRAVITY_Y 
+      x: X, 
+      y: Y,
+      scale: SCALE
     },
   });
   
@@ -101,9 +103,13 @@ export function enablePhysics() {
   isPhysicsEnabled = true;
   
   // PC用: 重力を下向きに設定
-  engine.gravity.x = PHYSICS_CONFIG.GRAVITY_X;
-  engine.gravity.y = PHYSICS_CONFIG.GRAVITY_Y;
+  const { X, Y, SCALE } = PHYSICS_CONFIG.GRAVITY;
+  engine.gravity.x = X;
+  engine.gravity.y = Y;
+  engine.gravity.scale = SCALE;
   isGyroActive = false; // 初期はジャイロ無効（PC想定）
+  
+  console.log("PC重力設定:", engine.gravity, "isGyroActive:", isGyroActive);
   
   // 全てのシールに物理ボディを追加（ヘルプステッカーも含む）
   state.stickers.forEach(sticker => {
@@ -205,15 +211,11 @@ function syncDOMWithPhysics() {
     }
   });
   
-  // ジャイロが有効な場合は重力を更新（スマホ）
+  // ジャイロが有効な場合のみ重力を更新（スマホ）
   if (isGyroActive) {
     updateGravity();
   }
-  
-  // PC用: マウスカーソルによる風の効果を適用
-  if (!isGyroActive) {
-    applyWindForce();
-  }
+  // PC時は重力は固定のまま（updateGravityを呼ばない）
 }
 
 /**
@@ -288,8 +290,8 @@ function updateStickerDOM(sticker, x, yPercent, rotation) {
  * イベントリスナーをセットアップ
  */
 function setupEventListeners() {
-  // マウス移動イベント
-  window.addEventListener("mousemove", handleMouseMove);
+  // マウス移動イベント（風の効果を無効化したのでコメントアウト）
+  // window.addEventListener("mousemove", handleMouseMove);
   
   // ジャイロイベント
   window.addEventListener("deviceorientation", handleDeviceOrientation);
@@ -302,7 +304,7 @@ function setupEventListeners() {
  * イベントリスナーを解除
  */
 function removeEventListeners() {
-  window.removeEventListener("mousemove", handleMouseMove);
+  // window.removeEventListener("mousemove", handleMouseMove);
   window.removeEventListener("deviceorientation", handleDeviceOrientation);
   window.removeEventListener("resize", updateWalls);
 }
@@ -367,11 +369,20 @@ function handleDeviceOrientation(e) {
   
   // beta: 前後の傾き (-180 to 180)
   // gamma: 左右の傾き (-90 to 90)
-  const beta = e.beta || 0;
-  const gamma = e.gamma || 0;
+  const beta = e.beta;
+  const gamma = e.gamma;
+  
+  // betaとgammaがnullの場合はPCなので処理しない
+  if (beta === null || gamma === null) {
+    console.log("ジャイロ値なし（PC）");
+    return;
+  }
   
   // ジャイロが実際に値を返している場合、ジャイロモードを有効化
-  isGyroActive = true;
+  if (!isGyroActive) {
+    console.log("ジャイロモード有効化");
+    isGyroActive = true;
+  }
   
   // 傾きから重力ベクトルを計算
   targetGravity = calculateGravityFromOrientation(beta, gamma);
@@ -432,10 +443,11 @@ async function checkGyroAvailability() {
       isGyroAvailable = false;
     }
   } else {
-    // Android等では自動的に利用可能
+    // PCでは存在してもジャイロは動作しないので、許可フラグはtrueだが
+    // 実際の動作はisGyroActiveで判定
     isGyroAvailable = true;
     gyroPermissionGranted = true;
-    console.log("ジャイロセンサー利用可能");
+    console.log("DeviceOrientationEvent利用可能（PC/Android）");
   }
 }
 
