@@ -52,6 +52,13 @@ export async function addStickerFromBlob(
     zIndex: actualZIndex,
     timestamp: Date.now(),
   });
+
+  // 追加したステッカーを選択状態にする
+  const addedSticker = state.getStickerById(stickerId);
+  if (addedSticker) {
+    state.selectSticker(addedSticker);
+    updateInfoButtonVisibility();
+  }
 }
 
 /**
