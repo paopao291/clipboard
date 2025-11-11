@@ -29,6 +29,8 @@ class AppState {
     // タッチドラッグ準備座標
     this.touchPrepareX = undefined;
     this.touchPrepareY = undefined;
+    // 物理モード
+    this.isPhysicsMode = false;
   }
 
   /**
@@ -192,6 +194,28 @@ class AppState {
    */
   hasSelection() {
     return this.selectedSticker !== null;
+  }
+
+  /**
+   * 物理モードを有効化
+   */
+  enablePhysicsMode() {
+    this.isPhysicsMode = true;
+  }
+
+  /**
+   * 物理モードを無効化
+   */
+  disablePhysicsMode() {
+    this.isPhysicsMode = false;
+  }
+
+  /**
+   * 物理モードが有効か確認
+   * @returns {boolean}
+   */
+  isPhysicsModeActive() {
+    return this.isPhysicsMode;
   }
 }
 

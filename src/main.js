@@ -26,6 +26,7 @@ import {
   setAddButtonTriggered,
 } from "./modules/events.js";
 import { addStickerToDOM } from "./modules/sticker.js";
+import { initPhysicsEngine, enablePhysics, disablePhysics, isPhysicsActive } from "./modules/physics.js";
 
 /**
  * アプリケーションの初期化
@@ -36,6 +37,9 @@ async function init() {
 
   // IndexedDBを初期化
   await initDB();
+
+  // 物理エンジンを初期化
+  initPhysicsEngine();
 
   // ペーストイベント（pasteAreaのみにバインド）
   elements.pasteArea.addEventListener("paste", handlePaste);
@@ -55,6 +59,9 @@ async function init() {
     setAddButtonTriggered();
     elements.galleryInput.click();
   });
+  
+  // 物理モードボタンイベント
+  elements.physicsBtn.addEventListener("click", togglePhysicsMode);
 
   // Escキーでヘルプステッカーを閉じる
   document.addEventListener("keydown", (e) => {
@@ -182,6 +189,23 @@ async function loadStickersFromDB() {
   // 変換完了フラグを保存
   if (needsConversion && stickers.length > 0) {
     localStorage.setItem('hybrid_coordinate_migrated', 'true');
+  }
+}
+
+/**
+ * 物理モードを切り替え
+ */
+function togglePhysicsMode() {
+  if (isPhysicsActive()) {
+    disablePhysics();
+    state.disablePhysicsMode();
+    elements.physicsBtn.classList.remove("active");
+    console.log("物理モード: OFF");
+  } else {
+    enablePhysics();
+    state.enablePhysicsMode();
+    elements.physicsBtn.classList.add("active");
+    console.log("物理モード: ON");
   }
 }
 

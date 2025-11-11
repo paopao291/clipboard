@@ -20,9 +20,19 @@ import {
 } from "./ui.js";
 import { showConfirmDialog } from "./dialog.js";
 import { absoluteToHybrid, getCenterCoordinates } from "./coordinate-utils.js";
+import {
+  isPhysicsActive,
+  setStickerPhysicsPosition,
+  applyStickerVelocity,
+} from "./physics.js";
 
 let wheelTimeout = null;
 let addButtonTriggered = false; // 右下の追加ボタンから呼ばれたかのフラグ
+
+// 物理モード用：ドラッグの速度追跡
+let lastDragX = 0;
+let lastDragY = 0;
+let lastDragTime = 0;
 
 /**
  * 右下の追加ボタンが押されたことを記録
@@ -300,6 +310,22 @@ export function handleStickerMouseDown(e, id) {
   const sticker = state.getStickerById(id);
   if (!sticker) return;
 
+  // 物理モード中は選択せずに直接ドラッグ開始
+  if (isPhysicsActive()) {
+    state.selectedSticker = sticker; // 内部的には必要だがUI的には選択しない
+    state.isDragging = true;
+    const coords = absoluteToHybrid(e.clientX, e.clientY);
+    state.dragStartX = coords.x - sticker.x;
+    state.dragStartYPercent = coords.yPercent - sticker.yPercent;
+    
+    // 速度追跡の初期化
+    lastDragX = e.clientX;
+    lastDragY = e.clientY;
+    lastDragTime = Date.now();
+    return;
+  }
+
+  // 通常モード（以下は既存のロジック）
   // 別のステッカーが選択中の場合は選択解除
   if (state.selectedSticker && state.selectedSticker.id !== id) {
     state.deselectAll();
@@ -375,17 +401,39 @@ export function handleMouseMove(e) {
   }
 
   if (state.isDragging) {
-    // ゴミ箱エリアとの重なり判定
-    const isOver = isOverTrashBtn(e.clientX, e.clientY);
-    setTrashDragOver(isOver);
-    setOverlayDeleteMode(isOver);
-    
-    // ゴミ箱に重なっていない時だけ位置を更新
-    if (!isOver) {
+    // 物理モード中はゴミ箱判定とオーバーレイを無効化
+    if (!isPhysicsActive()) {
+      // ゴミ箱エリアとの重なり判定
+      const isOver = isOverTrashBtn(e.clientX, e.clientY);
+      setTrashDragOver(isOver);
+      setOverlayDeleteMode(isOver);
+      
+      // ゴミ箱に重なっていない時だけ位置を更新
+      if (!isOver) {
+        const coords = absoluteToHybrid(e.clientX, e.clientY);
+        const newX = coords.x - state.dragStartX;
+        const newYPercent = coords.yPercent - state.dragStartYPercent;
+        updateStickerPosition(state.selectedSticker, newX, newYPercent);
+      }
+    } else {
+      // 物理モード中：ゴミ箱判定なしで常に位置を更新
       const coords = absoluteToHybrid(e.clientX, e.clientY);
       const newX = coords.x - state.dragStartX;
       const newYPercent = coords.yPercent - state.dragStartYPercent;
       updateStickerPosition(state.selectedSticker, newX, newYPercent);
+      
+      // 物理ボディも更新して速度を追跡
+      const now = Date.now();
+      const rect = state.selectedSticker.element.getBoundingClientRect();
+      const physicsX = rect.left + rect.width / 2;
+      const physicsY = rect.top + rect.height / 2;
+      
+      setStickerPhysicsPosition(state.selectedSticker.id, physicsX, physicsY);
+      
+      // 速度を追跡（投げる動作用）
+      lastDragX = e.clientX;
+      lastDragY = e.clientY;
+      lastDragTime = now;
     }
   } else if (state.isRotating) {
     const rect = state.selectedSticker.element.getBoundingClientRect();
@@ -422,6 +470,28 @@ export async function handleMouseUp(e) {
     if (wasDeleted) {
       state.endInteraction();
       return;
+    }
+
+    // 物理モードの場合、リリース時に速度を加える（投げる動作）
+    if (isPhysicsActive() && state.isDragging && state.selectedSticker) {
+      const now = Date.now();
+      const deltaTime = now - lastDragTime;
+      
+      // 速度を計算（deltaTimeが短すぎる場合は最小値を設定）
+      if (deltaTime > 0 && deltaTime < 100) {
+        const vx = ((e.clientX - lastDragX) / deltaTime) * 16; // 60FPS想定で調整
+        const vy = ((e.clientY - lastDragY) / deltaTime) * 16;
+        
+        // 速度を制限（投げすぎないように）
+        const maxVelocity = 20;
+        const velocityMagnitude = Math.sqrt(vx * vx + vy * vy);
+        if (velocityMagnitude > maxVelocity) {
+          const scale = maxVelocity / velocityMagnitude;
+          applyStickerVelocity(state.selectedSticker.id, vx * scale, vy * scale);
+        } else {
+          applyStickerVelocity(state.selectedSticker.id, vx, vy);
+        }
+      }
     }
 
     // 通常の終了処理
@@ -514,6 +584,23 @@ export function handleStickerTouchStart(e, id) {
   if (!sticker) return;
 
   const touches = e.touches;
+
+  // 物理モード中は選択せずに直接ドラッグ開始（1本指のみ）
+  if (isPhysicsActive() && touches.length === 1) {
+    state.selectedSticker = sticker; // 内部的には必要だがUI的には選択しない
+    state.isDragging = true;
+    const coords = absoluteToHybrid(touches[0].clientX, touches[0].clientY);
+    state.dragStartX = coords.x - sticker.x;
+    state.dragStartYPercent = coords.yPercent - sticker.yPercent;
+    
+    // 速度追跡の初期化
+    lastDragX = touches[0].clientX;
+    lastDragY = touches[0].clientY;
+    lastDragTime = Date.now();
+    return;
+  }
+
+  // 通常モード（以下は既存のロジック）
   // 選択中のステッカーがある場合、そのステッカーを操作対象にする
   const targetSticker = state.selectedSticker || sticker;
 
@@ -651,16 +738,38 @@ export function handleTouchMove(e) {
   if (state.isDragging && touches.length === 1) {
     e.preventDefault();
 
-    const isOver = isOverTrashBtn(touches[0].clientX, touches[0].clientY);
-    setTrashDragOver(isOver);
-    setOverlayDeleteMode(isOver);
-    
-    // ゴミ箱に重なっていない時だけ位置を更新
-    if (!isOver) {
+    // 物理モード中はゴミ箱判定とオーバーレイを無効化
+    if (!isPhysicsActive()) {
+      const isOver = isOverTrashBtn(touches[0].clientX, touches[0].clientY);
+      setTrashDragOver(isOver);
+      setOverlayDeleteMode(isOver);
+      
+      // ゴミ箱に重なっていない時だけ位置を更新
+      if (!isOver) {
+        const coords = absoluteToHybrid(touches[0].clientX, touches[0].clientY);
+        const newX = coords.x - state.dragStartX;
+        const newYPercent = coords.yPercent - state.dragStartYPercent;
+        updateStickerPosition(state.selectedSticker, newX, newYPercent);
+      }
+    } else {
+      // 物理モード中：ゴミ箱判定なしで常に位置を更新
       const coords = absoluteToHybrid(touches[0].clientX, touches[0].clientY);
       const newX = coords.x - state.dragStartX;
       const newYPercent = coords.yPercent - state.dragStartYPercent;
       updateStickerPosition(state.selectedSticker, newX, newYPercent);
+      
+      // 物理ボディも更新して速度を追跡
+      const now = Date.now();
+      const rect = state.selectedSticker.element.getBoundingClientRect();
+      const physicsX = rect.left + rect.width / 2;
+      const physicsY = rect.top + rect.height / 2;
+      
+      setStickerPhysicsPosition(state.selectedSticker.id, physicsX, physicsY);
+      
+      // 速度を追跡（投げる動作用）
+      lastDragX = touches[0].clientX;
+      lastDragY = touches[0].clientY;
+      lastDragTime = now;
     }
   }
 
@@ -739,6 +848,28 @@ export async function handleTouchEnd(e) {
       if (wasDeleted) {
         state.endInteraction();
         return;
+      }
+      
+      // 物理モードの場合、リリース時に速度を加える（投げる動作）
+      if (isPhysicsActive() && state.isDragging && state.selectedSticker) {
+        const now = Date.now();
+        const deltaTime = now - lastDragTime;
+        
+        // 速度を計算（deltaTimeが短すぎる場合は最小値を設定）
+        if (deltaTime > 0 && deltaTime < 100) {
+          const vx = ((touch.clientX - lastDragX) / deltaTime) * 16; // 60FPS想定で調整
+          const vy = ((touch.clientY - lastDragY) / deltaTime) * 16;
+          
+          // 速度を制限（投げすぎないように）
+          const maxVelocity = 20;
+          const velocityMagnitude = Math.sqrt(vx * vx + vy * vy);
+          if (velocityMagnitude > maxVelocity) {
+            const scale = maxVelocity / velocityMagnitude;
+            applyStickerVelocity(state.selectedSticker.id, vx * scale, vy * scale);
+          } else {
+            applyStickerVelocity(state.selectedSticker.id, vx, vy);
+          }
+        }
       }
     }
 

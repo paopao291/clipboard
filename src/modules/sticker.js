@@ -7,6 +7,7 @@ import {
 } from "./db.js";
 import { elements, showToast, updateInfoButtonVisibility, updateHelpStickerState, clearHelpStickerState } from "./ui.js";
 import { attachStickerEventListeners } from "./events.js";
+import { isPhysicsActive, addPhysicsBody, removePhysicsBody } from "./physics.js";
 
 /**
  * Blobからシールを追加
@@ -131,7 +132,7 @@ export function addStickerToDOM(
   elements.canvas.appendChild(stickerDiv);
 
   // 状態に追加
-  state.addSticker({
+  const stickerObject = {
     id: stickerId,
     url: url,
     x: x,
@@ -141,7 +142,16 @@ export function addStickerToDOM(
     zIndex: actualZIndex,
     element: stickerDiv,
     imgWrapper: imgWrapper,
-  });
+  };
+  state.addSticker(stickerObject);
+
+  // 物理モードが有効な場合は物理ボディを追加
+  if (isPhysicsActive()) {
+    // DOMが完全にレンダリングされるまで少し待つ
+    setTimeout(() => {
+      addPhysicsBody(stickerObject);
+    }, 10);
+  }
 
   // インフォボタンの表示状態を更新
   updateInfoButtonVisibility();
@@ -162,6 +172,11 @@ export async function removeSticker(id) {
 
     // DOM要素を非表示にする（削除はしない）
     sticker.element.style.display = "none";
+
+    // 物理モードが有効な場合は物理ボディも削除
+    if (isPhysicsActive()) {
+      removePhysicsBody(id);
+    }
 
     // インフォボタンの表示状態を更新
     updateInfoButtonVisibility();

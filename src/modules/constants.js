@@ -74,3 +74,36 @@ export const MESSAGES = {
   IMAGES_ADDED: (count) => `${count}枚の画像を追加しました！`,
   SELECT_FROM_LIBRARY: "写真ライブラリから選択してください",
 };
+
+// 物理エンジンの設定
+export const PHYSICS_CONFIG = {
+  // 重力
+  GRAVITY_X: 0,
+  GRAVITY_Y: -1, // 負の値 = 下向き（座標系の関係）
+  
+  // 壁
+  WALL_THICKNESS: 50,
+  
+  // 物理ボディのプロパティ
+  BODY: {
+    RESTITUTION: 0.4, // 反発係数
+    FRICTION: 0.05,   // 摩擦
+    FRICTION_AIR: 0.01, // 空気抵抗
+    DENSITY: 0.002,   // 密度
+  },
+  
+  // 風の効果（PC用）
+  WIND: {
+    RADIUS: 200,      // 影響範囲（px）
+    STRENGTH: 0.0003, // 強さ
+  },
+  
+  // ジャイロ（スマホ用）
+  GYRO: {
+    STRENGTH: 0.8,    // 重力の強さ係数
+    NEUTRAL_BETA: 45, // 中立位置（度）
+  },
+  
+  // 重力の更新
+  GRAVITY_LERP_FACTOR: 0.1, // 補間係数（小さいほど滑らか）
+};

@@ -11,6 +11,7 @@ export const elements = {
   infoBtn: null,
   trashBtn: null,
   addBtn: null,
+  physicsBtn: null,
   selectionOverlay: null,
   helpStickerTemplate: null,
 };
@@ -30,6 +31,7 @@ export function initElements() {
   elements.infoBtn = document.getElementById(DOM_IDS.INFO_BTN);
   elements.trashBtn = document.getElementById(DOM_IDS.TRASH_BTN);
   elements.addBtn = document.getElementById(DOM_IDS.ADD_BTN);
+  elements.physicsBtn = document.getElementById("physicsBtn");
   elements.selectionOverlay = document.getElementById("selectionOverlay");
   elements.helpStickerTemplate = document.getElementById("helpStickerTemplate");
   
@@ -362,26 +364,29 @@ export function updateHelpStickerState(sticker) {
  * ボタンの表示状態を更新
  */
 export function updateInfoButtonVisibility() {
-  // ステッカーがない場合：インフォボタン+FAB表示、ゴミ箱非表示
+  // ステッカーがない場合：インフォボタン+FAB+物理ボタン表示、ゴミ箱非表示
   if (state.getStickerCount() === 0) {
     elements.infoBtn.classList.remove("hidden");
     elements.infoBtn.classList.add("empty-state");
     elements.trashBtn.classList.add("hidden");
     elements.addBtn.classList.remove("hidden");
+    elements.physicsBtn.classList.remove("hidden");
     return;
   }
 
-  // ステッカーあり + 選択中：インフォボタン+ゴミ箱表示、FAB非表示
-  // ステッカーあり + 未選択：FAB表示、インフォボタン+ゴミ箱非表示
+  // ステッカーあり + 選択中：インフォボタン+ゴミ箱表示、FAB+物理ボタン非表示
+  // ステッカーあり + 未選択：FAB+物理ボタン表示、インフォボタン+ゴミ箱非表示
   elements.infoBtn.classList.remove("empty-state");
   if (state.hasSelection()) {
     elements.infoBtn.classList.remove("hidden");
     elements.trashBtn.classList.remove("hidden");
     elements.addBtn.classList.add("hidden");
+    elements.physicsBtn.classList.add("hidden");
   } else {
     elements.infoBtn.classList.add("hidden");
     elements.trashBtn.classList.add("hidden");
     elements.addBtn.classList.remove("hidden");
+    elements.physicsBtn.classList.remove("hidden");
   }
 }
 
