@@ -89,16 +89,16 @@ export const PHYSICS_CONFIG = {
   
   // 物理ボディのプロパティ
   BODY: {
-    RESTITUTION: 0.2, // 反発係数（ほんの少し跳ねる）
-    FRICTION: 0.08,   // 摩擦
-    FRICTION_AIR: 0.015, // 空気抵抗（少し減らして軽やかに）
-    DENSITY: 0.002,   // 密度（少し軽く）
+    RESTITUTION: 0.25, // 反発係数（ほんの少し跳ねる）
+    FRICTION: 0.08,    // 摩擦
+    FRICTION_AIR: 0.015, // 空気抵抗（軽やかに）
+    DENSITY: 0.0015,   // 密度（軽く）
   },
   
   // ジャイロ（スマホ用）
   GYRO: {
     STRENGTH: 0.8,         // 重力の強さ係数
-    NEUTRAL_BETA: 15,      // 中立位置（度）
+    NEUTRAL_BETA: 10,      // 中立位置（度）
     DEFAULT_GRAVITY: 0.1,  // 平行時の下向き重力
     INITIAL_X: 0,          // 初期X重力
     INITIAL_Y: 0.1,        // 初期Y重力（デフォルトと同じ）

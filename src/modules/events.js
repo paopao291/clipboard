@@ -59,6 +59,14 @@ async function checkAndFixOutOfBounds(sticker) {
   if (isCompletelyOutside) {
     // 完全に画面外に出た場合は中央に戻す
     updateStickerPosition(sticker, 0, 50);
+    
+    // 物理モード中は物理ボディの位置も更新
+    if (isPhysicsActive()) {
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+      setStickerPhysicsPosition(sticker.id, centerX, centerY);
+    }
+    
     await saveStickerChanges(sticker);
     showToast("画面外に出たため中央に戻しました");
     return true;
@@ -84,6 +92,14 @@ async function checkAndFixOutOfBounds(sticker) {
   if (isMostlyOutside) {
     // 中央に戻す
     updateStickerPosition(sticker, 0, 50);
+    
+    // 物理モード中は物理ボディの位置も更新
+    if (isPhysicsActive()) {
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+      setStickerPhysicsPosition(sticker.id, centerX, centerY);
+    }
+    
     await saveStickerChanges(sticker);
     showToast("画面外に出たため中央に戻しました");
     return true;
