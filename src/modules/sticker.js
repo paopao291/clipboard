@@ -391,3 +391,29 @@ export async function saveStickerChanges(sticker) {
     rotation: sticker.rotation,
   });
 }
+
+/**
+ * 複数のステッカーの位置を一括保存
+ * @param {Array} stickers - 保存するステッカーの配列
+ * @param {Object} options - オプション
+ * @param {boolean} options.showToastOnComplete - 完了時にトーストを表示するか
+ * @returns {Promise<void>}
+ */
+export async function saveAllStickerPositions(stickers, options = {}) {
+  const promises = stickers.map((sticker) => {
+    // ヘルプステッカーでない場合のみDB保存
+    if (!sticker.isHelpSticker) {
+      return saveStickerChanges(sticker);
+    } else {
+      // ヘルプステッカーはlocalStorageに保存
+      updateHelpStickerState(sticker);
+      return Promise.resolve();
+    }
+  });
+
+  await Promise.all(promises);
+  
+  if (options.showToastOnComplete) {
+    showToast('位置を保存しました');
+  }
+}

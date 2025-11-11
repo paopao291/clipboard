@@ -1,16 +1,21 @@
 /**
- * 自動レイアウトモジュール
+ * 自動レイアウトモジュール（斥力ベース配置システム）
  * ステッカーを重なりを避けながらバランスよく配置する
  * 
  * 【アルゴリズム】
  * - 各ステッカーが他のステッカーから斥力を受ける
  * - 重なっている場合は強い斥力、離れている場合は弱い斥力
  * - 画面境界からも反発力を受ける
- * - 現在位置から徐々に最適な位置に移動
+ * - 画面中心への弱い引力で配置範囲を制限
+ * - 最終位置を事前計算し、スムーズなアニメーションで移動
+ * 
+ * 【物理モードとの違い】
+ * - 物理モード: リアルタイムの重力シミュレーション（Matter.js使用）
+ * - 自動レイアウト: 斥力による最適配置の計算とアニメーション
  */
 
 import { state } from "../state.js";
-import { updateStickerPosition, saveStickerChanges } from "./sticker.js";
+import { updateStickerPosition, saveAllStickerPositions } from "./sticker.js";
 import { showToast } from "./ui.js";
 
 // ========================================
@@ -301,7 +306,7 @@ function animateToFinalPositions(finalPositions, resolve) {
     if (progress >= 1) {
       // 画面外チェックと保存
       checkAndFixAllOutOfBounds().then(() => {
-        return saveAllStickerPositions();
+        return saveAllStickersWithValidation();
       }).then(() => {
         isLayoutActive = false;
         resolve();
@@ -491,12 +496,12 @@ async function checkAndFixAllOutOfBounds() {
 }
 
 /**
- * 全ステッカーの位置をDBに保存
+ * 全ステッカーの位置をDBに保存（異常値チェック付き）
  * @returns {Promise<void>}
  */
-async function saveAllStickerPositions() {
-  const promises = state.stickers.map((sticker) => {
-    // 異常な値をチェック
+async function saveAllStickersWithValidation() {
+  // 異常な値をチェック・修正
+  state.stickers.forEach((sticker) => {
     if (!isFinite(sticker.x) || Math.abs(sticker.x) > 10000) {
       console.error(`保存前に異常な x を検出: ステッカー${sticker.id}, x=${sticker.x}`);
       sticker.x = 0;
@@ -506,14 +511,9 @@ async function saveAllStickerPositions() {
       console.error(`保存前に異常な yPercent を検出: ステッカー${sticker.id}, yPercent=${sticker.yPercent}`);
       sticker.yPercent = 50;
     }
-    
-    // ヘルプステッカーでない場合のみ保存
-    if (!sticker.isHelpSticker) {
-      return saveStickerChanges(sticker);
-    }
-    return Promise.resolve();
   });
 
-  await Promise.all(promises);
+  // 共通の保存関数を使用
+  await saveAllStickerPositions(state.stickers);
 }
 
