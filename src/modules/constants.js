@@ -101,7 +101,7 @@ export const PHYSICS_CONFIG = {
   GYRO: {
     STRENGTH: 0.8,         // 重力の強さ係数
     NEUTRAL_BETA: 10,      // 中立位置（度）
-    DEFAULT_GRAVITY: 0.05,  // 平行時の下向き重力
+    DEFAULT_GRAVITY: 0.08,  // 平行時の下向き重力
     INITIAL_X: 0,          // 初期X重力
     INITIAL_Y: 0.1,        // 初期Y重力（デフォルトと同じ）
   },
