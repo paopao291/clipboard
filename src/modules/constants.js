@@ -79,7 +79,7 @@ export const MESSAGES = {
 export const PHYSICS_CONFIG = {
   // 重力
   GRAVITY_X: 0,
-  GRAVITY_Y: -1, // 負の値 = 下向き（座標系の関係）
+  GRAVITY_Y: 1, // Matter.jsでは正の値 = 下向き
   
   // 壁
   WALL_THICKNESS: 50,

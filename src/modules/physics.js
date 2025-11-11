@@ -105,11 +105,9 @@ export function enablePhysics() {
   engine.gravity.y = PHYSICS_CONFIG.GRAVITY_Y;
   isGyroActive = false; // 初期はジャイロ無効（PC想定）
   
-  // 全てのシールに物理ボディを追加
+  // 全てのシールに物理ボディを追加（ヘルプステッカーも含む）
   state.stickers.forEach(sticker => {
-    if (!sticker.isHelpSticker) {
-      addPhysicsBody(sticker);
-    }
+    addPhysicsBody(sticker);
   });
   
   // エンジンを起動
@@ -388,9 +386,9 @@ function handleDeviceOrientation(e) {
 function calculateGravityFromOrientation(beta, gamma) {
   const { STRENGTH, NEUTRAL_BETA } = PHYSICS_CONFIG.GYRO;
   
-  // 傾きから重力ベクトルを計算（スマホのジャイロは符号を反転させない）
-  const x = (gamma / 90) * STRENGTH;
-  const y = ((beta - NEUTRAL_BETA) / 90) * STRENGTH;
+  // 傾きから重力ベクトルを計算（PCと同じ座標系にするため符号を反転）
+  const x = -(gamma / 90) * STRENGTH;
+  const y = -((beta - NEUTRAL_BETA) / 90) * STRENGTH;
   
   // 範囲を制限
   return {
