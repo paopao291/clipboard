@@ -34,7 +34,7 @@ const LAYOUT_CONFIG = {
   // 画面境界からの斥力の強さ
   BOUNDARY_REPULSION: 100,
   // 画面境界とのマージン（px）
-  BOUNDARY_MARGIN: 60,
+  BOUNDARY_MARGIN: 50,
   // 画面中心への引力の強さ
   CENTER_ATTRACTION: 0.15,
   // 理想的な配置範囲（画面サイズに対する割合 0-1）
