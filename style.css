@@ -296,7 +296,8 @@ a, button {
     top: 24px;
     width: 44px;
     height: 44px;
-    background: transparent;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
     border: none;
     border-radius: 50%;
     cursor: pointer;
@@ -304,12 +305,13 @@ a, button {
     align-items: center;
     justify-content: center;
     z-index: 10000;
-    color: #999;
-    filter: none;
+    color: white;
     transition: all 0.3s var(--ease-out-expo);
     opacity: 1;
     visibility: visible;
     transform: scale(1);
+    /* 強い影で視認性を確保 */
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
 }
 
 /* インフォボタン位置 */
@@ -326,12 +328,16 @@ a, button {
 .info-btn:hover,
 .hide-ui-btn:hover {
     transform: scale(1.05);
+    background: rgba(255, 255, 255, 0.25);
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
 }
 
 /* 右上アイコンボタン：アクティブ */
 .info-btn:active,
 .hide-ui-btn:active {
     transform: scale(0.95);
+    background: rgba(255, 255, 255, 0.2);
+    filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.2));
 }
 
 /* 右上アイコンボタン：SVGサイズ */
