@@ -178,7 +178,10 @@ export function addPhysicsBody(sticker) {
   const wrapperRect = sticker.imgWrapper 
     ? sticker.imgWrapper.getBoundingClientRect() 
     : containerRect;
-  const radius = wrapperRect.width / 2;
+  
+  // 物理ボディの半径を計算（表示サイズより小さくして重なりやすく）
+  const { RADIUS_SCALE } = PHYSICS_CONFIG.BODY;
+  const radius = (wrapperRect.width / 2) * RADIUS_SCALE;
   
   // 円形の物理ボディを作成
   const { RESTITUTION, FRICTION, FRICTION_AIR, DENSITY } = PHYSICS_CONFIG.BODY;
