@@ -355,7 +355,7 @@ export async function handleStickerMouseDown(e, id) {
 
   // 同じステッカーが既に選択されている場合
   if (state.selectedSticker && state.selectedSticker.id === id) {
-    // Shiftキーが押されていたら回転モード
+    // Shiftキーが押されていたら回転モード（物理モード中は通常モードのみ実行）
     if (e.shiftKey) {
       const rect = sticker.element.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
@@ -456,6 +456,11 @@ export function handleMouseMove(e) {
       lastDragTime = now;
     }
   } else if (state.isRotating) {
+    // 物理モード中は回転を無効化
+    if (isPhysicsActive()) {
+      return;
+    }
+    
     const rect = state.selectedSticker.element.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
@@ -536,6 +541,11 @@ export async function handleWheel(e, id) {
     return;
   }
 
+  // 物理モード中は拡大縮小を無効化
+  if (isPhysicsActive()) {
+    return;
+  }
+
   e.preventDefault();
   e.stopPropagation();
 
@@ -571,6 +581,11 @@ export async function handleWheel(e, id) {
 export async function handleCanvasWheel(e) {
   // Ctrl/Cmdキーが押されている場合はページズーム（デフォルト動作）を優先
   if (e.ctrlKey || e.metaKey) {
+    return;
+  }
+
+  // 物理モード中は拡大縮小を無効化
+  if (isPhysicsActive()) {
     return;
   }
 
@@ -715,7 +730,8 @@ export function handleTouchMove(e) {
     state.selectedSticker &&
     touches.length === 2 &&
     !state.isRotating &&
-    !state.isDragging
+    !state.isDragging &&
+    !isPhysicsActive() // 物理モード中はピンチ無効
   ) {
     // 待機状態をクリア
     state.canvasTapPending = false;
@@ -800,6 +816,11 @@ export function handleTouchMove(e) {
   // ピンチ中の処理
   if (state.isRotating && touches.length === 2) {
     e.preventDefault();
+
+    // 物理モード中はピンチ操作を無効化
+    if (isPhysicsActive()) {
+      return;
+    }
 
     const touch1 = touches[0];
     const touch2 = touches[1];
