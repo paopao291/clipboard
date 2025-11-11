@@ -233,7 +233,7 @@ export async function handleFileSelect(e) {
   if (files.length === 0) return;
 
   let addedCount = 0;
-
+  
   for (let file of files) {
     if (file.type.indexOf("image") !== -1) {
       // 画像を少しずつずらして配置
