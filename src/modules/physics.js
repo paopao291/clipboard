@@ -386,9 +386,9 @@ function handleDeviceOrientation(e) {
 function calculateGravityFromOrientation(beta, gamma) {
   const { STRENGTH, NEUTRAL_BETA } = PHYSICS_CONFIG.GYRO;
   
-  // 傾きから重力ベクトルを計算（PCと同じ座標系にするため符号を反転）
-  const x = -(gamma / 90) * STRENGTH;
-  const y = -((beta - NEUTRAL_BETA) / 90) * STRENGTH;
+  // 【テスト】傾きから重力ベクトルを計算（符号を反転させない = 逆向き）
+  const x = (gamma / 90) * STRENGTH;
+  const y = ((beta - NEUTRAL_BETA) / 90) * STRENGTH;
   
   // 範囲を制限
   return {
