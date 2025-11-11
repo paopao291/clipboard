@@ -56,6 +56,10 @@ async function init() {
 
   // ボタンイベント
   elements.infoBtn.addEventListener("click", showHelp);
+  elements.hideUIBtn.addEventListener("click", () => {
+    state.hideUI();
+    updateInfoButtonVisibility();
+  });
   elements.addBtn.addEventListener("click", () => {
     setAddButtonTriggered();
     elements.galleryInput.click();
@@ -77,9 +81,10 @@ async function init() {
     }
   });
 
-  // オーバーレイのクリックで選択解除
+  // オーバーレイのクリックで選択解除してUIを表示
   elements.selectionOverlay.addEventListener("click", () => {
     state.deselectAll();
+    state.showUI();
     updateInfoButtonVisibility();
   });
 
@@ -232,8 +237,9 @@ async function togglePhysicsMode() {
     state.disablePhysicsMode();
     elements.physicsBtn.classList.remove("active");
     
-    // 選択状態を解除
+    // 選択状態を解除してUIを表示
     state.deselectAll();
+    state.showUI();
     
     // pasteAreaを有効化
     elements.pasteArea.disabled = false;
@@ -243,8 +249,9 @@ async function togglePhysicsMode() {
     state.enablePhysicsMode();
     elements.physicsBtn.classList.add("active");
     
-    // 選択状態を解除
+    // 選択状態を解除してUIを表示
     state.deselectAll();
+    state.showUI();
     
     // pasteAreaを無効化（画像追加不可）
     elements.pasteArea.disabled = true;
@@ -276,8 +283,9 @@ async function handleLayoutButton() {
     elements.physicsBtn.classList.remove("active");
   }
 
-  // 選択状態を解除
+  // 選択状態を解除してUIを表示
   state.deselectAll();
+  state.showUI();
   updateInfoButtonVisibility();
 
   // ボタンをアクティブ状態に

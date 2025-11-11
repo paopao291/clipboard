@@ -31,6 +31,8 @@ class AppState {
     this.touchPrepareY = undefined;
     // 物理モード
     this.isPhysicsMode = false;
+    // UI表示状態（重力・斥力・追加ボタン）
+    this.isUIVisible = true;
   }
 
   /**
@@ -216,6 +218,35 @@ class AppState {
    */
   isPhysicsModeActive() {
     return this.isPhysicsMode;
+  }
+
+  /**
+   * UIの表示状態をトグル
+   */
+  toggleUIVisibility() {
+    this.isUIVisible = !this.isUIVisible;
+  }
+
+  /**
+   * UIを表示
+   */
+  showUI() {
+    this.isUIVisible = true;
+  }
+
+  /**
+   * UIを非表示
+   */
+  hideUI() {
+    this.isUIVisible = false;
+  }
+
+  /**
+   * UIが表示されているか確認
+   * @returns {boolean}
+   */
+  isUIVisibleState() {
+    return this.isUIVisible;
   }
 }
 

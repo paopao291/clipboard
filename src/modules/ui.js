@@ -9,6 +9,7 @@ export const elements = {
   cameraInput: null,
   pasteArea: null,
   infoBtn: null,
+  hideUIBtn: null,
   trashBtn: null,
   addBtn: null,
   physicsBtn: null,
@@ -30,6 +31,7 @@ export function initElements() {
   elements.cameraInput = document.getElementById(DOM_IDS.CAMERA_INPUT);
   elements.pasteArea = document.getElementById(DOM_IDS.PASTE_AREA);
   elements.infoBtn = document.getElementById(DOM_IDS.INFO_BTN);
+  elements.hideUIBtn = document.getElementById("hideUIBtn");
   elements.trashBtn = document.getElementById(DOM_IDS.TRASH_BTN);
   elements.addBtn = document.getElementById(DOM_IDS.ADD_BTN);
   elements.physicsBtn = document.getElementById("physicsBtn");
@@ -190,8 +192,8 @@ export function showHelp() {
     stickerDiv.classList.remove("appearing");
   }, 400);
 
-  // イベントリスナーを登録（通常のステッカーと同じイベントハンドラーを使用）
-  attachStickerEventListeners(stickerDiv, stickerId);
+  // イベントリスナーを登録（contentWrapperに設定）
+  attachStickerEventListeners(contentWrapper, stickerId);
 
   // DOMに追加
   elements.canvas.appendChild(stickerDiv);
@@ -305,8 +307,8 @@ export function restoreHelpSticker() {
   stickerDiv.style.zIndex = savedState.zIndex;
   state.updateZIndexCounter(savedState.zIndex);
 
-  // イベントリスナーを登録
-  attachStickerEventListeners(stickerDiv, stickerId);
+  // イベントリスナーを登録（contentWrapperに設定）
+  attachStickerEventListeners(contentWrapper, stickerId);
 
   // DOMに追加
   elements.canvas.appendChild(stickerDiv);
@@ -373,24 +375,27 @@ export function updateInfoButtonVisibility() {
     elements.addBtn.classList.add("hidden");
   }
   
-  // ステッカーがない場合：インフォボタン+FAB+物理ボタン表示、ゴミ箱非表示
+  // UIが非表示状態の場合、選択中のステッカー関連UI以外を非表示
+  const isUIVisible = state.isUIVisibleState();
+  
+  // ステッカーがない場合：インフォボタン+UI非表示ボタン+FAB+物理ボタン表示、ゴミ箱非表示
   if (state.getStickerCount() === 0) {
-    elements.infoBtn.classList.remove("hidden");
-    elements.infoBtn.classList.add("empty-state");
+    elements.infoBtn.classList.toggle("hidden", !isUIVisible);
+    elements.hideUIBtn.classList.toggle("hidden", !isUIVisible);
     elements.trashBtn.classList.add("hidden");
     if (!isPhysicsMode) {
-      elements.addBtn.classList.remove("hidden");
+      elements.addBtn.classList.toggle("hidden", !isUIVisible);
     }
-    elements.physicsBtn.classList.remove("hidden");
+    elements.physicsBtn.classList.toggle("hidden", !isUIVisible);
     elements.layoutBtn.classList.add("hidden"); // ステッカーがないときは非表示
     return;
   }
 
-  // ステッカーあり + 選択中：インフォボタン+ゴミ箱表示、FAB+物理ボタン+レイアウトボタン非表示
-  // ステッカーあり + 未選択：FAB+物理ボタン+レイアウトボタン表示、インフォボタン+ゴミ箱非表示
-  elements.infoBtn.classList.remove("empty-state");
+  // ステッカーあり + 選択中：ゴミ箱表示、その他非表示
+  // ステッカーあり + 未選択：インフォボタン+UI非表示ボタン+FAB+物理ボタン+レイアウトボタン表示、ゴミ箱非表示
   if (state.hasSelection()) {
-    elements.infoBtn.classList.remove("hidden");
+    elements.infoBtn.classList.add("hidden");
+    elements.hideUIBtn.classList.add("hidden");
     elements.trashBtn.classList.remove("hidden");
     if (!isPhysicsMode) {
       elements.addBtn.classList.add("hidden");
@@ -398,15 +403,16 @@ export function updateInfoButtonVisibility() {
     elements.physicsBtn.classList.add("hidden");
     elements.layoutBtn.classList.add("hidden");
   } else {
-    elements.infoBtn.classList.add("hidden");
+    elements.infoBtn.classList.toggle("hidden", !isUIVisible);
+    elements.hideUIBtn.classList.toggle("hidden", !isUIVisible);
     elements.trashBtn.classList.add("hidden");
     if (!isPhysicsMode) {
-      elements.addBtn.classList.remove("hidden");
+      elements.addBtn.classList.toggle("hidden", !isUIVisible);
     }
-    elements.physicsBtn.classList.remove("hidden");
+    elements.physicsBtn.classList.toggle("hidden", !isUIVisible);
     // ステッカーが2個以上ある場合のみレイアウトボタンを表示
     if (state.getStickerCount() >= 2) {
-      elements.layoutBtn.classList.remove("hidden");
+      elements.layoutBtn.classList.toggle("hidden", !isUIVisible);
     } else {
       elements.layoutBtn.classList.add("hidden");
     }

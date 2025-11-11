@@ -35,6 +35,9 @@ let lastDragX = 0;
 let lastDragY = 0;
 let lastDragTime = 0;
 
+// タッチイベント後のマウスイベント重複防止用
+let lastTouchTime = 0;
+
 /**
  * 右下の追加ボタンが押されたことを記録
  */
@@ -154,6 +157,7 @@ function handleTapOrClick(possibleTap, startTime) {
     const duration = Date.now() - (startTime || 0);
     if (duration < INTERACTION_CONFIG.TAP_MAX_DURATION_MS && !state.isDragging && !state.isRotating) {
       state.deselectAll();
+      state.showUI(); // ステッカー選択解除時にUIを表示
       updateInfoButtonVisibility();
       return true;
     }
@@ -272,18 +276,34 @@ export async function handleFileSelect(e) {
 }
 
 /**
- * キャンバスマウスダウン（選択解除）
+ * キャンバスマウスダウン（選択解除またはUI表示）
  * @param {MouseEvent} e
  */
 export function handleCanvasMouseDown(e) {
+  // タッチイベント後の重複マウスイベントを防ぐ（500ms以内）
+  const now = Date.now();
+  if (now - lastTouchTime < 500) {
+    return;
+  }
+  
   if (e.target === elements.canvas || e.target === elements.pasteArea) {
-    state.deselectAll();
-    updateInfoButtonVisibility();
+    // ステッカーが選択中の場合は選択解除してUIを表示
+    if (state.hasSelection()) {
+      state.deselectAll();
+      state.showUI();
+      updateInfoButtonVisibility();
+    } else {
+      // UIが非表示の場合のみ表示（UI表示中は何もしない）
+      if (!state.isUIVisibleState()) {
+        state.showUI();
+        updateInfoButtonVisibility();
+      }
+    }
   }
 }
 
 /**
- * キャンバスタッチスタート（ペーストエリアフォーカスと選択解除）
+ * キャンバスタッチスタート（ペーストエリアフォーカスと選択解除またはUI表示）
  * @param {TouchEvent} e
  */
 export function handleCanvasTouchStart(e) {
@@ -301,8 +321,11 @@ export function handleCanvasTouchStart(e) {
       elements.pasteArea.style.height = `${PASTE_AREA_CONFIG.TOUCH_SIZE}px`;
 
       if (!state.selectedSticker) {
-        // 未選択時：ペーストエリアにフォーカス
-        elements.pasteArea.focus();
+        // 未選択時：UI表示用のフラグを設定（ペーストエリアフォーカスはタップ確定後に）
+        state.canvasTapPending = true;
+        state.canvasTapStartTime = Date.now();
+        state.canvasTapX = touch.clientX;
+        state.canvasTapY = touch.clientY;
       } else {
         // 選択中：タップ判定を待つ（2本指追加でピンチできるようにするため）
         state.canvasTapPending = true;
@@ -350,9 +373,10 @@ export async function handleStickerMouseDown(e, id) {
   }
 
   // 通常モード（以下は既存のロジック）
-  // 別のステッカーが選択中の場合は選択解除
+  // 別のステッカーが選択中の場合は選択解除してUIを表示
   if (state.selectedSticker && state.selectedSticker.id !== id) {
     state.deselectAll();
+    state.showUI();
     updateInfoButtonVisibility();
     return;
   }
@@ -866,13 +890,35 @@ export function handleTouchMove(e) {
  * @param {TouchEvent} e
  */
 export async function handleTouchEnd(e) {
-  // 空白エリアタップ判定：選択解除
-  if (handleTapOrClick(state.canvasTapPending, state.canvasTapStartTime)) {
-    elements.pasteArea.focus();
-    state.canvasTapPending = false;
-    state.canvasTapX = undefined;
-    state.canvasTapY = undefined;
-    return;
+  // 空白エリアタップ判定：選択解除またはUI表示
+  if (state.canvasTapPending) {
+    const duration = Date.now() - (state.canvasTapStartTime || 0);
+    if (duration < INTERACTION_CONFIG.TAP_MAX_DURATION_MS && !state.isDragging && !state.isRotating) {
+      // タッチイベントを処理した時刻を記録（マウスイベント重複防止用）
+      lastTouchTime = Date.now();
+      
+      if (state.selectedSticker) {
+        // ステッカー選択中の場合は選択解除してUIを表示
+        state.deselectAll();
+        state.showUI();
+        updateInfoButtonVisibility();
+        // ペーストエリアにフォーカス
+        elements.pasteArea.focus();
+      } else {
+        // UIが非表示の場合のみ表示（UI表示中は何もしない）
+        if (!state.isUIVisibleState()) {
+          state.showUI();
+          updateInfoButtonVisibility();
+        }
+        // ペーストエリアにフォーカス（ペースト可能にするため）
+        elements.pasteArea.focus();
+      }
+      
+      state.canvasTapPending = false;
+      state.canvasTapX = undefined;
+      state.canvasTapY = undefined;
+      return;
+    }
   }
   state.canvasTapPending = false;
   state.canvasTapX = undefined;
@@ -973,16 +1019,16 @@ export function handlePasteAreaKeydown(e) {
 }
 
 /**
- * すべてのイベントリスナーをシールに登録
- * @param {HTMLElement} stickerElement - シール要素
+ * すべてのイベントリスナーをステッカーのクリック可能領域に登録
+ * @param {HTMLElement} wrapperElement - ステッカーのラッパー要素（imgWrapperまたはcontentWrapper）
  * @param {number} id - シールID
  */
-export function attachStickerEventListeners(stickerElement, id) {
-  stickerElement.addEventListener("mousedown", (e) =>
+export function attachStickerEventListeners(wrapperElement, id) {
+  wrapperElement.addEventListener("mousedown", (e) =>
     handleStickerMouseDown(e, id),
   );
-  stickerElement.addEventListener("wheel", (e) => handleWheel(e, id));
-  stickerElement.addEventListener(
+  wrapperElement.addEventListener("wheel", (e) => handleWheel(e, id));
+  wrapperElement.addEventListener(
     "touchstart",
     (e) => handleStickerTouchStart(e, id),
     { passive: false },

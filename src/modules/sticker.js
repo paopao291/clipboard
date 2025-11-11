@@ -179,8 +179,8 @@ export function addStickerToDOM(
     stickerDiv.style.zIndex = actualZIndex;
   }
 
-  // イベントリスナーを登録
-  attachStickerEventListeners(stickerDiv, stickerId);
+  // イベントリスナーを登録（imgWrapperに設定）
+  attachStickerEventListeners(imgWrapper, stickerId);
 
   // DOMに追加
   elements.canvas.appendChild(stickerDiv);
@@ -235,6 +235,9 @@ export async function removeSticker(id) {
       removePhysicsBody(id);
     }
 
+    // 削除時にUIを表示
+    state.showUI();
+    
     // インフォボタンの表示状態を更新
     updateInfoButtonVisibility();
 

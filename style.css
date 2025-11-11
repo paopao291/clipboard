@@ -269,13 +269,6 @@ a, button {
     transform: scale(1);
 }
 
-.add-btn.hidden {
-    opacity: 0;
-    visibility: hidden;
-    transform: scale(0.8);
-    pointer-events: none;
-}
-
 .add-btn:hover {
     transform: scale(1.05);
     background: rgba(0, 0, 0, 0.9);
@@ -296,11 +289,11 @@ a, button {
     height: 26px;
 }
 
-/* インフォボタン */
-.info-btn {
+/* 右上アイコンボタン共通スタイル */
+.info-btn,
+.hide-ui-btn {
     position: fixed;
     top: 24px;
-    right: 24px;
     width: 44px;
     height: 44px;
     background: transparent;
@@ -311,34 +304,53 @@ a, button {
     align-items: center;
     justify-content: center;
     z-index: 10000;
-    color: white;
+    color: #999;
+    filter: none;
     transition: all 0.3s var(--ease-out-expo);
-    filter: drop-shadow(0 0px 2px rgba(0, 0, 0, 0.2));
     opacity: 1;
     visibility: visible;
     transform: scale(1);
 }
 
-.info-btn.hidden {
+/* インフォボタン位置 */
+.info-btn {
+    right: 24px;
+}
+
+/* UI非表示ボタン位置 */
+.hide-ui-btn {
+    right: 80px;
+}
+
+/* 右上アイコンボタン：ホバー */
+.info-btn:hover,
+.hide-ui-btn:hover {
+    transform: scale(1.05);
+}
+
+/* 右上アイコンボタン：アクティブ */
+.info-btn:active,
+.hide-ui-btn:active {
+    transform: scale(0.95);
+}
+
+/* 右上アイコンボタン：SVGサイズ */
+.info-btn svg,
+.hide-ui-btn svg {
+    width: 22px;
+    height: 22px;
+}
+
+/* ボタン共通：非表示状態 */
+.info-btn.hidden,
+.hide-ui-btn.hidden,
+.add-btn.hidden,
+.physics-btn.hidden,
+.layout-btn.hidden {
     opacity: 0;
     visibility: hidden;
     transform: scale(0.8);
     pointer-events: none;
-}
-
-.info-btn:hover {
-    transform: scale(1.05);
-    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
-}
-
-.info-btn:active {
-    transform: scale(0.95);
-    filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.1));
-}
-
-.info-btn svg {
-    width: 22px;
-    height: 22px;
 }
 
 /* 物理モードボタン */
@@ -364,13 +376,6 @@ a, button {
     opacity: 1;
     visibility: visible;
     transform: scale(1);
-}
-
-.physics-btn.hidden {
-    opacity: 0;
-    visibility: hidden;
-    transform: scale(0.8);
-    pointer-events: none;
 }
 
 @media (hover: hover) { 
@@ -437,13 +442,6 @@ a, button {
     transform: scale(1);
 }
 
-.layout-btn.hidden {
-    opacity: 0;
-    visibility: hidden;
-    transform: scale(0.8);
-    pointer-events: none;
-}
-
 @media (hover: hover) { 
     .layout-btn:not(.hidden):hover {
         transform: scale(1.05);
@@ -481,23 +479,6 @@ a, button {
 .layout-btn svg {
     width: 24px;
     height: 24px;
-}
-
-/* ステッカーがない時のインフォボタン */
-.info-btn.empty-state {
-    color: #bbb;
-    filter: none;
-    background: transparent;
-}
-
-.info-btn.empty-state:hover {
-    color: #bbb;
-    filter: none;
-}
-
-.info-btn.empty-state:active {
-    color: #bbb;
-    filter: none;
 }
 
 /* キャンバス：ミニマルな空間 */
@@ -623,6 +604,8 @@ a, button {
     /* GPU加速を強制 */
     transform: translateZ(0);
     /* z-indexはJavaScriptで動的に設定されます */
+    /* ステッカー外枠はクリック不可（imgWrapperのみクリック可能） */
+    pointer-events: none;
 }
 
 /* 選択中のステッカーはオーバーレイより前面に */
@@ -708,6 +691,8 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
     /* GPU加速を強制 */
     transform: translateZ(0);
     backface-visibility: hidden;
+    /* クリック可能な領域 */
+    pointer-events: auto;
 }
 
 .sticker-img-wrapper:active {
