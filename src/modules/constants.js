@@ -94,7 +94,7 @@ export const PHYSICS_CONFIG = {
     FRICTION: 0.08,    // 摩擦
     FRICTION_AIR: 0.015, // 空気抵抗（軽やかに）
     DENSITY: 0.0015,   // 密度（軽く）
-    RADIUS_SCALE: 0.6, // 物理ボディの半径スケール（小さくして重なりやすく）
+    RADIUS_SCALE: 0.7, // 物理ボディの半径スケール（小さくして重なりやすく）
   },
   
   // ジャイロ（スマホ用）
