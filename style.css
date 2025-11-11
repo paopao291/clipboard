@@ -830,7 +830,7 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
     font-size: 14px;
     font-weight: 500;
     letter-spacing: -0.2px;
-    z-index: 9999;
+    z-index: 10001;
     opacity: 1;
     transition: all 0.3s var(--ease-out-expo);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
