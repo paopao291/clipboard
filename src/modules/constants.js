@@ -101,8 +101,8 @@ export const PHYSICS_CONFIG = {
   // ジャイロ（スマホ用）
   GYRO: {
     STRENGTH: 0.8,    // 重力の強さ係数
-    NEUTRAL_BETA: 0,  // 中立位置（度）- 平行時が中立
-    DEFAULT_GRAVITY: 0.3, // 平行時の下向き重力（やや下に落ちる）
+    NEUTRAL_BETA: 15,  // 中立位置（度）- 平行時が中立
+    DEFAULT_GRAVITY: 0.1, // 平行時の下向き重力（やや下に落ちる）
   },
   
   // 重力の更新
