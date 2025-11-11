@@ -364,12 +364,21 @@ export function updateHelpStickerState(sticker) {
  * ボタンの表示状態を更新
  */
 export function updateInfoButtonVisibility() {
+  // 物理モード中は追加ボタンを常に非表示
+  const isPhysicsMode = state.isPhysicsModeActive();
+  
+  if (isPhysicsMode) {
+    elements.addBtn.classList.add("hidden");
+  }
+  
   // ステッカーがない場合：インフォボタン+FAB+物理ボタン表示、ゴミ箱非表示
   if (state.getStickerCount() === 0) {
     elements.infoBtn.classList.remove("hidden");
     elements.infoBtn.classList.add("empty-state");
     elements.trashBtn.classList.add("hidden");
-    elements.addBtn.classList.remove("hidden");
+    if (!isPhysicsMode) {
+      elements.addBtn.classList.remove("hidden");
+    }
     elements.physicsBtn.classList.remove("hidden");
     return;
   }
@@ -380,12 +389,16 @@ export function updateInfoButtonVisibility() {
   if (state.hasSelection()) {
     elements.infoBtn.classList.remove("hidden");
     elements.trashBtn.classList.remove("hidden");
-    elements.addBtn.classList.add("hidden");
+    if (!isPhysicsMode) {
+      elements.addBtn.classList.add("hidden");
+    }
     elements.physicsBtn.classList.add("hidden");
   } else {
     elements.infoBtn.classList.add("hidden");
     elements.trashBtn.classList.add("hidden");
-    elements.addBtn.classList.remove("hidden");
+    if (!isPhysicsMode) {
+      elements.addBtn.classList.remove("hidden");
+    }
     elements.physicsBtn.classList.remove("hidden");
   }
 }

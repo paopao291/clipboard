@@ -319,7 +319,7 @@ export function handleCanvasTouchStart(e) {
  * @param {MouseEvent} e
  * @param {number} id - シールID
  */
-export function handleStickerMouseDown(e, id) {
+export async function handleStickerMouseDown(e, id) {
   e.preventDefault();
   e.stopPropagation();
 
@@ -329,6 +329,10 @@ export function handleStickerMouseDown(e, id) {
   // 物理モード中は選択せずに直接ドラッグ開始
   if (isPhysicsActive()) {
     state.selectedSticker = sticker; // 内部的には必要だがUI的には選択しない
+    
+    // 最前面に移動
+    await bringToFront(sticker);
+    
     state.isDragging = true;
     const coords = absoluteToHybrid(e.clientX, e.clientY);
     state.dragStartX = coords.x - sticker.x;
@@ -592,7 +596,7 @@ export async function handleCanvasWheel(e) {
  * @param {TouchEvent} e
  * @param {number} id - シールID
  */
-export function handleStickerTouchStart(e, id) {
+export async function handleStickerTouchStart(e, id) {
   e.preventDefault();
   e.stopPropagation();
 
@@ -604,6 +608,10 @@ export function handleStickerTouchStart(e, id) {
   // 物理モード中は選択せずに直接ドラッグ開始（1本指のみ）
   if (isPhysicsActive() && touches.length === 1) {
     state.selectedSticker = sticker; // 内部的には必要だがUI的には選択しない
+    
+    // 最前面に移動
+    await bringToFront(sticker);
+    
     state.isDragging = true;
     const coords = absoluteToHybrid(touches[0].clientX, touches[0].clientY);
     state.dragStartX = coords.x - sticker.x;

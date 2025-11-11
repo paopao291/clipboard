@@ -197,14 +197,32 @@ async function loadStickersFromDB() {
  */
 function togglePhysicsMode() {
   if (isPhysicsActive()) {
+    // 物理モード OFF
     disablePhysics();
     state.disablePhysicsMode();
     elements.physicsBtn.classList.remove("active");
+    
+    // 選択状態を解除
+    state.deselectAll();
+    
+    // pasteAreaを有効化
+    elements.pasteArea.disabled = false;
   } else {
+    // 物理モード ON
     enablePhysics();
     state.enablePhysicsMode();
     elements.physicsBtn.classList.add("active");
+    
+    // 選択状態を解除
+    state.deselectAll();
+    
+    // pasteAreaを無効化（画像追加不可）
+    elements.pasteArea.disabled = true;
+    elements.pasteArea.blur(); // フォーカスを外す
   }
+  
+  // ボタンの表示状態を更新
+  updateInfoButtonVisibility();
 }
 
 // 初期化実行
