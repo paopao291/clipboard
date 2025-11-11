@@ -3,6 +3,18 @@ import { DB_CONFIG } from './constants.js';
 let db = null;
 
 /**
+ * IDBRequestをPromiseでラップする共通関数
+ * @param {IDBRequest} request - IndexedDB request
+ * @returns {Promise<any>}
+ */
+function promisifyRequest(request) {
+    return new Promise((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+/**
  * IndexedDBを初期化
  * @returns {Promise<IDBDatabase>}
  */
@@ -37,14 +49,10 @@ export function initDB() {
  * @returns {Promise<void>}
  */
 export function saveStickerToDB(stickerData) {
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction([DB_CONFIG.STORE_NAME], 'readwrite');
-        const objectStore = transaction.objectStore(DB_CONFIG.STORE_NAME);
-        const request = objectStore.put(stickerData);
-
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-    });
+    const transaction = db.transaction([DB_CONFIG.STORE_NAME], 'readwrite');
+    const objectStore = transaction.objectStore(DB_CONFIG.STORE_NAME);
+    const request = objectStore.put(stickerData);
+    return promisifyRequest(request);
 }
 
 /**
@@ -57,22 +65,12 @@ export async function updateStickerInDB(id, updates) {
     try {
         const transaction = db.transaction([DB_CONFIG.STORE_NAME], 'readwrite');
         const objectStore = transaction.objectStore(DB_CONFIG.STORE_NAME);
-        const getRequest = objectStore.get(id);
-
-        return new Promise((resolve, reject) => {
-            getRequest.onsuccess = () => {
-                const data = getRequest.result;
-                if (data) {
-                    Object.assign(data, updates);
-                    const putRequest = objectStore.put(data);
-                    putRequest.onsuccess = () => resolve();
-                    putRequest.onerror = () => reject(putRequest.error);
-                } else {
-                    resolve();
-                }
-            };
-            getRequest.onerror = () => reject(getRequest.error);
-        });
+        const data = await promisifyRequest(objectStore.get(id));
+        
+        if (data) {
+            Object.assign(data, updates);
+            await promisifyRequest(objectStore.put(data));
+        }
     } catch (e) {
         console.error('DB更新エラー:', e);
     }
@@ -84,14 +82,10 @@ export async function updateStickerInDB(id, updates) {
  * @returns {Promise<void>}
  */
 export function deleteStickerFromDB(id) {
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction([DB_CONFIG.STORE_NAME], 'readwrite');
-        const objectStore = transaction.objectStore(DB_CONFIG.STORE_NAME);
-        const request = objectStore.delete(id);
-
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-    });
+    const transaction = db.transaction([DB_CONFIG.STORE_NAME], 'readwrite');
+    const objectStore = transaction.objectStore(DB_CONFIG.STORE_NAME);
+    const request = objectStore.delete(id);
+    return promisifyRequest(request);
 }
 
 /**
@@ -102,17 +96,11 @@ export async function loadAllStickersFromDB() {
     try {
         const transaction = db.transaction([DB_CONFIG.STORE_NAME], 'readonly');
         const objectStore = transaction.objectStore(DB_CONFIG.STORE_NAME);
-        const request = objectStore.getAll();
-
-        return new Promise((resolve, reject) => {
-            request.onsuccess = () => {
-                const stickers = request.result;
-                // z-index順にソート（小さい順から追加することで重ね順を再現）
-                stickers.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
-                resolve(stickers);
-            };
-            request.onerror = () => reject(request.error);
-        });
+        const stickers = await promisifyRequest(objectStore.getAll());
+        
+        // z-index順にソート（小さい順から追加することで重ね順を再現）
+        stickers.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+        return stickers;
     } catch (e) {
         console.error('DB読み込みエラー:', e);
         return [];

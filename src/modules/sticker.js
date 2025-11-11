@@ -1,5 +1,5 @@
 import { state } from "../state.js";
-import { STICKER_DEFAULTS, MESSAGES, HELP_STICKER_CONFIG } from "./constants.js";
+import { STICKER_DEFAULTS, HELP_STICKER_CONFIG } from "./constants.js";
 import {
   saveStickerToDB,
   updateStickerInDB,
@@ -190,7 +190,7 @@ export async function removeSticker(id) {
     // 「戻す」トーストを表示
     showToast("削除しました", {
       actionText: "戻す",
-      duration: 5000, // 5秒間表示
+      duration: 4000, // 4秒間表示
       onAction: () => {
         // タイムアウトをキャンセル
         if (deleteTimeout) {

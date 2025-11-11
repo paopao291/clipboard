@@ -32,6 +32,109 @@ export function setAddButtonTriggered() {
 }
 
 /**
+ * ステッカーが画面外に出たかチェックし、必要なら中央に戻す
+ * @param {Object} sticker - チェック対象のステッカー
+ * @returns {Promise<boolean>} 中央に戻した場合true
+ */
+async function checkAndFixOutOfBounds(sticker) {
+  const rect = sticker.element.getBoundingClientRect();
+  
+  // 完全に画面外に出たかチェック（回転していても確実に判定）
+  const isCompletelyOutside = 
+    rect.right <= 0 || 
+    rect.left >= window.innerWidth || 
+    rect.bottom <= 0 || 
+    rect.top >= window.innerHeight;
+  
+  if (isCompletelyOutside) {
+    // 完全に画面外に出た場合は中央に戻す
+    updateStickerPosition(sticker, 0, 50);
+    await saveStickerChanges(sticker);
+    showToast("画面外に出たため中央に戻しました");
+    return true;
+  }
+  
+  // 画面内に見えている部分の幅と高さを計算
+  const visibleWidth = Math.min(rect.right, window.innerWidth) - Math.max(rect.left, 0);
+  const visibleHeight = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
+  
+  // ステッカーの実際のサイズ
+  const stickerWidth = rect.width;
+  const stickerHeight = rect.height;
+  
+  // 画面内に見えている割合を計算（幅と高さの両方で判定）
+  const visibleRatioX = visibleWidth / stickerWidth;
+  const visibleRatioY = visibleHeight / stickerHeight;
+  
+  // 90%以上が画面外に出ている、または見えている部分が閾値未満の場合は中央に戻す
+  const minVisiblePx = 16;
+  const isMostlyOutside = visibleRatioX < 0.1 || visibleRatioY < 0.1 || 
+                          visibleWidth < minVisiblePx || visibleHeight < minVisiblePx;
+  
+  if (isMostlyOutside) {
+    // 中央に戻す
+    updateStickerPosition(sticker, 0, 50);
+    await saveStickerChanges(sticker);
+    showToast("画面外に出たため中央に戻しました");
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * ゴミ箱にドロップされた場合の削除処理
+ * @param {number} clientX - X座標
+ * @param {number} clientY - Y座標
+ * @returns {Promise<boolean>} 削除した場合true
+ */
+async function handleTrashDrop(clientX, clientY) {
+  if (state.isDragging && isOverTrashBtn(clientX, clientY)) {
+    const stickerToDelete = state.selectedSticker;
+    state.deselectAll();
+    setTrashDragOver(false);
+    setOverlayDeleteMode(false);
+    await removeSticker(stickerToDelete.id);
+    updateInfoButtonVisibility();
+    return true;
+  }
+  return false;
+}
+
+/**
+ * ドラッグ/回転の終了処理を行う
+ */
+async function finishInteraction() {
+  if (!state.selectedSticker) return;
+  
+  state.selectedSticker.element.classList.remove("rotating", "resizing");
+  await saveStickerChanges(state.selectedSticker);
+  
+  // ドラッグ終了時に画面外判定
+  if (state.isDragging) {
+    await checkAndFixOutOfBounds(state.selectedSticker);
+  }
+}
+
+/**
+ * タップ/クリック判定を処理
+ * @param {boolean} possibleTap - タップ可能性フラグ
+ * @param {number} startTime - タップ開始時刻
+ * @returns {boolean} タップとして処理した場合true
+ */
+function handleTapOrClick(possibleTap, startTime) {
+  if (possibleTap && state.selectedSticker) {
+    const duration = Date.now() - (startTime || 0);
+    if (duration < INTERACTION_CONFIG.TAP_MAX_DURATION_MS && !state.isDragging && !state.isRotating) {
+      state.deselectAll();
+      updateInfoButtonVisibility();
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * 2本指ピンチ操作を開始（共通処理）
  * @param {Touch} touch1 - 1本目の指
  * @param {Touch} touch2 - 2本目の指
@@ -302,81 +405,28 @@ export function handleMouseMove(e) {
  */
 export async function handleMouseUp(e) {
   // クリック判定（選択中のステッカーをクリックで解除）
-  if (state.possibleClick && state.selectedSticker) {
-    const clickDuration = Date.now() - (state.clickStartTime || 0);
-    // 閾値以内かつドラッグしていない場合はクリックとみなす
-    if (clickDuration < INTERACTION_CONFIG.TAP_MAX_DURATION_MS && !state.isDragging && !state.isRotating) {
-      state.deselectAll();
-      updateInfoButtonVisibility();
-      state.possibleClick = false;
-      state.dragPrepareX = undefined;
-      state.dragPrepareY = undefined;
-      return;
-    }
+  if (handleTapOrClick(state.possibleClick, state.clickStartTime)) {
+    state.possibleClick = false;
+    state.dragPrepareX = undefined;
+    state.dragPrepareY = undefined;
+    return;
   }
+  
   state.possibleClick = false;
   state.dragPrepareX = undefined;
   state.dragPrepareY = undefined;
 
   if (state.isDragging || state.isRotating) {
-    if (state.selectedSticker) {
-      // ゴミ箱エリアに重なっていたら削除
-      if (state.isDragging && isOverTrashBtn(e.clientX, e.clientY)) {
-        const stickerToDelete = state.selectedSticker;
-        state.deselectAll();
-        setTrashDragOver(false); // ゴミ箱の状態をリセット
-        setOverlayDeleteMode(false);
-        await removeSticker(stickerToDelete.id);
-        updateInfoButtonVisibility();
-        state.endInteraction();
-        return;
-      }
-
-      state.selectedSticker.element.classList.remove("rotating");
-      await saveStickerChanges(state.selectedSticker);
-
-      // ドラッグ終了時に画面外判定
-      if (state.isDragging) {
-        const rect = state.selectedSticker.element.getBoundingClientRect();
-        
-        // 完全に画面外に出たかチェック（回転していても確実に判定）
-        const isCompletelyOutside = 
-          rect.right <= 0 || 
-          rect.left >= window.innerWidth || 
-          rect.bottom <= 0 || 
-          rect.top >= window.innerHeight;
-        
-        if (!isCompletelyOutside) {
-          // 画面内に見えている部分の幅と高さを計算
-          const visibleWidth = Math.min(rect.right, window.innerWidth) - Math.max(rect.left, 0);
-          const visibleHeight = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
-          
-          // ステッカーの実際のサイズ
-          const stickerWidth = rect.width;
-          const stickerHeight = rect.height;
-          
-          // 画面内に見えている割合を計算（幅と高さの両方で判定）
-          const visibleRatioX = visibleWidth / stickerWidth;
-          const visibleRatioY = visibleHeight / stickerHeight;
-          
-          // 90%以上が画面外に出ている、または見えている部分が20px未満の場合は中央に戻す
-          const isMostlyOutside = visibleRatioX < 0.1 || visibleRatioY < 0.1 || 
-                                  visibleWidth < 20 || visibleHeight < 20;
-          
-          if (isMostlyOutside) {
-            // 中央に戻す
-            updateStickerPosition(state.selectedSticker, 0, 50);
-            await saveStickerChanges(state.selectedSticker);
-            showToast("画面外に出たため中央に戻しました");
-          }
-        } else {
-          // 完全に画面外に出た場合も中央に戻す
-          updateStickerPosition(state.selectedSticker, 0, 50);
-          await saveStickerChanges(state.selectedSticker);
-          showToast("画面外に出たため中央に戻しました");
-        }
-      }
+    // ゴミ箱にドロップされた場合は削除
+    const wasDeleted = await handleTrashDrop(e.clientX, e.clientY);
+    if (wasDeleted) {
+      state.endInteraction();
+      return;
     }
+
+    // 通常の終了処理
+    await finishInteraction();
+    
     // ドラッグ終了時にゴミ箱の状態をリセット
     setTrashDragOver(false);
     setOverlayDeleteMode(false);
@@ -656,30 +706,23 @@ export function handleTouchMove(e) {
  */
 export async function handleTouchEnd(e) {
   // 空白エリアタップ判定：選択解除
-  if (state.canvasTapPending) {
-    const tapDuration = Date.now() - (state.canvasTapStartTime || 0);
-    if (tapDuration < INTERACTION_CONFIG.TAP_MAX_DURATION_MS) {
-      state.deselectAll();
-      updateInfoButtonVisibility();
-      elements.pasteArea.focus();
-    }
+  if (handleTapOrClick(state.canvasTapPending, state.canvasTapStartTime)) {
+    elements.pasteArea.focus();
     state.canvasTapPending = false;
     state.canvasTapX = undefined;
     state.canvasTapY = undefined;
     return;
   }
+  state.canvasTapPending = false;
+  state.canvasTapX = undefined;
+  state.canvasTapY = undefined;
 
   // ステッカータップ判定：選択解除
-  if (state.possibleTap && state.selectedSticker) {
-    const tapDuration = Date.now() - (state.tapStartTime || 0);
-    if (tapDuration < INTERACTION_CONFIG.TAP_MAX_DURATION_MS && !state.isDragging) {
-      state.deselectAll();
-      updateInfoButtonVisibility();
-      state.possibleTap = false;
-      state.touchPrepareX = undefined;
-      state.touchPrepareY = undefined;
-      return;
-    }
+  if (handleTapOrClick(state.possibleTap, state.tapStartTime)) {
+    state.possibleTap = false;
+    state.touchPrepareX = undefined;
+    state.touchPrepareY = undefined;
+    return;
   }
 
   // タップフラグをクリア
@@ -689,70 +732,19 @@ export async function handleTouchEnd(e) {
 
   // ドラッグ/ピンチ終了処理
   if (state.isDragging || state.isRotating) {
-    if (state.selectedSticker) {
-      // ゴミ箱へのドロップ判定
-      if (state.isDragging && e.changedTouches.length > 0) {
-        const touch = e.changedTouches[0];
-        if (isOverTrashBtn(touch.clientX, touch.clientY)) {
-          const stickerToDelete = state.selectedSticker;
-          state.deselectAll();
-          setTrashDragOver(false);
-          setOverlayDeleteMode(false);
-          await removeSticker(stickerToDelete.id);
-          updateInfoButtonVisibility();
-          state.endInteraction();
-          return;
-        }
-      }
-
-      // リサイズ中クラスを削除（CSSトランジション復帰）
-      state.selectedSticker.element.classList.remove("rotating", "resizing");
-      
-      // 変更を保存
-      await saveStickerChanges(state.selectedSticker);
-
-      // ドラッグ終了時に画面外判定
-      if (state.isDragging) {
-        const rect = state.selectedSticker.element.getBoundingClientRect();
-        
-        // 完全に画面外に出たかチェック（回転していても確実に判定）
-        const isCompletelyOutside = 
-          rect.right <= 0 || 
-          rect.left >= window.innerWidth || 
-          rect.bottom <= 0 || 
-          rect.top >= window.innerHeight;
-        
-        if (!isCompletelyOutside) {
-          // 画面内に見えている部分の幅と高さを計算
-          const visibleWidth = Math.min(rect.right, window.innerWidth) - Math.max(rect.left, 0);
-          const visibleHeight = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
-          
-          // ステッカーの実際のサイズ
-          const stickerWidth = rect.width;
-          const stickerHeight = rect.height;
-          
-          // 画面内に見えている割合を計算（幅と高さの両方で判定）
-          const visibleRatioX = visibleWidth / stickerWidth;
-          const visibleRatioY = visibleHeight / stickerHeight;
-          
-          // 90%以上が画面外に出ている、または見えている部分が16px未満の場合は中央に戻す
-          const isMostlyOutside = visibleRatioX < 0.1 || visibleRatioY < 0.1 || 
-                                  visibleWidth < 16 || visibleHeight < 16;
-          
-          if (isMostlyOutside) {
-            // 中央に戻す
-            updateStickerPosition(state.selectedSticker, 0, 50);
-            await saveStickerChanges(state.selectedSticker);
-            showToast("画面外に出たため中央に戻しました");
-          }
-        } else {
-          // 完全に画面外に出た場合も中央に戻す
-          updateStickerPosition(state.selectedSticker, 0, 50);
-          await saveStickerChanges(state.selectedSticker);
-          showToast("画面外に出たため中央に戻しました");
-        }
+    // ゴミ箱にドロップされた場合は削除
+    if (e.changedTouches.length > 0) {
+      const touch = e.changedTouches[0];
+      const wasDeleted = await handleTrashDrop(touch.clientX, touch.clientY);
+      if (wasDeleted) {
+        state.endInteraction();
+        return;
       }
     }
+
+    // 通常の終了処理
+    await finishInteraction();
+    
     setTrashDragOver(false);
     setOverlayDeleteMode(false);
     resetStickerTransformOrigin();
