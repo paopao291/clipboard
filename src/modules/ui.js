@@ -391,11 +391,12 @@ export function updateHelpStickerState(sticker) {
  * ボタンの表示状態を更新
  */
 export function updateInfoButtonVisibility() {
-  // 物理モード中は追加ボタンを常に非表示
+  // 物理モード中は追加ボタンとheader-buttonsを常に非表示
   const isPhysicsMode = state.isPhysicsModeActive();
   
   if (isPhysicsMode) {
     elements.addBtn.classList.add("hidden");
+    elements.headerButtons.classList.add("hidden");
   }
   
   // UIが非表示状態の場合、選択中のステッカー関連UI以外を非表示
@@ -409,7 +410,7 @@ export function updateInfoButtonVisibility() {
   
   // ステッカーがない場合：右上ボタン群+FAB表示、選択ボタン群・ゴミ箱・左下ボタン群非表示
   if (state.getStickerCount() === 0) {
-    elements.headerButtons.classList.toggle("hidden", !isUIVisible);
+    elements.headerButtons.classList.toggle("hidden", !isUIVisible || isPhysicsMode);
     elements.selectionButtons.classList.add("hidden");
     elements.trashBtn.classList.add("hidden");
     if (!isPhysicsMode) {
@@ -437,7 +438,7 @@ export function updateInfoButtonVisibility() {
       elements.pinBtn.classList.remove('pinned');
     }
   } else {
-    elements.headerButtons.classList.toggle("hidden", !isUIVisible);
+    elements.headerButtons.classList.toggle("hidden", !isUIVisible || isPhysicsMode);
     elements.selectionButtons.classList.add("hidden");
     elements.trashBtn.classList.add("hidden");
     if (!isPhysicsMode) {
