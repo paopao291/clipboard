@@ -316,8 +316,6 @@ async function handleBackgroundSelect(e) {
       localStorage.setItem('backgroundImage', event.target.result);
     };
     reader.readAsDataURL(file);
-    
-    showToast('背景画像を設定しました');
   }
   
   // 入力をリセット
@@ -334,8 +332,6 @@ function removeBackgroundImage() {
   
   // localStorageから削除
   localStorage.removeItem('backgroundImage');
-  
-  showToast('背景画像を削除しました');
 }
 
 /**
