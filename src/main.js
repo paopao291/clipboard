@@ -8,7 +8,6 @@ import {
   updateInfoButtonVisibility,
   showInitialHelp,
   restoreHelpSticker,
-  showToast,
   elements,
 } from "./modules/ui.js";
 import {
@@ -29,6 +28,7 @@ import {
 import { addStickerToDOM, toggleStickerPin, sendToBack } from "./modules/sticker.js";
 import { initPhysicsEngine, enablePhysics, disablePhysics, isPhysicsActive } from "./modules/physics.js";
 import { startAutoLayout, isLayoutRunning } from "./modules/layout.js";
+import { setBackgroundImage, removeBackgroundImage, restoreBackgroundImage, hasBackgroundImage } from "./modules/background.js";
 
 /**
  * アプリケーションの初期化
@@ -57,14 +57,7 @@ async function init() {
   elements.pasteArea.addEventListener("keydown", handlePasteAreaKeydown);
 
   // ボタンイベント
-  elements.backgroundBtn.addEventListener("click", () => {
-    // 背景画像がある場合は削除、ない場合はアップロード
-    if (document.body.classList.contains('has-background-image')) {
-      removeBackgroundImage();
-    } else {
-      elements.backgroundInput.click();
-    }
-  });
+  elements.backgroundBtn.addEventListener("click", handleBackgroundButton);
   elements.infoBtn.addEventListener("click", showHelp);
   elements.hideUIBtn.addEventListener("click", () => {
     state.hideUI();
@@ -248,18 +241,6 @@ async function loadStickersFromDB() {
 }
 
 /**
- * 背景画像を復元
- */
-function restoreBackgroundImage() {
-  const savedBackground = localStorage.getItem('backgroundImage');
-  
-  if (savedBackground) {
-    document.body.style.backgroundImage = `url(${savedBackground})`;
-    document.body.classList.add('has-background-image');
-  }
-}
-
-/**
  * 物理モードを切り替え
  */
 async function togglePhysicsMode() {
@@ -295,6 +276,18 @@ async function togglePhysicsMode() {
 }
 
 /**
+ * 背景画像ボタンハンドラ
+ */
+function handleBackgroundButton() {
+  // 背景画像がある場合は削除、ない場合はアップロード
+  if (hasBackgroundImage()) {
+    removeBackgroundImage();
+  } else {
+    elements.backgroundInput.click();
+  }
+}
+
+/**
  * 背景画像選択ハンドラ
  * @param {Event} e
  */
@@ -303,35 +296,10 @@ async function handleBackgroundSelect(e) {
   
   if (!file) return;
   
-  if (file.type.indexOf("image") !== -1) {
-    const url = URL.createObjectURL(file);
-    
-    // bodyの背景画像を設定（ドット柄なし）
-    document.body.style.backgroundImage = `url(${url})`;
-    document.body.classList.add('has-background-image');
-    
-    // localStorageに保存（blob URLは保存できないので、FileReaderでBase64化）
-    const reader = new FileReader();
-    reader.onload = function(event) {
-      localStorage.setItem('backgroundImage', event.target.result);
-    };
-    reader.readAsDataURL(file);
-  }
+  await setBackgroundImage(file);
   
   // 入力をリセット
   e.target.value = "";
-}
-
-/**
- * 背景画像を削除
- */
-function removeBackgroundImage() {
-  // 背景画像をクリア（デフォルトに戻す）
-  document.body.style.backgroundImage = '';
-  document.body.classList.remove('has-background-image');
-  
-  // localStorageから削除
-  localStorage.removeItem('backgroundImage');
 }
 
 /**
