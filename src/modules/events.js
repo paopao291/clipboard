@@ -170,8 +170,14 @@ function handleTapOrClick(possibleTap, startTime) {
  * @param {Touch} touch1 - 1本目の指
  * @param {Touch} touch2 - 2本目の指
  * @param {Object} targetSticker - 対象のステッカー
+ * @returns {boolean} ピンチを開始したかどうか
  */
 function startPinchGesture(touch1, touch2, targetSticker) {
+  // 固定されているステッカーはピンチ不可
+  if (targetSticker.isPinned) {
+    return false;
+  }
+
   // 初期距離を保存（拡大縮小用）
   const dx = touch2.clientX - touch1.clientX;
   const dy = touch2.clientY - touch1.clientY;
@@ -183,6 +189,40 @@ function startPinchGesture(touch1, touch2, targetSticker) {
     Math.atan2(touch2.clientY - touch1.clientY, touch2.clientX - touch1.clientX) *
     (180 / Math.PI);
   state.startRotating(angle);
+  
+  return true;
+}
+
+/**
+ * 固定されたステッカーの操作処理（通常モード）
+ * @param {Object} sticker - ステッカーオブジェクト
+ * @param {number} id - ステッカーID
+ * @param {boolean} isTouch - タッチイベントかどうか
+ */
+async function handlePinnedStickerInteraction(sticker, id, isTouch = false) {
+  // 別のステッカーが選択中の場合は選択解除してUIを表示
+  if (state.selectedSticker && state.selectedSticker.id !== id) {
+    state.deselectAll();
+    state.showUI();
+    updateInfoButtonVisibility();
+    return true;
+  }
+  
+  // 未選択なら選択、選択中ならクリック/タップ判定準備
+  if (!state.selectedSticker) {
+    state.selectSticker(sticker);
+    updateInfoButtonVisibility();
+    await bringToFront(sticker);
+  } else {
+    if (isTouch) {
+      state.possibleTap = true;
+      state.tapStartTime = Date.now();
+    } else {
+      state.possibleClick = true;
+      state.clickStartTime = Date.now();
+    }
+  }
+  return true;
 }
 
 /**
@@ -353,30 +393,13 @@ export async function handleStickerMouseDown(e, id) {
   const sticker = state.getStickerById(id);
   if (!sticker) return;
 
-  // 固定されているステッカーは選択のみ可能
-  if (sticker.isPinned) {
-    // 別のステッカーが選択中の場合は選択解除してUIを表示
-    if (state.selectedSticker && state.selectedSticker.id !== id) {
-      state.deselectAll();
-      state.showUI();
-      updateInfoButtonVisibility();
-      return;
-    }
-    
-    // 未選択なら選択、選択中ならクリック判定準備
-    if (!state.selectedSticker) {
-      state.selectSticker(sticker);
-      updateInfoButtonVisibility();
-      bringToFront(sticker);
-    } else {
-      state.possibleClick = true;
-      state.clickStartTime = Date.now();
-    }
-    return;
-  }
-
   // 物理モード中は選択せずに直接ドラッグ開始
   if (isPhysicsActive()) {
+    // 固定されているステッカーは最前面に移動のみ
+    if (sticker.isPinned) {
+      await bringToFront(sticker);
+      return;
+    }
     state.selectedSticker = sticker; // 内部的には必要だがUI的には選択しない
     
     // 最前面に移動
@@ -391,6 +414,12 @@ export async function handleStickerMouseDown(e, id) {
     lastDragX = e.clientX;
     lastDragY = e.clientY;
     lastDragTime = Date.now();
+    return;
+  }
+  
+  // 固定されているステッカーは選択のみ可能（通常モードのみ）
+  if (sticker.isPinned) {
+    await handlePinnedStickerInteraction(sticker, id, false);
     return;
   }
 
@@ -678,30 +707,13 @@ export async function handleStickerTouchStart(e, id) {
 
   const touches = e.touches;
 
-  // 固定されているステッカーは選択のみ可能
-  if (sticker.isPinned) {
-    // 別のステッカーが選択中の場合は選択解除してUIを表示
-    if (state.selectedSticker && state.selectedSticker.id !== id) {
-      state.deselectAll();
-      state.showUI();
-      updateInfoButtonVisibility();
-      return;
-    }
-    
-    // 未選択なら選択、選択中ならタップ判定準備
-    if (!state.selectedSticker) {
-      state.selectSticker(sticker);
-      updateInfoButtonVisibility();
-      bringToFront(sticker);
-    } else {
-      state.possibleTap = true;
-      state.tapStartTime = Date.now();
-    }
-    return;
-  }
-
   // 物理モード中は選択せずに直接ドラッグ開始（1本指のみ）
   if (isPhysicsActive() && touches.length === 1) {
+    // 固定されているステッカーは最前面に移動のみ
+    if (sticker.isPinned) {
+      await bringToFront(sticker);
+      return;
+    }
     state.selectedSticker = sticker; // 内部的には必要だがUI的には選択しない
     
     // 最前面に移動
@@ -716,6 +728,12 @@ export async function handleStickerTouchStart(e, id) {
     lastDragX = touches[0].clientX;
     lastDragY = touches[0].clientY;
     lastDragTime = Date.now();
+    return;
+  }
+  
+  // 固定されているステッカーは選択のみ可能（通常モードのみ）
+  if (sticker.isPinned) {
+    await handlePinnedStickerInteraction(sticker, id, true);
     return;
   }
 
@@ -811,7 +829,8 @@ export function handleTouchMove(e) {
     touches.length === 2 &&
     !state.isRotating &&
     !state.isDragging &&
-    !isPhysicsActive() // 物理モード中はピンチ無効
+    !isPhysicsActive() && // 物理モード中はピンチ無効
+    !state.selectedSticker.isPinned // 固定されたステッカーはピンチ無効
   ) {
     // 待機状態をクリア
     state.canvasTapPending = false;
@@ -899,6 +918,11 @@ export function handleTouchMove(e) {
 
     // 物理モード中はピンチ操作を無効化
     if (isPhysicsActive()) {
+      return;
+    }
+
+    // 固定されたステッカーはピンチ操作を無効化
+    if (state.selectedSticker && state.selectedSticker.isPinned) {
       return;
     }
 
