@@ -118,9 +118,11 @@ export function enablePhysics() {
   engine.gravity.scale = SCALE;
   isGyroActive = false; // 初期はジャイロ無効（PC想定）
   
-  // 全てのシールに物理ボディを追加（ヘルプステッカーも含む）
+  // 固定されていないシールに物理ボディを追加
   state.stickers.forEach(sticker => {
-    addPhysicsBody(sticker);
+    if (!sticker.isPinned) {
+      addPhysicsBody(sticker);
+    }
   });
   
   // エンジンを起動
@@ -184,6 +186,9 @@ async function saveStickersAfterPhysics(stickers) {
  */
 export function addPhysicsBody(sticker) {
   if (!isPhysicsEnabled || !world) return;
+  
+  // 固定されたステッカーはスキップ
+  if (sticker.isPinned) return;
   
   // 既に物理ボディがある場合はスキップ
   if (stickerBodyMap.has(sticker.id)) return;

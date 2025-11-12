@@ -70,8 +70,9 @@ export async function startAutoLayout() {
     stopAutoLayout();
   }
 
-  // ステッカーが2つ未満なら何もしない
-  if (state.stickers.length < 2) {
+  // 固定されていないステッカーが2つ未満なら何もしない
+  const unpinnedStickers = state.stickers.filter(s => !s.isPinned);
+  if (unpinnedStickers.length < 2) {
     return;
   }
 
@@ -138,7 +139,8 @@ export function isLayoutRunning() {
  * @returns {Map<number, {x: number, yPercent: number}>} ステッカーIDと最終位置のマップ
  */
 function calculateFinalPositions() {
-  const stickers = state.stickers;
+  // 固定されていないステッカーのみを対象にする
+  const stickers = state.stickers.filter(s => !s.isPinned);
   const positions = new Map();
   
   // 現在の位置を仮想位置としてコピー（異常値を修正）

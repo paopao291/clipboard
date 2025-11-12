@@ -353,6 +353,28 @@ export async function handleStickerMouseDown(e, id) {
   const sticker = state.getStickerById(id);
   if (!sticker) return;
 
+  // 固定されているステッカーは選択のみ可能
+  if (sticker.isPinned) {
+    // 別のステッカーが選択中の場合は選択解除してUIを表示
+    if (state.selectedSticker && state.selectedSticker.id !== id) {
+      state.deselectAll();
+      state.showUI();
+      updateInfoButtonVisibility();
+      return;
+    }
+    
+    // 未選択なら選択、選択中ならクリック判定準備
+    if (!state.selectedSticker) {
+      state.selectSticker(sticker);
+      updateInfoButtonVisibility();
+      bringToFront(sticker);
+    } else {
+      state.possibleClick = true;
+      state.clickStartTime = Date.now();
+    }
+    return;
+  }
+
   // 物理モード中は選択せずに直接ドラッグ開始
   if (isPhysicsActive()) {
     state.selectedSticker = sticker; // 内部的には必要だがUI的には選択しない
@@ -580,6 +602,11 @@ export async function handleWheel(e, id) {
   const sticker = state.getStickerById(id);
   if (!sticker) return;
 
+  // 固定されたステッカーは拡大縮小不可
+  if (sticker.isPinned || (state.selectedSticker && state.selectedSticker.isPinned)) {
+    return;
+  }
+
   // 選択中のステッカーがある場合は、カーソル位置に関わらず選択中のステッカーを拡大縮小
   const targetSticker = state.selectedSticker || sticker;
 
@@ -650,6 +677,28 @@ export async function handleStickerTouchStart(e, id) {
   if (!sticker) return;
 
   const touches = e.touches;
+
+  // 固定されているステッカーは選択のみ可能
+  if (sticker.isPinned) {
+    // 別のステッカーが選択中の場合は選択解除してUIを表示
+    if (state.selectedSticker && state.selectedSticker.id !== id) {
+      state.deselectAll();
+      state.showUI();
+      updateInfoButtonVisibility();
+      return;
+    }
+    
+    // 未選択なら選択、選択中ならタップ判定準備
+    if (!state.selectedSticker) {
+      state.selectSticker(sticker);
+      updateInfoButtonVisibility();
+      bringToFront(sticker);
+    } else {
+      state.possibleTap = true;
+      state.tapStartTime = Date.now();
+    }
+    return;
+  }
 
   // 物理モード中は選択せずに直接ドラッグ開始（1本指のみ）
   if (isPhysicsActive() && touches.length === 1) {

@@ -174,15 +174,23 @@ a, button {
     }
 
     .info-btn,
-    .hide-ui-btn {
+    .hide-ui-btn,
+    .pin-btn {
         width: var(--size-button-mobile);
         height: var(--size-button-mobile);
     }
 
     .info-btn svg,
-    .hide-ui-btn svg {
+    .hide-ui-btn svg,
+    .pin-btn svg {
         width: var(--size-icon-sm);
         height: var(--size-icon-sm);
+    }
+
+    /* 選択ボタン群 */
+    .selection-buttons {
+        top: var(--spacing-sm);
+        right: var(--spacing-sm);
     }
 
     .footer-buttons {
@@ -244,6 +252,49 @@ a, button {
         font-size: var(--font-sm);
         padding: 5px 14px;
     }
+}
+
+/* 選択中のステッカー操作ボタン群のラッパー */
+.selection-buttons {
+    position: fixed;
+    top: var(--spacing-base);
+    right: var(--spacing-base);
+    display: flex;
+    gap: 12px;
+    z-index: 10000;
+    transition: all 0.3s var(--ease-out-expo);
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1);
+}
+
+.selection-buttons.hidden {
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.8);
+    pointer-events: none;
+}
+
+/* 固定ボタン：アイコンの切り替え */
+.pin-btn .pin-icon-outline {
+    display: block;
+}
+
+.pin-btn .pin-icon-fill {
+    display: none;
+}
+
+/* 固定ボタン：固定状態のスタイル */
+.pin-btn.pinned {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.pin-btn.pinned .pin-icon-outline {
+    display: none;
+}
+
+.pin-btn.pinned .pin-icon-fill {
+    display: block;
 }
 
 /* ゴミ箱ボタン */
@@ -351,7 +402,8 @@ a, button {
 
 /* 右上アイコンボタン共通スタイル */
 .info-btn,
-.hide-ui-btn {
+.hide-ui-btn,
+.pin-btn {
     width: var(--size-button-sm);
     height: var(--size-button-sm);
     background: var(--color-white-overlay);
@@ -373,7 +425,8 @@ a, button {
 
 /* 右上アイコンボタン：ホバー */
 .info-btn:hover,
-.hide-ui-btn:hover {
+.hide-ui-btn:hover,
+.pin-btn:hover {
     transform: scale(1.05);
     background: var(--color-white-overlay-hover);
     filter: var(--shadow-button-hover);
@@ -381,7 +434,8 @@ a, button {
 
 /* 右上アイコンボタン：アクティブ */
 .info-btn:active,
-.hide-ui-btn:active {
+.hide-ui-btn:active,
+.pin-btn:active {
     transform: scale(0.95);
     background: var(--color-white-overlay);
     filter: var(--shadow-button-active);
@@ -389,7 +443,8 @@ a, button {
 
 /* 右上アイコンボタン：SVGサイズ */
 .info-btn svg,
-.hide-ui-btn svg {
+.hide-ui-btn svg,
+.pin-btn svg {
     width: var(--size-icon-sm);
     height: var(--size-icon-sm);
 }
@@ -649,6 +704,34 @@ a, button {
     /* z-indexはJavaScriptで動的に設定されます */
     /* ステッカー外枠はクリック不可（imgWrapperのみクリック可能） */
     pointer-events: none;
+}
+
+/* 固定されたステッカー：シンプルな斜線パターン */
+.sticker.pinned .sticker-img-wrapper {
+    position: relative;
+}
+
+.sticker.pinned .sticker-img-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 16px,
+        rgba(255, 255, 255, 0.3) 16px,
+        rgba(255, 255, 255, 0.3) 32px
+    );
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* UI非表示時は斜線も非表示（スクショ用） */
+.canvas.ui-hidden .sticker.pinned .sticker-img-wrapper::after {
+    display: none;
 }
 
 /* 選択中のステッカーはオーバーレイより前面に */

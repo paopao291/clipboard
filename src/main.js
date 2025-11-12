@@ -25,7 +25,7 @@ import {
   handleCanvasWheel,
   setAddButtonTriggered,
 } from "./modules/events.js";
-import { addStickerToDOM } from "./modules/sticker.js";
+import { addStickerToDOM, toggleStickerPin } from "./modules/sticker.js";
 import { initPhysicsEngine, enablePhysics, disablePhysics, isPhysicsActive } from "./modules/physics.js";
 import { startAutoLayout, isLayoutRunning } from "./modules/layout.js";
 
@@ -63,6 +63,19 @@ async function init() {
   elements.addBtn.addEventListener("click", () => {
     setAddButtonTriggered();
     elements.galleryInput.click();
+  });
+  
+  // 固定ボタンイベント
+  elements.pinBtn.addEventListener("click", () => {
+    if (state.selectedSticker) {
+      toggleStickerPin(state.selectedSticker);
+      // 固定ボタンの状態を更新
+      if (state.selectedSticker.isPinned) {
+        elements.pinBtn.classList.add('pinned');
+      } else {
+        elements.pinBtn.classList.remove('pinned');
+      }
+    }
   });
   
   // 物理モードボタンイベント
@@ -218,6 +231,7 @@ async function loadStickersFromDB() {
       stickerData.rotation,
       stickerData.id,
       stickerData.zIndex,
+      stickerData.isPinned || false,
     );
   }
   

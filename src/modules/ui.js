@@ -11,6 +11,8 @@ export const elements = {
   headerButtons: null,
   infoBtn: null,
   hideUIBtn: null,
+  selectionButtons: null,
+  pinBtn: null,
   trashBtn: null,
   addBtn: null,
   footerButtons: null,
@@ -35,6 +37,8 @@ export function initElements() {
   elements.headerButtons = document.querySelector(".header-buttons");
   elements.infoBtn = document.getElementById(DOM_IDS.INFO_BTN);
   elements.hideUIBtn = document.getElementById("hideUIBtn");
+  elements.selectionButtons = document.querySelector(".selection-buttons");
+  elements.pinBtn = document.getElementById("pinBtn");
   elements.trashBtn = document.getElementById(DOM_IDS.TRASH_BTN);
   elements.addBtn = document.getElementById(DOM_IDS.ADD_BTN);
   elements.footerButtons = document.querySelector(".footer-buttons");
@@ -382,35 +386,60 @@ export function updateInfoButtonVisibility() {
   // UIが非表示状態の場合、選択中のステッカー関連UI以外を非表示
   const isUIVisible = state.isUIVisibleState();
   
-  // ステッカーがない場合：右上ボタン群+FAB表示、ゴミ箱・左下ボタン群非表示
+  // UI表示状態をcanvasに反映（斜線の表示制御用）
+  elements.canvas.classList.toggle('ui-hidden', !isUIVisible);
+  
+  // 固定されていないステッカーの数をカウント
+  const unpinnedCount = state.stickers.filter(s => !s.isPinned).length;
+  
+  // ステッカーがない場合：右上ボタン群+FAB表示、選択ボタン群・ゴミ箱・左下ボタン群非表示
   if (state.getStickerCount() === 0) {
     elements.headerButtons.classList.toggle("hidden", !isUIVisible);
+    elements.selectionButtons.classList.add("hidden");
     elements.trashBtn.classList.add("hidden");
     if (!isPhysicsMode) {
       elements.addBtn.classList.toggle("hidden", !isUIVisible);
     }
-    elements.footerButtons.classList.add("hidden"); // ステッカーがないときは左下ボタン群を非表示
+    elements.footerButtons.classList.add("hidden");
     return;
   }
 
-  // ステッカーあり + 選択中：ゴミ箱表示、その他非表示
-  // ステッカーあり + 未選択：右上ボタン群+FAB+左下ボタン群+レイアウトボタン表示、ゴミ箱非表示
+  // ステッカーあり + 選択中：選択ボタン群とゴミ箱表示、その他非表示
+  // ステッカーあり + 未選択：右上ボタン群+FAB+左下ボタン群表示、選択ボタン群とゴミ箱非表示
   if (state.hasSelection()) {
     elements.headerButtons.classList.add("hidden");
-    elements.trashBtn.classList.remove("hidden");
+    // 選択ボタン群もUI表示状態を考慮
+    elements.selectionButtons.classList.toggle("hidden", !isUIVisible);
+    elements.trashBtn.classList.toggle("hidden", !isUIVisible);
     if (!isPhysicsMode) {
       elements.addBtn.classList.add("hidden");
     }
     elements.footerButtons.classList.add("hidden");
+    
+    // 固定ボタンの状態を更新（pinBtnはselectionButtons内にあるので個別制御不要）
+    if (state.selectedSticker.isPinned) {
+      elements.pinBtn.classList.add('pinned');
+    } else {
+      elements.pinBtn.classList.remove('pinned');
+    }
   } else {
     elements.headerButtons.classList.toggle("hidden", !isUIVisible);
+    elements.selectionButtons.classList.add("hidden");
     elements.trashBtn.classList.add("hidden");
     if (!isPhysicsMode) {
       elements.addBtn.classList.toggle("hidden", !isUIVisible);
     }
     elements.footerButtons.classList.toggle("hidden", !isUIVisible);
-    // ステッカーが2個以上ある場合のみレイアウトボタンを表示
-    if (state.getStickerCount() >= 2) {
+    
+    // 固定されていないステッカーが0個の場合、物理モードボタンを非表示
+    if (unpinnedCount === 0) {
+      elements.physicsBtn.classList.add("hidden");
+    } else {
+      elements.physicsBtn.classList.toggle("hidden", !isUIVisible);
+    }
+    
+    // 固定されていないステッカーが2個以上ある場合のみレイアウトボタンを表示
+    if (unpinnedCount >= 2) {
       elements.layoutBtn.classList.toggle("hidden", !isUIVisible);
     } else {
       elements.layoutBtn.classList.add("hidden");

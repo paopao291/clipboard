@@ -106,6 +106,7 @@ export async function addStickerFromBlob(
     width: width,
     rotation: rotation,
     zIndex: actualZIndex,
+    isPinned: false,
     timestamp: Date.now(),
   });
 
@@ -126,6 +127,7 @@ export async function addStickerFromBlob(
  * @param {number} rotation - 回転角度
  * @param {number|null} id - シールID
  * @param {number|null} zIndex - z-index
+ * @param {boolean} isPinned - 固定状態
  * @returns {number} 実際のz-index
  */
 export function addStickerToDOM(
@@ -136,6 +138,7 @@ export function addStickerToDOM(
   rotation = STICKER_DEFAULTS.ROTATION,
   id = null,
   zIndex = null,
+  isPinned = false,
 ) {
   const stickerId = id || Date.now();
 
@@ -196,8 +199,14 @@ export function addStickerToDOM(
     zIndex: actualZIndex,
     element: stickerDiv,
     imgWrapper: imgWrapper,
+    isPinned: isPinned,
   };
   state.addSticker(stickerObject);
+  
+  // 固定状態を反映
+  if (isPinned) {
+    stickerDiv.classList.add('pinned');
+  }
   
   // transformを適用（scaleと回転）
   applyStickerTransform(stickerObject);
@@ -419,4 +428,32 @@ export async function saveAllStickerPositions(stickers, options = {}) {
   if (options.showToastOnComplete) {
     showToast('位置を保存しました');
   }
+}
+
+/**
+ * ステッカーの固定状態をトグル
+ * @param {Object} sticker - シールオブジェクト
+ */
+export async function toggleStickerPin(sticker) {
+  sticker.isPinned = !sticker.isPinned;
+  
+  // DOMクラスを更新
+  if (sticker.isPinned) {
+    sticker.element.classList.add('pinned');
+    showToast('固定しました');
+  } else {
+    sticker.element.classList.remove('pinned');
+    showToast('固定を解除しました');
+  }
+  
+  // ヘルプステッカーでない場合はDBに保存
+  if (!sticker.isHelpSticker) {
+    await updateStickerInDB(sticker.id, { isPinned: sticker.isPinned });
+  } else {
+    // ヘルプステッカーはlocalStorageに保存
+    updateHelpStickerState(sticker);
+  }
+  
+  // ボタンの表示状態を更新
+  updateInfoButtonVisibility();
 }

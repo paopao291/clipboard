@@ -61,6 +61,21 @@
                     inputmode="none"
                 ></textarea>
 
+                <!-- 選択中のステッカー操作ボタン群 -->
+                <div class="selection-buttons">
+                    <!-- 固定ボタン -->
+                    <button id="pinBtn" class="pin-btn hidden" title="固定">
+                        <!-- アウトライン版（未固定時） -->
+                        <svg class="pin-icon-outline" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
+                            <path d="m640-480 80 80v80H520v240l-40 40-40-40v-240H240v-80l80-80v-280h-40v-80h400v80h-40v280Zm-286 80h252l-46-46v-314H400v314l-46 46Zm126 0Z"/>
+                        </svg>
+                        <!-- Fill版（固定時） -->
+                        <svg class="pin-icon-fill" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
+                            <path d="m640-480 80 80v80H520v240l-40 40-40-40v-240H240v-80l80-80v-280h-40v-80h400v80h-40v280Z"/>
+                        </svg>
+                    </button>
+                </div>
+
                 <!-- ゴミ箱ボタン -->
                 <button id="trashBtn" class="trash-btn hidden" title="削除">
                     <svg
