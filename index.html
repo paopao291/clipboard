@@ -69,15 +69,28 @@
 
                 <!-- 選択中のステッカー操作ボタン群 -->
                 <div class="selection-buttons hidden">
+                    <!-- 縁取りトグルボタン -->
+                    <button id="borderBtn" class="selection-btn border-btn" title="縁取り">
+                        <!-- 縁取り追加アイコン（縁取りなし状態で表示） -->
+                        <svg class="border-icon-on" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M5 21C4.45 21 3.97917 20.8042 3.5875 20.4125C3.19583 20.0208 3 19.55 3 19V5C3 4.45 3.19583 3.97917 3.5875 3.5875C3.97917 3.19583 4.45 3 5 3H19C19.55 3 20.0208 3.19583 20.4125 3.5875C20.8042 3.97917 21 4.45 21 5V19C21 19.55 20.8042 20.0208 20.4125 20.4125C20.0208 20.8042 19.55 21 19 21H5ZM5 19H19V5H5V19Z" fill="currentColor"/>
+                            <path d="M7 17V7H17V17H7Z" fill="currentColor"/>
+                        </svg>
+                        <!-- 縁取り削除アイコン（縁取りあり状態で表示） -->
+                        <svg class="border-icon-off" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M7 17V7H17V17H7ZM5 19V21C4.45 21 3.97917 20.8042 3.5875 20.4125C3.19583 20.0208 3 19.55 3 19H5ZM3 17V15H5V17H3ZM3 13V11H5V13H3ZM3 9V7H5V9H3ZM5 5H3C3 4.45 3.19583 3.97917 3.5875 3.5875C3.97917 3.19583 4.45 3 5 3V5ZM7 21V19H9V21H7ZM7 5V3H9V5H7ZM11 21V19H13V21H11ZM11 5V3H13V5H11ZM15 21V19H17V21H15ZM15 5V3H17V5H15ZM19 21V19H21C21 19.55 20.8042 20.0208 20.4125 20.4125C20.0208 20.8042 19.55 21 19 21ZM19 17V15H21V17H19ZM19 13V11H21V13H19ZM19 9V7H21V9H19ZM19 5V3C19.55 3 20.0208 3.19583 20.4125 3.5875C20.8042 3.97917 21 4.45 21 5H19Z" fill="currentColor"/>
+                        </svg>
+                    </button>
+                    
                     <!-- 最背面へボタン -->
-                    <button id="sendToBackBtn" class="selection-btn send-to-back-btn hidden" title="最背面へ">
+                    <button id="sendToBackBtn" class="selection-btn send-to-back-btn" title="最背面へ">
                         <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
                             <path d="M160-501q0 71 47.5 122T326-322l-62-62 56-56 160 160-160 160-56-56 64-64q-105-6-176.5-81T80-500q0-109 75.5-184.5T340-760h140v80H340q-75 0-127.5 52T160-501Zm400 261v-80h320v80H560Zm0-220v-80h320v80H560Zm0-220v-80h320v80H560Z"/>
                         </svg>
                     </button>
                     
                     <!-- 固定ボタン -->
-                    <button id="pinBtn" class="selection-btn pin-btn hidden" title="固定">
+                    <button id="pinBtn" class="selection-btn pin-btn" title="固定">
                         <!-- アウトライン版（未固定時） -->
                         <svg class="pin-icon-outline" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
                             <path d="m640-480 80 80v80H520v240l-40 40-40-40v-240H240v-80l80-80v-280h-40v-80h400v80h-40v280Zm-286 80h252l-46-46v-314H400v314l-46 46Zm126 0Z"/>

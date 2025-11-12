@@ -16,6 +16,7 @@ export const elements = {
   selectionButtons: null,
   sendToBackBtn: null,
   pinBtn: null,
+  borderBtn: null,
   trashBtn: null,
   addBtn: null,
   footerButtons: null,
@@ -45,6 +46,7 @@ export function initElements() {
   elements.selectionButtons = document.querySelector(".selection-buttons");
   elements.sendToBackBtn = document.getElementById("sendToBackBtn");
   elements.pinBtn = document.getElementById("pinBtn");
+  elements.borderBtn = document.getElementById("borderBtn");
   elements.trashBtn = document.getElementById(DOM_IDS.TRASH_BTN);
   elements.addBtn = document.getElementById(DOM_IDS.ADD_BTN);
   elements.footerButtons = document.querySelector(".footer-buttons");
@@ -225,6 +227,7 @@ export function showHelp() {
     imgWrapper: contentWrapper, // 回転用のラッパー
     isHelpSticker: true, // ヘルプステッカーであることを示すフラグ
     isPinned: false,
+    hasBorder: true, // ヘルプステッカーもデフォルトで縁取りあり
   });
 
   // 選択状態にする（オーバーレイ表示）
@@ -240,6 +243,7 @@ export function showHelp() {
     width: initialWidth,
     rotation: HELP_STICKER_CONFIG.INITIAL_ROTATION,
     zIndex: zIndex,
+    hasBorder: true,
   });
 }
 
@@ -341,12 +345,18 @@ export function restoreHelpSticker() {
     imgWrapper: contentWrapper,
     isHelpSticker: true,
     isPinned: savedState.isPinned || false,
+    hasBorder: savedState.hasBorder !== undefined ? savedState.hasBorder : true,
   };
   state.addSticker(helpSticker);
   
   // 固定状態を反映
   if (helpSticker.isPinned) {
     stickerDiv.classList.add('pinned');
+  }
+  
+  // 縁取り状態を反映
+  if (!helpSticker.hasBorder) {
+    stickerDiv.classList.add('no-border');
   }
 }
 
@@ -384,6 +394,7 @@ export function updateHelpStickerState(sticker) {
     rotation: sticker.rotation,
     zIndex: sticker.zIndex,
     isPinned: sticker.isPinned || false,
+    hasBorder: sticker.hasBorder !== undefined ? sticker.hasBorder : true,
   });
 }
 
@@ -436,6 +447,13 @@ export function updateInfoButtonVisibility() {
       elements.pinBtn.classList.add('pinned');
     } else {
       elements.pinBtn.classList.remove('pinned');
+    }
+    
+    // 縁取りボタンの状態を更新
+    if (state.selectedSticker.hasBorder === false) {
+      elements.borderBtn.classList.add('no-border');
+    } else {
+      elements.borderBtn.classList.remove('no-border');
     }
   } else {
     elements.headerButtons.classList.toggle("hidden", !isUIVisible || isPhysicsMode);

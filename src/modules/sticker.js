@@ -73,6 +73,7 @@ function applyStickerTransform(sticker) {
  * @param {number} rotation - 回転角度
  * @param {number|null} id - シールID
  * @param {number|null} zIndex - z-index
+ * @param {boolean} hasBorder - 縁取りあり
  */
 export async function addStickerFromBlob(
   blob,
@@ -82,6 +83,7 @@ export async function addStickerFromBlob(
   rotation = STICKER_DEFAULTS.ROTATION,
   id = null,
   zIndex = null,
+  hasBorder = STICKER_DEFAULTS.HAS_BORDER,
 ) {
   const stickerId = id || Date.now();
   const url = URL.createObjectURL(blob);
@@ -96,6 +98,7 @@ export async function addStickerFromBlob(
     stickerId,
     zIndex,
     false, // isPinned（新規追加時は常に未固定）
+    hasBorder,
   );
 
   // IndexedDBに保存
@@ -108,6 +111,7 @@ export async function addStickerFromBlob(
     rotation: rotation,
     zIndex: actualZIndex,
     isPinned: false,
+    hasBorder: hasBorder,
     timestamp: Date.now(),
   });
 
@@ -129,6 +133,7 @@ export async function addStickerFromBlob(
  * @param {number|null} id - シールID
  * @param {number|null} zIndex - z-index
  * @param {boolean} isPinned - 固定状態
+ * @param {boolean} hasBorder - 縁取りあり
  * @returns {number} 実際のz-index
  */
 export function addStickerToDOM(
@@ -140,6 +145,7 @@ export function addStickerToDOM(
   id = null,
   zIndex = null,
   isPinned = false,
+  hasBorder = STICKER_DEFAULTS.HAS_BORDER,
 ) {
   const stickerId = id || Date.now();
 
@@ -201,12 +207,18 @@ export function addStickerToDOM(
     element: stickerDiv,
     imgWrapper: imgWrapper,
     isPinned: isPinned,
+    hasBorder: hasBorder,
   };
   state.addSticker(stickerObject);
   
   // 固定状態を反映
   if (isPinned) {
     stickerDiv.classList.add('pinned');
+  }
+  
+  // 縁取り状態を反映
+  if (!hasBorder) {
+    stickerDiv.classList.add('no-border');
   }
   
   // transformを適用（scaleと回転）
@@ -269,6 +281,7 @@ export async function removeSticker(id) {
       imgWrapper: sticker.imgWrapper,
       isHelpSticker: sticker.isHelpSticker,
       isPinned: sticker.isPinned,
+      hasBorder: sticker.hasBorder,
     };
 
     let deleteTimeout = null;
@@ -317,6 +330,13 @@ async function undoRemoveSticker(stickerData) {
   // 固定状態を復元
   if (stickerData.isPinned) {
     stickerData.element.classList.add('pinned');
+  }
+  
+  // 縁取り状態を復元
+  if (stickerData.hasBorder === false) {
+    stickerData.element.classList.add('no-border');
+  } else {
+    stickerData.element.classList.remove('no-border');
   }
 
   // 選択状態にする
@@ -473,15 +493,39 @@ export async function toggleStickerPin(sticker) {
   // DOMクラスを更新
   if (sticker.isPinned) {
     sticker.element.classList.add('pinned');
-    showToast('固定しました');
   } else {
     sticker.element.classList.remove('pinned');
-    showToast('固定を解除しました');
   }
   
   // ヘルプステッカーでない場合はDBに保存
   if (!sticker.isHelpSticker) {
     await updateStickerInDB(sticker.id, { isPinned: sticker.isPinned });
+  } else {
+    // ヘルプステッカーはlocalStorageに保存
+    updateHelpStickerState(sticker);
+  }
+  
+  // ボタンの表示状態を更新
+  updateInfoButtonVisibility();
+}
+
+/**
+ * ステッカーの縁取り状態をトグル
+ * @param {Object} sticker - シールオブジェクト
+ */
+export async function toggleStickerBorder(sticker) {
+  sticker.hasBorder = !sticker.hasBorder;
+  
+  // DOMクラスを更新
+  if (!sticker.hasBorder) {
+    sticker.element.classList.add('no-border');
+  } else {
+    sticker.element.classList.remove('no-border');
+  }
+  
+  // ヘルプステッカーでない場合はDBに保存
+  if (!sticker.isHelpSticker) {
+    await updateStickerInDB(sticker.id, { hasBorder: sticker.hasBorder });
   } else {
     // ヘルプステッカーはlocalStorageに保存
     updateHelpStickerState(sticker);

@@ -318,6 +318,24 @@ body.has-background-image .background-btn .background-icon-remove {
     display: block;
 }
 
+/* 縁取りボタン：アイコンの切り替え */
+.border-btn .border-icon-on {
+    display: none;
+}
+
+.border-btn .border-icon-off {
+    display: block;
+}
+
+/* 縁取りボタン：縁取りなし状態のスタイル */
+.selection-btn.no-border .border-icon-on {
+    display: block;
+}
+
+.selection-btn.no-border .border-icon-off {
+    display: none;
+}
+
 /* ゴミ箱ボタン */
 .trash-btn {
     position: fixed;
@@ -862,6 +880,16 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
     backface-visibility: hidden;
     /* 画像のスムーズレンダリング */
     image-rendering: auto;
+}
+
+/* 縁取りなしの場合 */
+.sticker.no-border img {
+    filter: var(--shadow-sticker);
+}
+
+/* ヘルプステッカーの縁取りなし */
+.sticker.help-sticker.no-border .help-sticker-content {
+    filter: var(--shadow-sticker);
 }
 
 /* 選択時・削除ドラッグ時のシャドウは不要（オーバーレイで表現） */

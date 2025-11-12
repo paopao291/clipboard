@@ -25,7 +25,7 @@ import {
   handleCanvasWheel,
   setAddButtonTriggered,
 } from "./modules/events.js";
-import { addStickerToDOM, toggleStickerPin, sendToBack } from "./modules/sticker.js";
+import { addStickerToDOM, toggleStickerPin, toggleStickerBorder, sendToBack } from "./modules/sticker.js";
 import { initPhysicsEngine, enablePhysics, disablePhysics, isPhysicsActive } from "./modules/physics.js";
 import { startAutoLayout, isLayoutRunning } from "./modules/layout.js";
 import { setBackgroundImage, removeBackgroundImage, restoreBackgroundImage, hasBackgroundImage, initBackgroundDB } from "./modules/background.js";
@@ -76,6 +76,9 @@ async function init() {
   
   // 固定ボタンイベント
   elements.pinBtn.addEventListener("click", handlePinButton);
+  
+  // 縁取りボタンイベント
+  elements.borderBtn.addEventListener("click", handleBorderButton);
   
   // 物理モードボタンイベント
   elements.physicsBtn.addEventListener("click", togglePhysicsMode);
@@ -234,6 +237,7 @@ async function loadStickersFromDB() {
       stickerData.id,
       stickerData.zIndex,
       stickerData.isPinned || false,
+      stickerData.hasBorder !== undefined ? stickerData.hasBorder : STICKER_DEFAULTS.HAS_BORDER,
     );
   }
   
@@ -328,6 +332,17 @@ async function handlePinButton() {
   
   await toggleStickerPin(state.selectedSticker);
   // 固定ボタンの状態を更新
+  updateInfoButtonVisibility();
+}
+
+/**
+ * 縁取りボタンハンドラ
+ */
+async function handleBorderButton() {
+  if (!state.selectedSticker) return;
+  
+  await toggleStickerBorder(state.selectedSticker);
+  // 縁取りボタンの状態を更新
   updateInfoButtonVisibility();
 }
 

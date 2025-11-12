@@ -14,6 +14,7 @@ export const STICKER_DEFAULTS = {
   MAX_WIDTH_PERCENT: 80, // 画面幅の80%まで
   ROTATION: 0,
   Z_INDEX_START: 10,
+  HAS_BORDER: true, // 縁取りのデフォルト状態
 };
 
 // サイズ変更の設定
