@@ -1,7 +1,7 @@
 // IndexedDB設定
 export const DB_CONFIG = {
   NAME: "StickerDB",
-  VERSION: 1,
+  VERSION: 2,
   STORE_NAME: "stickers",
 };
 

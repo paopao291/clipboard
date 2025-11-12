@@ -438,6 +438,12 @@ body.has-background-image .background-btn .background-icon-remove {
     transform: scale(1);
 }
 
+.has-background-image .header-btn,
+.has-background-image .selection-btn {
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    mix-blend-mode: difference;
+}
+
 /* header-buttons内のボタン：グレー背景 */
 .header-btn {
     background: rgba(33, 33, 33, 0.15);
