@@ -8,10 +8,12 @@ export const elements = {
   galleryInput: null,
   cameraInput: null,
   pasteArea: null,
+  headerButtons: null,
   infoBtn: null,
   hideUIBtn: null,
   trashBtn: null,
   addBtn: null,
+  footerButtons: null,
   physicsBtn: null,
   layoutBtn: null,
   selectionOverlay: null,
@@ -30,10 +32,12 @@ export function initElements() {
   elements.galleryInput = document.getElementById(DOM_IDS.GALLERY_INPUT);
   elements.cameraInput = document.getElementById(DOM_IDS.CAMERA_INPUT);
   elements.pasteArea = document.getElementById(DOM_IDS.PASTE_AREA);
+  elements.headerButtons = document.querySelector(".header-buttons");
   elements.infoBtn = document.getElementById(DOM_IDS.INFO_BTN);
   elements.hideUIBtn = document.getElementById("hideUIBtn");
   elements.trashBtn = document.getElementById(DOM_IDS.TRASH_BTN);
   elements.addBtn = document.getElementById(DOM_IDS.ADD_BTN);
+  elements.footerButtons = document.querySelector(".footer-buttons");
   elements.physicsBtn = document.getElementById("physicsBtn");
   elements.layoutBtn = document.getElementById("layoutBtn");
   elements.selectionOverlay = document.getElementById("selectionOverlay");
@@ -378,38 +382,34 @@ export function updateInfoButtonVisibility() {
   // UIが非表示状態の場合、選択中のステッカー関連UI以外を非表示
   const isUIVisible = state.isUIVisibleState();
   
-  // ステッカーがない場合：インフォボタン+UI非表示ボタン+FAB+物理ボタン表示、ゴミ箱非表示
+  // ステッカーがない場合：右上ボタン群+FAB+左下ボタン群表示、ゴミ箱非表示
   if (state.getStickerCount() === 0) {
-    elements.infoBtn.classList.toggle("hidden", !isUIVisible);
-    elements.hideUIBtn.classList.toggle("hidden", !isUIVisible);
+    elements.headerButtons.classList.toggle("hidden", !isUIVisible);
     elements.trashBtn.classList.add("hidden");
     if (!isPhysicsMode) {
       elements.addBtn.classList.toggle("hidden", !isUIVisible);
     }
-    elements.physicsBtn.classList.toggle("hidden", !isUIVisible);
+    elements.footerButtons.classList.toggle("hidden", !isUIVisible);
     elements.layoutBtn.classList.add("hidden"); // ステッカーがないときは非表示
     return;
   }
 
   // ステッカーあり + 選択中：ゴミ箱表示、その他非表示
-  // ステッカーあり + 未選択：インフォボタン+UI非表示ボタン+FAB+物理ボタン+レイアウトボタン表示、ゴミ箱非表示
+  // ステッカーあり + 未選択：右上ボタン群+FAB+左下ボタン群+レイアウトボタン表示、ゴミ箱非表示
   if (state.hasSelection()) {
-    elements.infoBtn.classList.add("hidden");
-    elements.hideUIBtn.classList.add("hidden");
+    elements.headerButtons.classList.add("hidden");
     elements.trashBtn.classList.remove("hidden");
     if (!isPhysicsMode) {
       elements.addBtn.classList.add("hidden");
     }
-    elements.physicsBtn.classList.add("hidden");
-    elements.layoutBtn.classList.add("hidden");
+    elements.footerButtons.classList.add("hidden");
   } else {
-    elements.infoBtn.classList.toggle("hidden", !isUIVisible);
-    elements.hideUIBtn.classList.toggle("hidden", !isUIVisible);
+    elements.headerButtons.classList.toggle("hidden", !isUIVisible);
     elements.trashBtn.classList.add("hidden");
     if (!isPhysicsMode) {
       elements.addBtn.classList.toggle("hidden", !isUIVisible);
     }
-    elements.physicsBtn.classList.toggle("hidden", !isUIVisible);
+    elements.footerButtons.classList.toggle("hidden", !isUIVisible);
     // ステッカーが2個以上ある場合のみレイアウトボタンを表示
     if (state.getStickerCount() >= 2) {
       elements.layoutBtn.classList.toggle("hidden", !isUIVisible);

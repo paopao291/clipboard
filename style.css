@@ -7,11 +7,53 @@
     --accent-glow: rgba(0, 122, 255, 0.35);
     --text-primary: rgba(0, 0, 0, 0.85);
     --text-secondary: rgba(0, 0, 0, 0.45);
-    --outline-inner: #ffffff; /* 内側の縁取り：白 */
-    --outline-outer: #e5e7eb; /* 外側の縁取り：グレー */
+    --outline-inner: #ffffff;
+    --outline-outer: #e5e7eb;
     --selection-glow: var(--accent);
-    --shadow-ambient: rgba(0, 0, 0, 0.08);
-    --shadow-key: rgba(0, 0, 0, 0.12);
+
+    /* 色システム */
+    --color-black: rgba(0, 0, 0, 0.85);
+    --color-black-strong: rgba(0, 0, 0, 0.9);
+    --color-black-full: rgba(0, 0, 0, 1);
+    --color-white: rgba(255, 255, 255, 1);
+    --color-white-translucent: rgba(255, 255, 255, 0.95);
+    --color-white-overlay: rgba(255, 255, 255, 0.15);
+    --color-white-overlay-hover: rgba(255, 255, 255, 0.25);
+    --color-overlay-dark: rgba(0, 0, 0, 0.2);
+    --color-overlay-darker: rgba(0, 0, 0, 0.3);
+    --color-purple: rgba(139, 92, 246, 0.95);
+    --color-green: rgba(34, 197, 94, 0.95);
+    --color-bg-light: #f4f7f7;
+    --color-bg-main: #f7f7f4;
+
+    /* フォントサイズシステム（rem = アクセシブル） */
+    --font-sm: 0.8125rem;   /* 13px */
+    --font-base: 0.875rem;  /* 14px */
+    --font-md: 1rem;        /* 16px */
+    --font-xl: 1.5rem;      /* 24px */
+
+    /* シャドウシステム */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+    --shadow-base: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
+    --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.12);
+    --shadow-sticker: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1));
+    --shadow-button: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
+    --shadow-button-hover: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
+    --shadow-button-active: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.2));
+
+    /* サイズシステム */
+    --size-icon-sm: 22px;
+    --size-icon-md: 24px;
+    --size-icon-lg: 26px;
+    --size-button-sm: 44px;
+    --size-button-md: 56px;
+    --size-button-mobile: 48px;
+    --size-button-mobile-lg: 60px;
+
+    /* スペーシングシステム */
+    --spacing-sm: 20px;
+    --spacing-base: 24px;
 
     /* アニメーション：Apple標準 */
     --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
@@ -36,8 +78,8 @@ body {
         "Hiragino Kaku Gothic ProN", sans-serif;
     background:
         radial-gradient(circle, rgba(0, 0, 0, 0.15) 1px, transparent 1px),
-        #f7f7f4;
-    background-size: 24px 24px;
+        var(--color-bg-main);
+    background-size: var(--spacing-base) var(--spacing-base);
     background-position: 0 0;
     overflow: hidden;
     width: 100%;
@@ -64,7 +106,7 @@ a, button {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--color-overlay-dark);
     z-index: 5000;
     opacity: 0;
     pointer-events: none;
@@ -96,7 +138,7 @@ a, button {
     border: none;
     outline: none;
     resize: none;
-    font-size: 16px; /* iOS のズーム防止 */
+    font-size: var(--font-md); /* iOS のズーム防止 */
     caret-color: transparent; /* カーソルを非表示 */
     -webkit-user-select: text; /* ペーストメニュー用 */
     user-select: text;
@@ -125,23 +167,33 @@ a, button {
     }
 
     /* スマホ：ボタンサイズ調整 */
-    .info-btn {
-        top: 20px;
-        right: 20px;
-        width: 48px;
-        height: 48px;
+    .header-buttons {
+        top: var(--spacing-sm);
+        right: var(--spacing-sm);
     }
 
-    .info-btn svg {
-        width: 22px;
-        height: 22px;
+    .info-btn,
+    .hide-ui-btn {
+        width: var(--size-button-mobile);
+        height: var(--size-button-mobile);
+    }
+
+    .info-btn svg,
+    .hide-ui-btn svg {
+        width: var(--size-icon-sm);
+        height: var(--size-icon-sm);
+    }
+
+    .footer-buttons {
+        bottom: var(--spacing-sm);
+        left: var(--spacing-sm);
     }
 
     .add-btn {
-        bottom: 20px;
-        right: 20px;
-        width: 60px;
-        height: 60px;
+        bottom: var(--spacing-sm);
+        right: var(--spacing-sm);
+        width: var(--size-button-mobile-lg);
+        height: var(--size-button-mobile-lg);
     }
 
     .add-btn svg {
@@ -151,31 +203,31 @@ a, button {
 
     /* ヘルプステッカーのスマホ対応 */
     .help-sticker-content {
-        padding: 24px;
+        padding: var(--spacing-base);
     }
 
     .help-sticker-content h2 {
-        font-size: 24px;
-        margin-bottom: 24px;
+        font-size: var(--font-xl);
+        margin-bottom: var(--spacing-base);
         letter-spacing: -0.5px;
     }
 
     .help-section h3 {
-        font-size: 16px;
+        font-size: var(--font-base);
         margin-top: 18px;
     }
 
     .help-section p {
-        font-size: 13px;
+        font-size: var(--font-sm);
     }
 
     /* トーストのスマホ対応 */
     .toast {
-        top: 20px;
-        font-size: 13px;
+        top: var(--spacing-sm);
+        font-size: var(--font-sm);
         padding: 10px 16px;
         max-width: 85%;
-        gap: 20px;
+        gap: var(--spacing-sm);
     }
 
     /* アクションボタンがある場合は右paddingを小さく */
@@ -189,7 +241,7 @@ a, button {
     }
 
     .toast-action {
-        font-size: 12px;
+        font-size: var(--font-sm);
         padding: 5px 14px;
     }
 }
@@ -197,22 +249,22 @@ a, button {
 /* ゴミ箱ボタン */
 .trash-btn {
     position: fixed;
-    bottom: 24px;
+    bottom: var(--spacing-base);
     left: 50%;
     transform: translateX(-50%) scale(1);
-    width: 56px;
-    height: 56px;
+    width: var(--size-button-md);
+    height: var(--size-button-md);
     background-color: transparent;
-    border: 1px solid white;
+    border: 1px solid var(--color-white);
     border-radius: 50%;
     cursor: default;
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 10000;
-    color: white;
+    color: var(--color-white);
     transition: all 0.3s var(--ease-out-expo);
-    filter: drop-shadow(0 0px 4px rgba(0, 0, 0, 0.2));
+    filter: var(--shadow-button-active);
     pointer-events: none;
     opacity: 1;
     visibility: visible;
@@ -226,8 +278,8 @@ a, button {
 }
 
 .trash-btn svg {
-    width: 22px;
-    height: 22px;
+    width: var(--size-icon-sm);
+    height: var(--size-icon-sm);
 }
 
 /* ゴミ箱ラベル */
@@ -236,9 +288,9 @@ a, button {
     bottom: calc(100% + 8px);
     left: 50%;
     transform: translateX(-50%);
-    font-size: 13px;
+    font-size: var(--font-sm);
     font-weight: 400;
-    color: white;
+    color: var(--color-white);
     white-space: nowrap;
     pointer-events: none;
     transition: all 0.2s var(--ease-out-expo);
@@ -247,11 +299,11 @@ a, button {
 /* FAB（追加ボタン） */
 .add-btn {
     position: fixed;
-    bottom: 24px;
-    right: 24px;
-    width: 56px;
-    height: 56px;
-    background: rgba(0, 0, 0, 0.85);
+    bottom: var(--spacing-base);
+    right: var(--spacing-base);
+    width: var(--size-button-md);
+    height: var(--size-button-md);
+    background: var(--color-black);
     border: unset;
     border-radius: 50%;
     cursor: pointer;
@@ -259,11 +311,9 @@ a, button {
     align-items: center;
     justify-content: center;
     z-index: 10000;
-    color: white;
+    color: var(--color-white);
     transition: all 0.3s var(--ease-out-expo);
-    box-shadow:
-        0 2px 8px rgba(0, 0, 0, 0.15),
-        0 1px 2px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md), var(--shadow-sm);
     opacity: 1;
     visibility: visible;
     transform: scale(1);
@@ -271,32 +321,40 @@ a, button {
 
 .add-btn:hover {
     transform: scale(1.05);
-    background: rgba(0, 0, 0, 0.9);
-    box-shadow:
-        0 4px 12px rgba(0, 0, 0, 0.2),
-        0 2px 4px rgba(0, 0, 0, 0.15);
+    background: var(--color-black-strong);
+    box-shadow: var(--shadow-md), 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .add-btn:active {
     transform: scale(0.95);
-    box-shadow:
-        0 1px 4px rgba(0, 0, 0, 0.12),
-        0 0px 2px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12), 0 0px 2px rgba(0, 0, 0, 0.08);
 }
 
 .add-btn svg {
-    width: 26px;
-    height: 26px;
+    width: var(--size-icon-lg);
+    height: var(--size-icon-lg);
+}
+
+/* 右上ボタン群のラッパー */
+.header-buttons {
+    position: fixed;
+    top: var(--spacing-base);
+    right: var(--spacing-base);
+    display: flex;
+    gap: 12px;
+    z-index: 10000;
+    transition: all 0.3s var(--ease-out-expo);
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1);
 }
 
 /* 右上アイコンボタン共通スタイル */
 .info-btn,
 .hide-ui-btn {
-    position: fixed;
-    top: 24px;
-    width: 44px;
-    height: 44px;
-    background: rgba(255, 255, 255, 0.15);
+    width: var(--size-button-sm);
+    height: var(--size-button-sm);
+    background: var(--color-white-overlay);
     backdrop-filter: blur(10px);
     border: none;
     border-radius: 50%;
@@ -304,53 +362,49 @@ a, button {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 10000;
-    color: white;
+    color: var(--color-white);
     transition: all 0.3s var(--ease-out-expo);
     opacity: 1;
     visibility: visible;
     transform: scale(1);
-    /* 強い影で視認性を確保 */
-    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
-}
-
-/* インフォボタン位置 */
-.info-btn {
-    right: 24px;
-}
-
-/* UI非表示ボタン位置 */
-.hide-ui-btn {
-    right: 80px;
+    filter: var(--shadow-button);
 }
 
 /* 右上アイコンボタン：ホバー */
 .info-btn:hover,
 .hide-ui-btn:hover {
     transform: scale(1.05);
-    background: rgba(255, 255, 255, 0.25);
-    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
+    background: var(--color-white-overlay-hover);
+    filter: var(--shadow-button-hover);
 }
 
 /* 右上アイコンボタン：アクティブ */
 .info-btn:active,
 .hide-ui-btn:active {
     transform: scale(0.95);
-    background: rgba(255, 255, 255, 0.2);
-    filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.2));
+    background: var(--color-white-overlay);
+    filter: var(--shadow-button-active);
 }
 
 /* 右上アイコンボタン：SVGサイズ */
 .info-btn svg,
 .hide-ui-btn svg {
-    width: 22px;
-    height: 22px;
+    width: var(--size-icon-sm);
+    height: var(--size-icon-sm);
 }
 
 /* ボタン共通：非表示状態 */
+.header-buttons.hidden,
+.footer-buttons.hidden,
+.add-btn.hidden {
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.8);
+    pointer-events: none;
+}
+
 .info-btn.hidden,
 .hide-ui-btn.hidden,
-.add-btn.hidden,
 .physics-btn.hidden,
 .layout-btn.hidden {
     opacity: 0;
@@ -359,26 +413,34 @@ a, button {
     pointer-events: none;
 }
 
+/* 左下ボタン群のラッパー */
+.footer-buttons {
+    position: fixed;
+    bottom: var(--spacing-base);
+    left: var(--spacing-base);
+    display: flex;
+    gap: 12px;
+    z-index: 10000;
+    transition: all 0.3s var(--ease-out-expo);
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1);
+}
+
 /* 物理モードボタン */
 .physics-btn {
-    position: fixed;
-    bottom: 24px;
-    left: 24px;
-    width: 56px;
-    height: 56px;
-    background: rgba(255, 255, 255, 0.95);
+    width: var(--size-button-md);
+    height: var(--size-button-md);
+    background: var(--color-white-translucent);
     border: none;
     border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 10000;
     color: #333;
     transition: all 0.3s var(--ease-out-expo);
-    box-shadow:
-        0 2px 8px rgba(0, 0, 0, 0.1),
-        0 1px 2px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-base), var(--shadow-sm);
     opacity: 1;
     visibility: visible;
     transform: scale(1);
@@ -387,28 +449,24 @@ a, button {
 @media (hover: hover) { 
     .physics-btn:not(.hidden):hover {
         transform: scale(1.05);
-        background: rgba(255, 255, 255, 1);
+        background: var(--color-white);
         border-color: rgba(0, 0, 0, 0.15);
-        box-shadow:
-            0 4px 12px rgba(0, 0, 0, 0.15),
-            0 2px 4px rgba(0, 0, 0, 0.1);
+        box-shadow: var(--shadow-md), 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 }
 
 .physics-btn:not(.hidden):active {
     transform: scale(0.95);
-    box-shadow:
-        0 1px 4px rgba(0, 0, 0, 0.1),
-        0 0px 2px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1), var(--shadow-sm);
 }
 
 .physics-btn.active:not(.hidden) {
-    background: rgba(139, 92, 246, 0.95);
+    background: var(--color-purple);
     border-color: rgba(139, 92, 246, 0.3);
-    color: white;
+    color: var(--color-white);
     box-shadow:
         0 4px 16px rgba(139, 92, 246, 0.4),
-        0 2px 8px rgba(139, 92, 246, 0.3);
+        var(--shadow-base);
 }
 
 .physics-btn.active:not(.hidden):hover {
@@ -419,30 +477,24 @@ a, button {
 }
 
 .physics-btn svg {
-    width: 24px;
-    height: 24px;
+    width: var(--size-icon-md);
+    height: var(--size-icon-md);
 }
 
 /* 自動レイアウトボタン */
 .layout-btn {
-    position: fixed;
-    bottom: 24px;
-    left: 92px; /* 物理ボタン(56px) + 間隔(12px) + 左マージン(24px) */
-    width: 56px;
-    height: 56px;
-    background: rgba(255, 255, 255, 0.95);
+    width: var(--size-button-md);
+    height: var(--size-button-md);
+    background: var(--color-white-translucent);
     border: none;
     border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 10000;
     color: #333;
     transition: all 0.3s var(--ease-out-expo);
-    box-shadow:
-        0 2px 8px rgba(0, 0, 0, 0.1),
-        0 1px 2px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-base), var(--shadow-sm);
     opacity: 1;
     visibility: visible;
     transform: scale(1);
@@ -451,28 +503,24 @@ a, button {
 @media (hover: hover) { 
     .layout-btn:not(.hidden):hover {
         transform: scale(1.05);
-        background: rgba(255, 255, 255, 1);
+        background: var(--color-white);
         border-color: rgba(0, 0, 0, 0.15);
-        box-shadow:
-            0 4px 12px rgba(0, 0, 0, 0.15),
-            0 2px 4px rgba(0, 0, 0, 0.1);
+        box-shadow: var(--shadow-md), 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 }
 
 .layout-btn:not(.hidden):active {
     transform: scale(0.95);
-    box-shadow:
-        0 1px 4px rgba(0, 0, 0, 0.1),
-        0 0px 2px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1), var(--shadow-sm);
 }
 
 .layout-btn.active:not(.hidden) {
-    background: rgba(34, 197, 94, 0.95);
+    background: var(--color-green);
     border-color: rgba(34, 197, 94, 0.3);
-    color: white;
+    color: var(--color-white);
     box-shadow:
         0 4px 16px rgba(34, 197, 94, 0.4),
-        0 2px 8px rgba(34, 197, 94, 0.3);
+        var(--shadow-base);
 }
 
 .layout-btn.active:not(.hidden):hover {
@@ -483,8 +531,8 @@ a, button {
 }
 
 .layout-btn svg {
-    width: 24px;
-    height: 24px;
+    width: var(--size-icon-md);
+    height: var(--size-icon-md);
 }
 
 /* キャンバス：ミニマルな空間 */
@@ -518,17 +566,17 @@ a, button {
 
 /* ヘルプステッカーの中身 */
 .help-sticker-content {
-    background: #f4f7f7;
-    padding: 24px;
+    background: var(--color-bg-light);
+    padding: var(--spacing-base);
     width: 100%;
     max-height: 75vh;
     overflow-y: auto;
     position: relative;
-    filter: url(#outline-filter) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1));
+    filter: url(#outline-filter) var(--shadow-sticker);
 }
 
 .help-sticker-content h2 {
-    font-size: 28px;
+    font-size: var(--font-xl);
     font-weight: 700;
     line-height: 1.2;
     color: var(--text-primary);
@@ -541,11 +589,11 @@ a, button {
 }
 
 .help-section h3 {
-    font-size: 17px;
+    font-size: var(--font-md);
     font-weight: 600;
     color: var(--text-primary);
     margin-bottom: 8px;
-    margin-top: 20px;
+    margin-top: var(--spacing-sm);
     letter-spacing: -0.3px;
 }
 
@@ -554,7 +602,7 @@ a, button {
 }
 
 .help-section p {
-    font-size: 14px;
+    font-size: var(--font-base);
     font-weight: 400;
     color: var(--text-secondary);
     line-height: 1.6;
@@ -563,7 +611,7 @@ a, button {
 }
 
 .help-section p small {
-    font-size: 12px;
+    font-size: var(--font-sm);
     opacity: 0.7;
     font-style: italic;
 }
@@ -575,7 +623,7 @@ a, button {
     border: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: 6px;
     font-family: "SF Mono", "Menlo", monospace;
-    font-size: 12px;
+    font-size: var(--font-sm);
     font-weight: 600;
     color: var(--text-primary);
     letter-spacing: 0.2px;
@@ -721,7 +769,7 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
     display: block;
     pointer-events: none;
     /* 常に軽い影でステッカー感を演出 */
-    filter: url(#outline-filter) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1));
+    filter: url(#outline-filter) var(--shadow-sticker);
     transition: filter 0.3s var(--ease-out-expo);
     /* GPU加速を強制 */
     transform: translateZ(0);
@@ -743,7 +791,7 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--color-overlay-darker);
     backdrop-filter: blur(16px);
     z-index: 15000;
     display: flex;
@@ -758,14 +806,14 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
 }
 
 .confirm-dialog-content {
-    background: white;
+    background: var(--color-white);
     border-radius: 30px;
     padding: 16px;
     padding-top: 28px;
     max-width: min(420px, 85%);
     width: 85%;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
-    transform: scale(0.92) translateY(20px);
+    box-shadow: var(--shadow-lg);
+    transform: scale(0.92) translateY(var(--spacing-sm));
     transition: transform 0.35s var(--ease-out-expo);
 }
 
@@ -774,9 +822,9 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
 }
 
 .confirm-dialog-message {
-    font-size: 17px;
+    font-size: var(--font-md);
     font-weight: 500;
-    color: rgba(0, 0, 0, 0.85);
+    color: var(--text-primary);
     text-align: center;
     margin-bottom: 28px;
     line-height: 1.5;
@@ -790,10 +838,10 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
 
 .confirm-dialog-btn {
     flex: 1;
-    padding: 16px 24px;
+    padding: 16px var(--spacing-base);
     border: none;
     border-radius: 14px;
-    font-size: 16px;
+    font-size: var(--font-md);
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s var(--ease-out-expo);
@@ -814,12 +862,12 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
 }
 
 .confirm-dialog-confirm {
-    background: rgba(0, 0, 0, 0.9);
-    color: white;
+    background: var(--color-black-strong);
+    color: var(--color-white);
 }
 
 .confirm-dialog-confirm:hover {
-    background: rgba(0, 0, 0, 1);
+    background: var(--color-black-full);
 }
 
 .confirm-dialog-confirm:active {
@@ -829,25 +877,25 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
 /* トースト：シンプルな通知 */
 .toast {
     position: fixed;
-    top: 20px;
+    top: var(--spacing-sm);
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.85);
+    background: var(--color-black);
     backdrop-filter: blur(20px);
-    color: white;
-    padding: 12px 20px;
-    border-radius: 20px;
-    font-size: 14px;
+    color: var(--color-white);
+    padding: 12px var(--spacing-sm);
+    border-radius: var(--spacing-sm);
+    font-size: var(--font-base);
     font-weight: 500;
     letter-spacing: -0.2px;
     z-index: 10001;
     opacity: 1;
     transition: all 0.3s var(--ease-out-expo);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-md);
     pointer-events: auto;
     display: flex;
     align-items: center;
-    gap: 24px;
+    gap: var(--spacing-base);
     max-width: 90%;
 }
 
@@ -863,12 +911,12 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
 
 .toast-action {
     flex: 0 0 auto;
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--color-overlay-dark);
     border: none;
-    color: white;
+    color: var(--color-white);
     padding: 6px 16px;
     border-radius: 12px;
-    font-size: 13px;
+    font-size: var(--font-sm);
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s var(--ease-out-expo);
@@ -877,11 +925,11 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
 }
 
 .toast-action:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: var(--color-overlay-darker);
     transform: scale(1.05);
 }
 
 .toast-action:active {
     transform: scale(0.95);
-    background: rgba(255, 255, 255, 0.25);
+    background: var(--color-white-overlay-hover);
 }
