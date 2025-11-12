@@ -350,6 +350,13 @@ export function handleCanvasTouchStart(e) {
   if (e.target === elements.canvas || e.target === elements.pasteArea) {
     const touches = e.touches;
 
+    // 選択中のステッカーがあり、2本指でタッチした場合は即座にピンチ開始
+    if (touches.length === 2 && state.selectedSticker && !state.selectedSticker.isPinned && !isPhysicsActive()) {
+      e.preventDefault();
+      startPinchGesture(touches[0], touches[1], state.selectedSticker);
+      return;
+    }
+
     if (touches.length === 1) {
       const touch = touches[0];
       state.setLastTouchPosition(touch.clientX, touch.clientY);
@@ -875,7 +882,8 @@ export function handleTouchMove(e) {
 
   // ドラッグ中の処理
   if (state.isDragging && touches.length === 1) {
-    e.preventDefault();
+    // passive: trueで登録されているため、e.preventDefault()は呼ばない
+    // （iOSのスクロール最適化を維持）
 
     // 物理モード中はゴミ箱判定とオーバーレイを無効化
     if (!isPhysicsActive()) {
@@ -914,7 +922,8 @@ export function handleTouchMove(e) {
 
   // ピンチ中の処理
   if (state.isRotating && touches.length === 2) {
-    e.preventDefault();
+    // passive: trueで登録されているため、e.preventDefault()は呼ばない
+    // （iOSのスクロール最適化を維持）
 
     // 物理モード中はピンチ操作を無効化
     if (isPhysicsActive()) {
@@ -929,7 +938,6 @@ export function handleTouchMove(e) {
     const touch1 = touches[0];
     const touch2 = touches[1];
 
-    // requestAnimationFrameを使わず即座に反映（慣性を減らす）
     if (!state.selectedSticker) return;
 
     // リサイズ中クラスを追加（CSSトランジション無効化用）

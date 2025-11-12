@@ -240,22 +240,33 @@ export function removePhysicsBody(stickerId) {
 // 同期・更新処理
 // ========================================
 
+// requestAnimationFrameによるDOM更新のスロットリング用
+let rafScheduled = false;
+
 /**
- * 物理ボディとDOMを同期
+ * 物理ボディとDOMを同期（requestAnimationFrameでスロットリング）
  */
 function syncDOMWithPhysics() {
-  stickerBodyMap.forEach((body, stickerId) => {
-    const sticker = state.getStickerById(stickerId);
-    if (sticker) {
-      syncStickerFromPhysics(sticker, body);
-    }
-  });
+  // 既にrequestAnimationFrameがスケジュールされていれば何もしない
+  if (rafScheduled) return;
   
-  // ジャイロが有効な場合のみ重力を更新（スマホ）
-  if (isGyroActive) {
-    updateGravity();
-  }
-  // PC時は重力は固定のまま（updateGravityを呼ばない）
+  rafScheduled = true;
+  requestAnimationFrame(() => {
+    rafScheduled = false;
+    
+    stickerBodyMap.forEach((body, stickerId) => {
+      const sticker = state.getStickerById(stickerId);
+      if (sticker) {
+        syncStickerFromPhysics(sticker, body);
+      }
+    });
+    
+    // ジャイロが有効な場合のみ重力を更新（スマホ）
+    if (isGyroActive) {
+      updateGravity();
+    }
+    // PC時は重力は固定のまま（updateGravityを呼ばない）
+  });
 }
 
 /**

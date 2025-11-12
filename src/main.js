@@ -118,8 +118,8 @@ async function init() {
   document.addEventListener("mousemove", handleMouseMove);
   document.addEventListener("mouseup", handleMouseUp);
 
-  // タッチイベント
-  document.addEventListener("touchmove", handleTouchMove, { passive: false });
+  // タッチイベント（passiveをtrueに変更してスクロール最適化を有効に）
+  document.addEventListener("touchmove", handleTouchMove, { passive: true });
   document.addEventListener("touchend", handleTouchEnd);
 
   // IndexedDBから自動読み込み

@@ -88,6 +88,12 @@ class AppState {
       showOverlay();
       // UI非表示状態を解除（選択モードはUI表示が前提）
       this.showUI();
+      
+      // iOS最適化：ピンチ操作をスムーズにするため、キャンバスのtouch-actionを変更
+      const canvas = document.querySelector('.canvas');
+      if (canvas) {
+        canvas.style.touchAction = 'none';
+      }
     }
 
     this.selectedSticker = sticker;
@@ -101,6 +107,12 @@ class AppState {
     this.selectedSticker = null;
     // オーバーレイを非表示
     hideOverlay();
+    
+    // iOS最適化：キャンバスのtouch-actionを元に戻す
+    const canvas = document.querySelector('.canvas');
+    if (canvas) {
+      canvas.style.touchAction = '';
+    }
   }
 
   /**

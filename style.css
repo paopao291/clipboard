@@ -609,6 +609,9 @@ body.has-background-image .background-btn .background-icon-remove {
     position: relative;
     overflow: hidden;
     cursor: default;
+    /* iOS最適化：デフォルトはmanipulation（ダブルタップズーム無効化） */
+    /* ステッカー選択時はJavaScriptで動的にtouch-action: noneに変更 */
+    touch-action: manipulation;
 }
 
 /* ヘルプステッカー：操作方法をステッカーとして表示 */
@@ -625,6 +628,13 @@ body.has-background-image .background-btn .background-icon-remove {
     /* ここがクリック可能な領域（scaleが適用される層） */
     pointer-events: auto;
     cursor: grab;
+    /* iOS最適化 */
+    will-change: transform;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    touch-action: none;
 }
 
 .help-sticker-wrapper:active {
@@ -640,6 +650,8 @@ body.has-background-image .background-btn .background-icon-remove {
     overflow-y: auto;
     position: relative;
     filter: url(#outline-filter) var(--shadow-sticker);
+    /* iOS最適化：スクロールのスムーズさ */
+    -webkit-overflow-scrolling: touch;
 }
 
 .help-sticker-content h2 {
@@ -724,6 +736,8 @@ body.has-background-image .background-btn .background-icon-remove {
     will-change: transform, width;
     /* GPU加速を強制 */
     transform: translateZ(0);
+    /* iOS最適化：タッチアクションを無効化してタッチ遅延を削減 */
+    touch-action: none;
     /* z-indexはJavaScriptで動的に設定されます */
     /* ステッカー外枠はクリック不可（imgWrapperのみクリック可能） */
     pointer-events: none;
@@ -859,8 +873,13 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
     /* GPU加速を強制 */
     transform: translateZ(0);
     backface-visibility: hidden;
+    /* iOS最適化 */
+    -webkit-transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
     /* クリック可能な領域 */
     pointer-events: auto;
+    /* タッチアクションを制御してスクロールとの衝突を防ぐ */
+    touch-action: none;
 }
 
 .sticker-img-wrapper:active {
@@ -878,8 +897,12 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
     /* GPU加速を強制 */
     transform: translateZ(0);
     backface-visibility: hidden;
+    /* iOS最適化 */
+    -webkit-transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
     /* 画像のスムーズレンダリング */
     image-rendering: auto;
+    -webkit-user-drag: none;
 }
 
 /* 縁取りなしの場合 */
