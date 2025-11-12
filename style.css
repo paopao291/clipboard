@@ -175,6 +175,7 @@ a, button {
 
     .info-btn,
     .hide-ui-btn,
+    .send-to-back-btn,
     .pin-btn {
         width: var(--size-button-mobile);
         height: var(--size-button-mobile);
@@ -182,6 +183,7 @@ a, button {
 
     .info-btn svg,
     .hide-ui-btn svg,
+    .send-to-back-btn svg,
     .pin-btn svg {
         width: var(--size-icon-sm);
         height: var(--size-icon-sm);
@@ -403,6 +405,7 @@ a, button {
 /* 右上アイコンボタン共通スタイル */
 .info-btn,
 .hide-ui-btn,
+.send-to-back-btn,
 .pin-btn {
     width: var(--size-button-sm);
     height: var(--size-button-sm);
@@ -426,6 +429,7 @@ a, button {
 /* 右上アイコンボタン：ホバー */
 .info-btn:hover,
 .hide-ui-btn:hover,
+.send-to-back-btn:hover,
 .pin-btn:hover {
     transform: scale(1.05);
     background: var(--color-white-overlay-hover);
@@ -435,6 +439,7 @@ a, button {
 /* 右上アイコンボタン：アクティブ */
 .info-btn:active,
 .hide-ui-btn:active,
+.send-to-back-btn:active,
 .pin-btn:active {
     transform: scale(0.95);
     background: var(--color-white-overlay);
@@ -444,6 +449,7 @@ a, button {
 /* 右上アイコンボタン：SVGサイズ */
 .info-btn svg,
 .hide-ui-btn svg,
+.send-to-back-btn svg,
 .pin-btn svg {
     width: var(--size-icon-sm);
     height: var(--size-icon-sm);

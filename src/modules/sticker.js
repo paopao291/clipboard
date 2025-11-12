@@ -268,6 +268,7 @@ export async function removeSticker(id) {
       element: sticker.element,
       imgWrapper: sticker.imgWrapper,
       isHelpSticker: sticker.isHelpSticker,
+      isPinned: sticker.isPinned,
     };
 
     let deleteTimeout = null;
@@ -312,6 +313,11 @@ async function undoRemoveSticker(stickerData) {
 
   // 状態に再追加
   state.addSticker(stickerData);
+  
+  // 固定状態を復元
+  if (stickerData.isPinned) {
+    stickerData.element.classList.add('pinned');
+  }
 
   // 選択状態にする
   state.selectSticker(stickerData);
@@ -329,18 +335,44 @@ async function undoRemoveSticker(stickerData) {
 }
 
 /**
+ * ステッカーのz-indexを更新してDBに保存
+ * @param {Object} sticker - シールオブジェクト
+ * @param {number} newZIndex - 新しいz-index
+ */
+async function updateStickerZIndex(sticker, newZIndex) {
+  sticker.element.style.zIndex = newZIndex;
+  sticker.zIndex = newZIndex;
+
+  // ヘルプステッカーはlocalStorageに、通常ステッカーはDBに保存
+  if (!sticker.isHelpSticker) {
+    await updateStickerInDB(sticker.id, { zIndex: newZIndex });
+  } else {
+    updateHelpStickerState(sticker);
+  }
+}
+
+/**
  * ステッカーを最前面に移動
  * @param {Object} sticker - シールオブジェクト
  */
 export async function bringToFront(sticker) {
   const newZIndex = state.incrementZIndex();
-  sticker.element.style.zIndex = newZIndex;
-  sticker.zIndex = newZIndex;
+  await updateStickerZIndex(sticker, newZIndex);
+}
 
-  // ヘルプステッカーはDBに保存しない
-  if (!sticker.isHelpSticker) {
-    await updateStickerInDB(sticker.id, { zIndex: newZIndex });
-  }
+/**
+ * ステッカーを最背面に移動
+ * @param {Object} sticker - シールオブジェクト
+ */
+export async function sendToBack(sticker) {
+  // 現在の最小z-indexを見つける
+  const minZIndex = Math.min(...state.stickers.map(s => s.zIndex));
+  
+  // 最小値-1を設定（ただし1以上を保持）
+  const newZIndex = Math.max(1, minZIndex - 1);
+  await updateStickerZIndex(sticker, newZIndex);
+  
+  showToast('最背面に移動しました');
 }
 
 /**

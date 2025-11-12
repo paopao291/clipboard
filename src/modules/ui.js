@@ -12,6 +12,7 @@ export const elements = {
   infoBtn: null,
   hideUIBtn: null,
   selectionButtons: null,
+  sendToBackBtn: null,
   pinBtn: null,
   trashBtn: null,
   addBtn: null,
@@ -38,6 +39,7 @@ export function initElements() {
   elements.infoBtn = document.getElementById(DOM_IDS.INFO_BTN);
   elements.hideUIBtn = document.getElementById("hideUIBtn");
   elements.selectionButtons = document.querySelector(".selection-buttons");
+  elements.sendToBackBtn = document.getElementById("sendToBackBtn");
   elements.pinBtn = document.getElementById("pinBtn");
   elements.trashBtn = document.getElementById(DOM_IDS.TRASH_BTN);
   elements.addBtn = document.getElementById(DOM_IDS.ADD_BTN);

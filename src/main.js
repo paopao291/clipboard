@@ -25,7 +25,7 @@ import {
   handleCanvasWheel,
   setAddButtonTriggered,
 } from "./modules/events.js";
-import { addStickerToDOM, toggleStickerPin } from "./modules/sticker.js";
+import { addStickerToDOM, toggleStickerPin, sendToBack } from "./modules/sticker.js";
 import { initPhysicsEngine, enablePhysics, disablePhysics, isPhysicsActive } from "./modules/physics.js";
 import { startAutoLayout, isLayoutRunning } from "./modules/layout.js";
 
@@ -65,18 +65,11 @@ async function init() {
     elements.galleryInput.click();
   });
   
+  // 背面に送るボタンイベント
+  elements.sendToBackBtn.addEventListener("click", handleSendToBackButton);
+  
   // 固定ボタンイベント
-  elements.pinBtn.addEventListener("click", () => {
-    if (state.selectedSticker) {
-      toggleStickerPin(state.selectedSticker);
-      // 固定ボタンの状態を更新
-      if (state.selectedSticker.isPinned) {
-        elements.pinBtn.classList.add('pinned');
-      } else {
-        elements.pinBtn.classList.remove('pinned');
-      }
-    }
-  });
+  elements.pinBtn.addEventListener("click", handlePinButton);
   
   // 物理モードボタンイベント
   elements.physicsBtn.addEventListener("click", togglePhysicsMode);
@@ -273,6 +266,30 @@ async function togglePhysicsMode() {
   }
   
   // ボタンの表示状態を更新
+  updateInfoButtonVisibility();
+}
+
+/**
+ * 背面に送るボタンハンドラ
+ */
+async function handleSendToBackButton() {
+  if (!state.selectedSticker) return;
+  
+  await sendToBack(state.selectedSticker);
+  // 選択を解除してUIを表示
+  state.deselectAll();
+  state.showUI();
+  updateInfoButtonVisibility();
+}
+
+/**
+ * 固定ボタンハンドラ
+ */
+async function handlePinButton() {
+  if (!state.selectedSticker) return;
+  
+  await toggleStickerPin(state.selectedSticker);
+  // 固定ボタンの状態を更新
   updateInfoButtonVisibility();
 }
 
