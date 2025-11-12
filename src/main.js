@@ -305,10 +305,87 @@ async function handleBackgroundSelect(e) {
   
   if (!file) return;
   
-  await setBackgroundImage(file);
+  // 画像リサイズ処理を追加
+  const optimizedImage = await optimizeBackgroundImage(file);
+  
+  await setBackgroundImage(optimizedImage);
   
   // 入力をリセット
   e.target.value = "";
+}
+
+/**
+ * 背景画像を最適なサイズに調整
+ * @param {File} imageFile - 元の画像ファイル
+ * @returns {Promise<Blob>} 最適化された画像
+ */
+async function optimizeBackgroundImage(imageFile) {
+  // 画面サイズの取得
+  const screenWidth = window.innerWidth;
+  const screenHeight = window.innerHeight;
+  
+  // 最大解像度の設定（デバイスピクセル比を考慮）
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  const maxWidth = screenWidth * devicePixelRatio * 1.5;  // 余裕を持たせる
+  const maxHeight = screenHeight * devicePixelRatio * 1.5;
+  
+  // 画像ファイルのBlobをImageオブジェクトに変換
+  const imageUrl = URL.createObjectURL(imageFile);
+  const img = new Image();
+  
+  try {
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = imageUrl;
+    });
+    
+    // 元の画像サイズを取得
+    const originalWidth = img.width;
+    const originalHeight = img.height;
+    
+    // リサイズが必要かチェック
+    if (originalWidth <= maxWidth && originalHeight <= maxHeight) {
+      console.log('背景画像: リサイズ不要（元サイズ使用）');
+      return imageFile; // リサイズ不要
+    }
+    
+    // アスペクト比を維持してリサイズ
+    let newWidth, newHeight;
+    if (originalWidth / originalHeight > maxWidth / maxHeight) {
+      // 横長画像
+      newWidth = maxWidth;
+      newHeight = (originalHeight * maxWidth) / originalWidth;
+    } else {
+      // 縦長画像
+      newHeight = maxHeight;
+      newWidth = (originalWidth * maxHeight) / originalHeight;
+    }
+    
+    // Canvas使ってリサイズ
+    const canvas = document.createElement('canvas');
+    canvas.width = newWidth;
+    canvas.height = newHeight;
+    const ctx = canvas.getContext('2d');
+    
+    // 画質を維持するための設定
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, 0, 0, newWidth, newHeight);
+    
+    // Canvasからリサイズ画像を取得
+    const resizedImageBlob = await new Promise(resolve => {
+      canvas.toBlob(blob => resolve(blob), imageFile.type, 0.92);
+    });
+    
+    console.log(`背景画像: リサイズ完了 (${originalWidth}x${originalHeight} → ${newWidth}x${newHeight})`);
+    return resizedImageBlob;
+  } catch (error) {
+    console.error('背景画像のリサイズに失敗:', error);
+    return imageFile; // エラー時は元の画像を返す
+  } finally {
+    // リソース解放
+    URL.revokeObjectURL(imageUrl);
+  }
 }
 
 /**

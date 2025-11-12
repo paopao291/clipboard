@@ -55,20 +55,32 @@ let gyroPermissionGranted = false;
 export function initPhysicsEngine() {
   // エンジンを作成（下向きの重力を設定）
   const { X, Y, SCALE } = PHYSICS_CONFIG.GRAVITY;
-  engine = Engine.create({
+  
+  // エンジンオプション
+  const engineOptions = {
     gravity: { 
       x: X, 
       y: Y,
       scale: SCALE
     },
-    // Safari最適化：計算精度を下げて高速化
-    positionIterations: 3,  // デフォルト6→3（50%削減）
-    velocityIterations: 2,  // デフォルト4→2（50%削減）
-    constraintIterations: 1, // デフォルト2→1（50%削減）
-    
     // スリープ機能は無効化（重力が常に作用するようにする）
     enableSleeping: false,
-  });
+  };
+  
+  // Safari/iOSにはさらに軽量な設定
+  if (isSafari || isIOS) {
+    // さらに精度削減（極限まで軽量化）
+    engineOptions.positionIterations = 2;  // 3→2にさらに削減
+    engineOptions.velocityIterations = 1;  // 2→1にさらに削減
+    engineOptions.constraintIterations = 1;
+  } else {
+    // 他のブラウザは現状維持
+    engineOptions.positionIterations = 3;
+    engineOptions.velocityIterations = 2;
+    engineOptions.constraintIterations = 1;
+  }
+  
+  engine = Engine.create(engineOptions);
   
   world = engine.world;
   
@@ -138,10 +150,15 @@ export function enablePhysics() {
   accumulator = 0;
   previousBodyStates.clear();
   
+  // Safari最適化: キャッシュをクリア
+  domUpdateCache.clear();
+  updateBuffer.clear();
+  batchUpdateScheduled = false;
+  
   // 独自のレンダリングループを開始（固定タイムステップ + 補間）
   renderLoopId = requestAnimationFrame(renderLoop);
   
-  console.log(`物理モード: 物理演算${PHYSICS_HZ}Hz、レンダリング${RENDER_FPS}FPS (${isSafari || isIOS ? 'Safari/iOS' : 'Chrome/他'})`);
+  console.log(`物理モード: 物理演算${PHYSICS_HZ}Hz、レンダリング${RENDER_FPS}FPS (${isSafari || isIOS ? 'Safari/iOS' : 'Chrome/他'}) - Safari最適化適用中`);
   
   // イベントリスナーを登録
   setupEventListeners();
@@ -171,12 +188,24 @@ export async function disablePhysics() {
     if (sticker) {
       // 現在の物理位置をDOMに反映して固定
       syncStickerFromPhysics(sticker, body);
+      
+      // Safari最適化: will-changeを削除（メモリ解放）
+      if (isSafari || isIOS) {
+        if (sticker.imgWrapper) {
+          sticker.imgWrapper.style.willChange = 'auto';
+        }
+      }
     }
     World.remove(world, body);
   });
   
   stickerBodyMap.clear();
   previousBodyStates.clear();
+  
+  // Safari最適化: キャッシュをクリア
+  domUpdateCache.clear();
+  updateBuffer.clear();
+  batchUpdateScheduled = false;
   
   // イベントリスナーを解除
   removeEventListeners();
@@ -375,11 +404,21 @@ function renderLoop(currentTime) {
   renderWithInterpolation(alpha);
 }
 
+// 更新バッチ処理用のバッファとキャッシュ
+const updateBuffer = new Map();
+let batchUpdateScheduled = false;
+
+// Safari向けの更新キャッシュ（パフォーマンス最適化）
+const domUpdateCache = new Map();
+
 /**
- * 補間を使ってDOMを更新
+ * 補間を使ってDOMを更新（バッチ処理最適化）
  * @param {number} alpha - 補間係数（0.0〜1.0）
  */
 function renderWithInterpolation(alpha) {
+  // 更新が必要なステッカーを特定（読み取りフェーズ）
+  const updatesNeeded = [];
+  
   stickerBodyMap.forEach((body, stickerId) => {
     const sticker = state.getStickerById(stickerId);
     if (!sticker) return;
@@ -400,7 +439,7 @@ function renderWithInterpolation(alpha) {
     const prevState = previousBodyStates.get(stickerId);
     if (!prevState) {
       // 初回は補間なしで描画
-      syncStickerFromPhysics(sticker, body);
+      updatesNeeded.push({ sticker, body, isFirst: true });
       return;
     }
     
@@ -409,18 +448,80 @@ function renderWithInterpolation(alpha) {
     const deltaY = Math.abs(body.position.y - prevState.position.y);
     const deltaAngle = Math.abs(body.angle - prevState.angle);
     
+    // Safari用により高い閾値を使用
+    const posThreshold = isSafari || isIOS ? POSITION_THRESHOLD * 1.5 : POSITION_THRESHOLD;
+    
     // 変化が閾値以下なら更新スキップ
-    if (deltaX < POSITION_THRESHOLD && deltaY < POSITION_THRESHOLD && deltaAngle < ANGLE_THRESHOLD) {
+    if (deltaX < posThreshold && deltaY < posThreshold && deltaAngle < ANGLE_THRESHOLD) {
       return;
     }
     
-    // 位置と角度を補間
-    const interpX = lerp(prevState.position.x, body.position.x, alpha);
-    const interpY = lerp(prevState.position.y, body.position.y, alpha);
-    const interpAngle = lerpAngle(prevState.angle, body.angle, alpha);
-    
-    // 補間した値でDOMを更新
-    syncStickerFromPhysicsInterpolated(sticker, interpX, interpY, interpAngle);
+    // キャッシュをチェック（Safari最適化）
+    const cachedValues = domUpdateCache.get(stickerId);
+    if (cachedValues) {
+      const [lastX, lastY, lastRotation] = cachedValues;
+      
+      // 位置と角度を補間
+      const interpX = lerp(prevState.position.x, body.position.x, alpha);
+      const interpY = lerp(prevState.position.y, body.position.y, alpha);
+      const interpAngle = lerpAngle(prevState.angle, body.angle, alpha);
+      
+      // Safari用に大きい閾値を適用
+      const cacheThreshold = isSafari || isIOS ? 0.5 : 0.1;
+      
+      // キャッシュ値と近ければスキップ
+      if (Math.abs(interpX - lastX) < cacheThreshold && 
+          Math.abs(interpY - lastY) < cacheThreshold && 
+          Math.abs(interpAngle - lastRotation) < (cacheThreshold * 0.1)) {
+        return;
+      }
+      
+      // キャッシュ更新
+      domUpdateCache.set(stickerId, [interpX, interpY, interpAngle]);
+      
+      // 更新リストに追加
+      updatesNeeded.push({ 
+        sticker, 
+        interpX, 
+        interpY, 
+        interpAngle 
+      });
+    } else {
+      // 位置と角度を補間
+      const interpX = lerp(prevState.position.x, body.position.x, alpha);
+      const interpY = lerp(prevState.position.y, body.position.y, alpha);
+      const interpAngle = lerpAngle(prevState.angle, body.angle, alpha);
+      
+      // 初回はキャッシュを作成
+      domUpdateCache.set(stickerId, [interpX, interpY, interpAngle]);
+      
+      // 更新リストに追加
+      updatesNeeded.push({ 
+        sticker, 
+        interpX, 
+        interpY, 
+        interpAngle 
+      });
+    }
+  });
+  
+  // 更新があるときだけ処理（Safari最適化）
+  if (updatesNeeded.length === 0) return;
+  
+  // 一括でDOMを更新（バッチ処理）
+  updatesNeeded.forEach(update => {
+    if (update.isFirst) {
+      // 初回は補間なしで描画
+      syncStickerFromPhysics(update.sticker, update.body);
+    } else {
+      // 補間した値でDOMを更新
+      syncStickerFromPhysicsInterpolated(
+        update.sticker, 
+        update.interpX, 
+        update.interpY, 
+        update.interpAngle
+      );
+    }
   });
 }
 
@@ -533,11 +634,21 @@ function updateStickerDOM(sticker, x, yPercent, rotation) {
   sticker.element.style.left = `calc(50% + ${x}px)`;
   sticker.element.style.top = `${yPercent}%`;
   
-  // 回転とスケールを更新
+  // 回転とスケールを更新（Safari最適化）
   if (sticker.imgWrapper) {
     const baseWidth = getBaseWidth(sticker);
     const scale = sticker.width / baseWidth;
+    
+    // Safari最適化: transform一括指定
     sticker.imgWrapper.style.transform = `rotate(${rotation}deg) scale(${scale})`;
+    
+    // Safari最適化: 物理モード中はwill-changeを常に適用
+    if (isSafari || isIOS) {
+      // パフォーマンス向上のためのGPU加速強化
+      sticker.imgWrapper.style.willChange = 'transform';
+      sticker.imgWrapper.style.backfaceVisibility = 'hidden';
+      sticker.imgWrapper.style.webkitBackfaceVisibility = 'hidden';
+    }
   }
 }
 
