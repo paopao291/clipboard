@@ -900,7 +900,7 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
 
 .toast-action {
     flex: 0 0 auto;
-    background: var(--color-overlay-dark);
+    background: var(--color-white-overlay);
     border: none;
     color: var(--color-white);
     padding: 6px 16px;
@@ -914,11 +914,11 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
 }
 
 .toast-action:hover {
-    background: var(--color-overlay-darker);
+    background: var(--color-white-overlay-hover);
     transform: scale(1.05);
 }
 
 .toast-action:active {
     transform: scale(0.95);
-    background: var(--color-white-overlay-hover);
+    background: var(--color-white-overlay);
 }
