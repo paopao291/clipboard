@@ -7,8 +7,10 @@ export const elements = {
   canvas: null,
   galleryInput: null,
   cameraInput: null,
+  backgroundInput: null,
   pasteArea: null,
   headerButtons: null,
+  backgroundBtn: null,
   infoBtn: null,
   hideUIBtn: null,
   selectionButtons: null,
@@ -34,8 +36,10 @@ export function initElements() {
   elements.canvas = document.getElementById(DOM_IDS.CANVAS);
   elements.galleryInput = document.getElementById(DOM_IDS.GALLERY_INPUT);
   elements.cameraInput = document.getElementById(DOM_IDS.CAMERA_INPUT);
+  elements.backgroundInput = document.getElementById("backgroundInput");
   elements.pasteArea = document.getElementById(DOM_IDS.PASTE_AREA);
   elements.headerButtons = document.querySelector(".header-buttons");
+  elements.backgroundBtn = document.getElementById("backgroundBtn");
   elements.infoBtn = document.getElementById(DOM_IDS.INFO_BTN);
   elements.hideUIBtn = document.getElementById("hideUIBtn");
   elements.selectionButtons = document.querySelector(".selection-buttons");
