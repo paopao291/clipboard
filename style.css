@@ -649,7 +649,10 @@ body.has-background-image .background-btn .background-icon-remove {
     max-height: 75vh;
     overflow-y: auto;
     position: relative;
-    filter: url(#outline-filter) var(--shadow-sticker);
+    /* SafariではdivにSVGフィルターが効かないため、box-shadowで代替 */
+    box-shadow: 
+        0 0 0 12px white,
+        var(--shadow-md);
     /* iOS最適化：スクロールのスムーズさ */
     -webkit-overflow-scrolling: touch;
 }
@@ -912,7 +915,7 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
 
 /* ヘルプステッカーの縁取りなし */
 .sticker.help-sticker.no-border .help-sticker-content {
-    filter: var(--shadow-sticker);
+    box-shadow: var(--shadow-md);
 }
 
 /* 選択時・削除ドラッグ時のシャドウは不要（オーバーレイで表現） */

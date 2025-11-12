@@ -242,17 +242,26 @@ export function removePhysicsBody(stickerId) {
 
 // requestAnimationFrameによるDOM更新のスロットリング用
 let rafScheduled = false;
+let lastUpdateTime = 0;
+const MIN_UPDATE_INTERVAL = 16; // 60FPSに制限（Safari最適化）
 
 /**
- * 物理ボディとDOMを同期（requestAnimationFrameでスロットリング）
+ * 物理ボディとDOMを同期（requestAnimationFrameでスロットリング + FPS制限）
  */
 function syncDOMWithPhysics() {
   // 既にrequestAnimationFrameがスケジュールされていれば何もしない
   if (rafScheduled) return;
   
   rafScheduled = true;
-  requestAnimationFrame(() => {
+  requestAnimationFrame((currentTime) => {
     rafScheduled = false;
+    
+    // Safari最適化：更新頻度を制限（60FPS以下に）
+    const deltaTime = currentTime - lastUpdateTime;
+    if (deltaTime < MIN_UPDATE_INTERVAL) {
+      return; // スキップ
+    }
+    lastUpdateTime = currentTime;
     
     stickerBodyMap.forEach((body, stickerId) => {
       const sticker = state.getStickerById(stickerId);
