@@ -707,11 +707,13 @@ a, button {
 }
 
 /* 固定されたステッカー：シンプルな斜線パターン */
-.sticker.pinned .sticker-img-wrapper {
+.sticker.pinned .sticker-img-wrapper,
+.sticker.pinned .help-sticker-wrapper {
     position: relative;
 }
 
-.sticker.pinned .sticker-img-wrapper::after {
+.sticker.pinned .sticker-img-wrapper::after,
+.sticker.pinned .help-sticker-wrapper::after {
     content: '';
     position: absolute;
     top: 0;
@@ -730,7 +732,8 @@ a, button {
 }
 
 /* UI非表示時は斜線も非表示（スクショ用） */
-.canvas.ui-hidden .sticker.pinned .sticker-img-wrapper::after {
+.canvas.ui-hidden .sticker.pinned .sticker-img-wrapper::after,
+.canvas.ui-hidden .sticker.pinned .help-sticker-wrapper::after {
     display: none;
 }
 

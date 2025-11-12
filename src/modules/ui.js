@@ -218,6 +218,7 @@ export function showHelp() {
     element: stickerDiv,
     imgWrapper: contentWrapper, // 回転用のラッパー
     isHelpSticker: true, // ヘルプステッカーであることを示すフラグ
+    isPinned: false,
   });
 
   // 選択状態にする（オーバーレイ表示）
@@ -322,7 +323,7 @@ export function restoreHelpSticker() {
   elements.canvas.appendChild(stickerDiv);
 
   // 状態に追加
-  state.addSticker({
+  const helpSticker = {
     id: stickerId,
     url: null,
     x: savedState.x,
@@ -333,7 +334,14 @@ export function restoreHelpSticker() {
     element: stickerDiv,
     imgWrapper: contentWrapper,
     isHelpSticker: true,
-  });
+    isPinned: savedState.isPinned || false,
+  };
+  state.addSticker(helpSticker);
+  
+  // 固定状態を反映
+  if (helpSticker.isPinned) {
+    stickerDiv.classList.add('pinned');
+  }
 }
 
 /**
@@ -369,6 +377,7 @@ export function updateHelpStickerState(sticker) {
     width: sticker.width,
     rotation: sticker.rotation,
     zIndex: sticker.zIndex,
+    isPinned: sticker.isPinned || false,
   });
 }
 

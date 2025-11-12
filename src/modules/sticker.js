@@ -95,6 +95,7 @@ export async function addStickerFromBlob(
     rotation,
     stickerId,
     zIndex,
+    false, // isPinned（新規追加時は常に未固定）
   );
 
   // IndexedDBに保存
