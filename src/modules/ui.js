@@ -382,15 +382,14 @@ export function updateInfoButtonVisibility() {
   // UIが非表示状態の場合、選択中のステッカー関連UI以外を非表示
   const isUIVisible = state.isUIVisibleState();
   
-  // ステッカーがない場合：右上ボタン群+FAB+左下ボタン群表示、ゴミ箱非表示
+  // ステッカーがない場合：右上ボタン群+FAB表示、ゴミ箱・左下ボタン群非表示
   if (state.getStickerCount() === 0) {
     elements.headerButtons.classList.toggle("hidden", !isUIVisible);
     elements.trashBtn.classList.add("hidden");
     if (!isPhysicsMode) {
       elements.addBtn.classList.toggle("hidden", !isUIVisible);
     }
-    elements.footerButtons.classList.toggle("hidden", !isUIVisible);
-    elements.layoutBtn.classList.add("hidden"); // ステッカーがないときは非表示
+    elements.footerButtons.classList.add("hidden"); // ステッカーがないときは左下ボタン群を非表示
     return;
   }
 
