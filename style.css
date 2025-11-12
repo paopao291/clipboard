@@ -629,7 +629,7 @@ body.has-background-image .background-btn .background-icon-remove {
     pointer-events: auto;
     cursor: grab;
     /* iOS最適化 */
-    will-change: transform;
+    /* will-changeは物理モード時のみ動的に適用 */
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
     backface-visibility: hidden;
@@ -736,7 +736,7 @@ body.has-background-image .background-btn .background-icon-remove {
     cursor: default;
     user-select: none;
     overflow: visible;
-    will-change: transform, width;
+    /* will-changeは物理モード時のみ動的に適用 */
     /* GPU加速を強制 */
     transform: translateZ(0);
     /* iOS最適化：タッチアクションを無効化してタッチ遅延を削減 */
@@ -744,6 +744,16 @@ body.has-background-image .background-btn .background-icon-remove {
     /* z-indexはJavaScriptで動的に設定されます */
     /* ステッカー外枠はクリック不可（imgWrapperのみクリック可能） */
     pointer-events: none;
+}
+
+/* 物理モード中のステッカー：will-changeを動的に適用（GPU最適化） */
+.canvas.physics-mode .sticker {
+    will-change: transform;
+}
+
+.canvas.physics-mode .sticker-img-wrapper,
+.canvas.physics-mode .help-sticker-wrapper {
+    will-change: transform;
 }
 
 /* 固定されたステッカー：シンプルな斜線パターン */
@@ -872,7 +882,7 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
     position: relative;
     transition: transform 0.03s linear;
     cursor: grab;
-    will-change: transform;
+    /* will-changeは物理モード時のみ動的に適用 */
     /* GPU加速を強制 */
     transform: translateZ(0);
     backface-visibility: hidden;

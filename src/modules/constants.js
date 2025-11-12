@@ -96,6 +96,10 @@ export const PHYSICS_CONFIG = {
     FRICTION_AIR: 0.02, // 空気抵抗（0.015→0.02に増加、よりふわっと）
     DENSITY: 0.0008,   // 密度（0.0015→0.0008に軽減、約半分の重さ）
     RADIUS_SCALE: 0.7, // 物理ボディの半径スケール（小さくして重なりやすく）
+    
+    // Safari/iOS用の調整値（少し重め）
+    SAFARI_FRICTION_AIR: 0.015, // 空気抵抗（Chromeより少なめ）
+    SAFARI_DENSITY: 0.0008,     // 密度（Chromeより少し重め）
   },
   
   // ジャイロ（スマホ用）

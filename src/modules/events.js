@@ -24,6 +24,7 @@ import {
   isPhysicsActive,
   setStickerPhysicsPosition,
   applyStickerVelocity,
+  updateStickerPhysicsPositionDuringDrag,
 } from "./physics.js";
 import { stopAutoLayout } from "./layout.js";
 
@@ -528,13 +529,13 @@ export function handleMouseMove(e) {
       const newYPercent = coords.yPercent - state.dragStartYPercent;
       updateStickerPosition(state.selectedSticker, newX, newYPercent);
       
-      // 物理ボディも更新して速度を追跡
+      // 物理ボディも更新（速度は保持して重力を維持）
       const now = Date.now();
       const rect = state.selectedSticker.element.getBoundingClientRect();
       const physicsX = rect.left + rect.width / 2;
       const physicsY = rect.top + rect.height / 2;
       
-      setStickerPhysicsPosition(state.selectedSticker.id, physicsX, physicsY);
+      updateStickerPhysicsPositionDuringDrag(state.selectedSticker.id, physicsX, physicsY);
       
       // 速度を追跡（投げる動作用）
       lastDragX = e.clientX;
@@ -905,13 +906,13 @@ export function handleTouchMove(e) {
       const newYPercent = coords.yPercent - state.dragStartYPercent;
       updateStickerPosition(state.selectedSticker, newX, newYPercent);
       
-      // 物理ボディも更新して速度を追跡
+      // 物理ボディも更新（速度は保持して重力を維持）
       const now = Date.now();
       const rect = state.selectedSticker.element.getBoundingClientRect();
       const physicsX = rect.left + rect.width / 2;
       const physicsY = rect.top + rect.height / 2;
       
-      setStickerPhysicsPosition(state.selectedSticker.id, physicsX, physicsY);
+      updateStickerPhysicsPositionDuringDrag(state.selectedSticker.id, physicsX, physicsY);
       
       // 速度を追跡（投げる動作用）
       lastDragX = touches[0].clientX;

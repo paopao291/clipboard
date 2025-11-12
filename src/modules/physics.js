@@ -18,7 +18,7 @@ import { state } from "../state.js";
 import { PHYSICS_CONFIG, STICKER_DEFAULTS, HELP_STICKER_CONFIG } from "./constants.js";
 
 // Matter.jsモジュール
-const { Engine, World, Bodies, Body, Events, Runner } = Matter;
+const { Engine, World, Bodies, Body, Events, Runner, Sleeping } = Matter;
 
 // ========================================
 // 物理エンジンの状態
@@ -31,6 +31,9 @@ let isPhysicsEnabled = false;
 
 // シールIDと物理ボディのマッピング
 const stickerBodyMap = new Map();
+
+// 補間用：前回の物理状態を保存
+const previousBodyStates = new Map(); // stickerId -> {position: {x, y}, angle: number}
 
 // ========================================
 // ジャイロセンサー関連（スマホ用）
@@ -62,6 +65,9 @@ export function initPhysicsEngine() {
     positionIterations: 3,  // デフォルト6→3（50%削減）
     velocityIterations: 2,  // デフォルト4→2（50%削減）
     constraintIterations: 1, // デフォルト2→1（50%削減）
+    
+    // スリープ機能は無効化（重力が常に作用するようにする）
+    enableSleeping: false,
   });
   
   world = engine.world;
@@ -69,11 +75,8 @@ export function initPhysicsEngine() {
   // 壁を作成（フレークシールのパッケージのように画面を箱にする）
   createWalls();
   
-  // ランナーを作成
+  // ランナーを作成（後方互換性のため保持するが、独自ループを使用）
   runner = Runner.create();
-  
-  // 更新ループを設定
-  Events.on(engine, "afterUpdate", syncDOMWithPhysics);
 }
 
 /**
@@ -129,12 +132,16 @@ export function enablePhysics() {
     }
   });
   
-  // エンジンを起動
-  Runner.run(runner, engine);
+  // レンダリングループの状態をリセット
+  lastPhysicsTime = 0;
+  lastRenderTime = 0;
+  accumulator = 0;
+  previousBodyStates.clear();
   
-  // Safari最適化：30FPSに制限
-  runner.delta = 1000 / 30;  // 30FPS（デフォルトは60FPS）
-  runner.isFixed = true;      // 固定タイムステップ
+  // 独自のレンダリングループを開始（固定タイムステップ + 補間）
+  renderLoopId = requestAnimationFrame(renderLoop);
+  
+  console.log(`物理モード: 物理演算${PHYSICS_HZ}Hz、レンダリング${RENDER_FPS}FPS (${isSafari || isIOS ? 'Safari/iOS' : 'Chrome/他'})`);
   
   // イベントリスナーを登録
   setupEventListeners();
@@ -152,8 +159,11 @@ export async function disablePhysics() {
   isPhysicsEnabled = false;
   isGyroActive = false;
   
-  // エンジンを停止
-  Runner.stop(runner);
+  // レンダリングループを停止
+  if (renderLoopId) {
+    cancelAnimationFrame(renderLoopId);
+    renderLoopId = null;
+  }
   
   // 全ての物理ボディを削除し、現在の位置でDOMを固定
   stickerBodyMap.forEach((body, stickerId) => {
@@ -166,6 +176,7 @@ export async function disablePhysics() {
   });
   
   stickerBodyMap.clear();
+  previousBodyStates.clear();
   
   // イベントリスナーを解除
   removeEventListeners();
@@ -215,13 +226,25 @@ export function addPhysicsBody(sticker) {
   const { RADIUS_SCALE } = PHYSICS_CONFIG.BODY;
   const radius = (wrapperRect.width / 2) * RADIUS_SCALE;
   
-  // 円形の物理ボディを作成
-  const { RESTITUTION, FRICTION, FRICTION_AIR, DENSITY } = PHYSICS_CONFIG.BODY;
+  // 円形の物理ボディを作成（ブラウザによって物理特性を分岐）
+  const { 
+    RESTITUTION, 
+    FRICTION, 
+    FRICTION_AIR, 
+    SAFARI_FRICTION_AIR,
+    DENSITY, 
+    SAFARI_DENSITY 
+  } = PHYSICS_CONFIG.BODY;
+  
+  // Safari/iOSはちょっと重めに
+  const frictionAir = (isSafari || isIOS) ? SAFARI_FRICTION_AIR : FRICTION_AIR;
+  const density = (isSafari || isIOS) ? SAFARI_DENSITY : DENSITY;
+  
   const body = Bodies.circle(x, y, radius, {
     restitution: RESTITUTION,
     friction: FRICTION,
-    frictionAir: FRICTION_AIR,
-    density: DENSITY,
+    frictionAir: frictionAir,
+    density: density,
     angle: (sticker.rotation * Math.PI) / 180,
   });
   
@@ -230,6 +253,12 @@ export function addPhysicsBody(sticker) {
   
   // マッピングに追加
   stickerBodyMap.set(sticker.id, body);
+  
+  // 前回の状態を初期化（補間用）
+  previousBodyStates.set(sticker.id, {
+    position: { x: body.position.x, y: body.position.y },
+    angle: body.angle
+  });
 }
 
 /**
@@ -241,6 +270,7 @@ export function removePhysicsBody(stickerId) {
   if (body && world) {
     World.remove(world, body);
     stickerBodyMap.delete(stickerId);
+    previousBodyStates.delete(stickerId);
   }
 }
 
@@ -248,42 +278,176 @@ export function removePhysicsBody(stickerId) {
 // 同期・更新処理
 // ========================================
 
-// requestAnimationFrameによるDOM更新のスロットリング用
-let rafScheduled = false;
-let lastUpdateTime = 0;
-const MIN_UPDATE_INTERVAL = 33; // 30FPSに制限（Safari最適化：16ms→33ms）
+// ブラウザ検出
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+// 固定タイムステップ + 補間の設定
+const PHYSICS_HZ_SAFARI = 30;  // Safari/iOS: 物理演算30Hz（軽量）
+const PHYSICS_HZ_CHROME = 60;  // Chrome: 物理演算60Hz（高精度）
+const RENDER_FPS = 60;         // レンダリング: 常に60FPS（滑らか）
+
+const PHYSICS_HZ = isSafari || isIOS ? PHYSICS_HZ_SAFARI : PHYSICS_HZ_CHROME;
+const PHYSICS_DELTA = 1000 / PHYSICS_HZ; // 物理演算の間隔（ms）
+const RENDER_DELTA = 1000 / RENDER_FPS;  // レンダリングの間隔（ms）
+
+// レンダリングループの状態
+let renderLoopId = null;
+let lastRenderTime = 0;
+let lastPhysicsTime = 0;
+let accumulator = 0;
+
+// DOM更新の最適化用閾値
+const VELOCITY_THRESHOLD = 0.01;  // これ以下の速度ならほぼ静止
+const POSITION_THRESHOLD = 0.1;   // これ以下の移動ならDOM更新スキップ
+const ANGLE_THRESHOLD = 0.001;    // これ以下の回転ならDOM更新スキップ
 
 /**
- * 物理ボディとDOMを同期（requestAnimationFrameでスロットリング + FPS制限）
+ * 前回の物理状態を保存（補間用）
  */
-function syncDOMWithPhysics() {
-  // 既にrequestAnimationFrameがスケジュールされていれば何もしない
-  if (rafScheduled) return;
-  
-  rafScheduled = true;
-  requestAnimationFrame((currentTime) => {
-    rafScheduled = false;
-    
-    // Safari最適化：更新頻度を制限（60FPS以下に）
-    const deltaTime = currentTime - lastUpdateTime;
-    if (deltaTime < MIN_UPDATE_INTERVAL) {
-      return; // スキップ
-    }
-    lastUpdateTime = currentTime;
-    
-    stickerBodyMap.forEach((body, stickerId) => {
-      const sticker = state.getStickerById(stickerId);
-      if (sticker) {
-        syncStickerFromPhysics(sticker, body);
-      }
+function savePreviousPhysicsStates() {
+  stickerBodyMap.forEach((body, stickerId) => {
+    previousBodyStates.set(stickerId, {
+      position: { x: body.position.x, y: body.position.y },
+      angle: body.angle
     });
-    
-    // ジャイロが有効な場合のみ重力を更新（スマホ）
-    if (isGyroActive) {
-      updateGravity();
-    }
-    // PC時は重力は固定のまま（updateGravityを呼ばない）
   });
+}
+
+/**
+ * 物理演算を1ステップ実行
+ */
+function stepPhysics() {
+  // 前回の状態を保存
+  savePreviousPhysicsStates();
+  
+  // 物理演算を実行
+  Engine.update(engine, PHYSICS_DELTA);
+  
+  // ジャイロが有効な場合のみ重力を更新（スマホ）
+  if (isGyroActive) {
+    updateGravity();
+  }
+}
+
+/**
+ * レンダリングループ（60FPS、補間あり）
+ */
+function renderLoop(currentTime) {
+  if (!isPhysicsEnabled) {
+    renderLoopId = null;
+    return;
+  }
+  
+  // 次のフレームをスケジュール
+  renderLoopId = requestAnimationFrame(renderLoop);
+  
+  // 初回実行時の時刻を設定
+  if (lastPhysicsTime === 0) {
+    lastPhysicsTime = currentTime;
+    lastRenderTime = currentTime;
+    return;
+  }
+  
+  // レンダリング頻度を制限（60FPS）
+  const renderDelta = currentTime - lastRenderTime;
+  if (renderDelta < RENDER_DELTA) {
+    return;
+  }
+  lastRenderTime = currentTime;
+  
+  // 物理演算の更新
+  const physicsDelta = currentTime - lastPhysicsTime;
+  accumulator += physicsDelta;
+  lastPhysicsTime = currentTime;
+  
+  // 固定タイムステップで物理演算を実行
+  while (accumulator >= PHYSICS_DELTA) {
+    stepPhysics();
+    accumulator -= PHYSICS_DELTA;
+  }
+  
+  // 補間係数を計算（0.0〜1.0）
+  const alpha = accumulator / PHYSICS_DELTA;
+  
+  // 補間してレンダリング
+  renderWithInterpolation(alpha);
+}
+
+/**
+ * 補間を使ってDOMを更新
+ * @param {number} alpha - 補間係数（0.0〜1.0）
+ */
+function renderWithInterpolation(alpha) {
+  stickerBodyMap.forEach((body, stickerId) => {
+    const sticker = state.getStickerById(stickerId);
+    if (!sticker) return;
+    
+    // ドラッグ中のステッカーはスキップ（Safari対策：ドラッグ操作と競合しないように）
+    if (state.selectedSticker && state.selectedSticker.id === stickerId && state.isDragging) {
+      return;
+    }
+    
+    // 速度が閾値以下なら更新スキップ（ほぼ静止）
+    const speed = Math.sqrt(body.velocity.x ** 2 + body.velocity.y ** 2);
+    const angularSpeed = Math.abs(body.angularVelocity);
+    if (speed < VELOCITY_THRESHOLD && angularSpeed < ANGLE_THRESHOLD) {
+      return;
+    }
+    
+    // 前回の状態を取得
+    const prevState = previousBodyStates.get(stickerId);
+    if (!prevState) {
+      // 初回は補間なしで描画
+      syncStickerFromPhysics(sticker, body);
+      return;
+    }
+    
+    // 位置と角度の変化をチェック
+    const deltaX = Math.abs(body.position.x - prevState.position.x);
+    const deltaY = Math.abs(body.position.y - prevState.position.y);
+    const deltaAngle = Math.abs(body.angle - prevState.angle);
+    
+    // 変化が閾値以下なら更新スキップ
+    if (deltaX < POSITION_THRESHOLD && deltaY < POSITION_THRESHOLD && deltaAngle < ANGLE_THRESHOLD) {
+      return;
+    }
+    
+    // 位置と角度を補間
+    const interpX = lerp(prevState.position.x, body.position.x, alpha);
+    const interpY = lerp(prevState.position.y, body.position.y, alpha);
+    const interpAngle = lerpAngle(prevState.angle, body.angle, alpha);
+    
+    // 補間した値でDOMを更新
+    syncStickerFromPhysicsInterpolated(sticker, interpX, interpY, interpAngle);
+  });
+}
+
+/**
+ * 線形補間
+ * @param {number} a - 開始値
+ * @param {number} b - 終了値
+ * @param {number} t - 補間係数（0.0〜1.0）
+ * @returns {number} 補間された値
+ */
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+/**
+ * 角度の線形補間（最短経路）
+ * @param {number} a - 開始角度（ラジアン）
+ * @param {number} b - 終了角度（ラジアン）
+ * @param {number} t - 補間係数（0.0〜1.0）
+ * @returns {number} 補間された角度
+ */
+function lerpAngle(a, b, t) {
+  // 最短経路を選択
+  let delta = b - a;
+  if (delta > Math.PI) delta -= 2 * Math.PI;
+  if (delta < -Math.PI) delta += 2 * Math.PI;
+  return a + delta * t;
 }
 
 /**
@@ -295,6 +459,25 @@ function syncStickerFromPhysics(sticker, body) {
   // 座標変換
   const { x, yPercent } = convertPhysicsToHybridCoords(body.position);
   const rotation = convertRadiansToDegrees(body.angle);
+  
+  // ステッカーのプロパティを更新
+  updateStickerProperties(sticker, x, yPercent, rotation);
+  
+  // DOMスタイルを更新
+  updateStickerDOM(sticker, x, yPercent, rotation);
+}
+
+/**
+ * 補間した位置・回転でDOMを更新
+ * @param {Object} sticker - シールオブジェクト
+ * @param {number} physicsX - 物理座標のX
+ * @param {number} physicsY - 物理座標のY
+ * @param {number} angle - 角度（ラジアン）
+ */
+function syncStickerFromPhysicsInterpolated(sticker, physicsX, physicsY, angle) {
+  // 座標変換
+  const { x, yPercent } = convertPhysicsToHybridCoords({ x: physicsX, y: physicsY });
+  const rotation = convertRadiansToDegrees(angle);
   
   // ステッカーのプロパティを更新
   updateStickerProperties(sticker, x, yPercent, rotation);
@@ -445,6 +628,10 @@ function updateGravity() {
   
   const { GRAVITY_LERP_FACTOR } = PHYSICS_CONFIG;
   
+  // 重力変化を計算
+  const oldGravityX = engine.gravity.x;
+  const oldGravityY = engine.gravity.y;
+  
   engine.gravity.x += (targetGravity.x - engine.gravity.x) * GRAVITY_LERP_FACTOR;
   engine.gravity.y += (targetGravity.y - engine.gravity.y) * GRAVITY_LERP_FACTOR;
 }
@@ -510,6 +697,20 @@ export function setStickerPhysicsPosition(stickerId, x, y) {
     Body.setPosition(body, { x, y });
     Body.setVelocity(body, { x: 0, y: 0 }); // 速度をリセット
     Body.setAngularVelocity(body, 0); // 角速度をリセット
+  }
+}
+
+/**
+ * ドラッグ中のステッカーの物理ボディ位置を更新（速度を保持）
+ * @param {number} stickerId - シールID
+ * @param {number} x - X座標（画面絶対座標）
+ * @param {number} y - Y座標（画面絶対座標）
+ */
+export function updateStickerPhysicsPositionDuringDrag(stickerId, x, y) {
+  const body = stickerBodyMap.get(stickerId);
+  if (body) {
+    // 位置だけ更新、速度は保持（重力が引き続き作用）
+    Body.setPosition(body, { x, y });
   }
 }
 
