@@ -252,6 +252,7 @@ async function togglePhysicsMode() {
     await disablePhysics();
     state.disablePhysicsMode();
     elements.physicsBtn.classList.remove("active");
+    elements.canvas.classList.remove("physics-mode");
     
     // 選択状態を解除してUIを表示
     state.deselectAll();
@@ -264,6 +265,7 @@ async function togglePhysicsMode() {
     enablePhysics();
     state.enablePhysicsMode();
     elements.physicsBtn.classList.add("active");
+    elements.canvas.classList.add("physics-mode");
     
     // 選択状態を解除してUIを表示
     state.deselectAll();

@@ -742,6 +742,12 @@ body.has-background-image .background-btn .background-icon-remove {
     display: none;
 }
 
+/* 物理モード中は斜線を非表示 */
+.canvas.physics-mode .sticker.pinned .sticker-img-wrapper::after,
+.canvas.physics-mode .sticker.pinned .help-sticker-wrapper::after {
+    display: none;
+}
+
 /* 選択中のステッカーはオーバーレイより前面に */
 .sticker.selected {
     z-index: 6000 !important;
