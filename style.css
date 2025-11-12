@@ -180,20 +180,14 @@ a, button {
         right: var(--spacing-sm);
     }
 
-    .background-btn,
-    .info-btn,
-    .hide-ui-btn,
-    .send-to-back-btn,
-    .pin-btn {
+    .header-btn,
+    .selection-btn {
         width: var(--size-button-mobile);
         height: var(--size-button-mobile);
     }
 
-    .background-btn svg,
-    .info-btn svg,
-    .hide-ui-btn svg,
-    .send-to-back-btn svg,
-    .pin-btn svg {
+    .header-btn svg,
+    .selection-btn svg {
         width: var(--size-icon-sm);
         height: var(--size-icon-sm);
     }
@@ -313,15 +307,11 @@ body.has-background-image .background-btn .background-icon-remove {
 }
 
 /* 固定ボタン：固定状態のスタイル */
-.pin-btn.pinned {
-    background: rgba(255, 255, 255, 0.3);
-}
-
-.pin-btn.pinned .pin-icon-outline {
+.selection-btn.pinned .pin-icon-outline {
     display: none;
 }
 
-.pin-btn.pinned .pin-icon-fill {
+.selection-btn.pinned .pin-icon-fill {
     display: block;
 }
 
@@ -423,59 +413,63 @@ body.has-background-image .background-btn .background-icon-remove {
     transform: scale(1);
 }
 
-/* 右上アイコンボタン共通スタイル */
-.background-btn,
-.info-btn,
-.hide-ui-btn,
-.send-to-back-btn,
-.pin-btn {
+/* 右上アイコンボタン：基本スタイル（共通） */
+.header-btn,
+.selection-btn {
     width: var(--size-button-sm);
     height: var(--size-button-sm);
-    background: var(--color-white-overlay);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    color: var(--color-white);
     border: none;
     border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--color-white);
     transition: all 0.3s var(--ease-out-expo);
     opacity: 1;
     visibility: visible;
     transform: scale(1);
-    filter: var(--shadow-button);
 }
 
-/* 右上アイコンボタン：ホバー */
-.background-btn:hover,
-.info-btn:hover,
-.hide-ui-btn:hover,
-.send-to-back-btn:hover,
-.pin-btn:hover {
-    transform: scale(1.05);
-    background: var(--color-white-overlay-hover);
-    filter: var(--shadow-button-hover);
+/* header-buttons内のボタン：グレー背景 */
+.header-btn {
+    background: rgba(200, 200, 200, 0.5);
 }
 
-/* 右上アイコンボタン：アクティブ */
-.background-btn:active,
-.info-btn:active,
-.hide-ui-btn:active,
-.send-to-back-btn:active,
-.pin-btn:active {
+@media (hover: hover) {     
+    .header-btn:hover {
+        transform: scale(1.05);
+        background: rgba(200, 200, 200, 0.25);
+    }
+}
+
+.header-btn:active {
     transform: scale(0.95);
-    background: var(--color-white-overlay);
+    background: rgba(200, 200, 200, 0.15);
+    filter: var(--shadow-button-active);
+}
+
+/* selection-buttons内のボタン：白背景 */
+.selection-btn {
+    background: rgba(100, 100, 100, 0.15);
+}
+
+@media (hover: hover) { 
+    .selection-btn:hover {
+        transform: scale(1.05);
+        background: rgba(100, 100, 100, 0.2);
+    }
+}
+
+.selection-btn:active {
+    transform: scale(0.95);
+    background: rgba(100, 100, 100, 0.2);
     filter: var(--shadow-button-active);
 }
 
 /* 右上アイコンボタン：SVGサイズ */
-.background-btn svg,
-.info-btn svg,
-.hide-ui-btn svg,
-.send-to-back-btn svg,
-.pin-btn svg {
+.header-btn svg,
+.selection-btn svg {
     width: var(--size-icon-sm);
     height: var(--size-icon-sm);
 }

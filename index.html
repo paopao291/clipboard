@@ -68,16 +68,16 @@
                 ></textarea>
 
                 <!-- 選択中のステッカー操作ボタン群 -->
-                <div class="selection-buttons">
+                <div class="selection-buttons hidden">
                     <!-- 最背面へボタン -->
-                    <button id="sendToBackBtn" class="send-to-back-btn hidden" title="最背面へ">
+                    <button id="sendToBackBtn" class="selection-btn send-to-back-btn hidden" title="最背面へ">
                         <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
                             <path d="M160-501q0 71 47.5 122T326-322l-62-62 56-56 160 160-160 160-56-56 64-64q-105-6-176.5-81T80-500q0-109 75.5-184.5T340-760h140v80H340q-75 0-127.5 52T160-501Zm400 261v-80h320v80H560Zm0-220v-80h320v80H560Zm0-220v-80h320v80H560Z"/>
                         </svg>
                     </button>
                     
                     <!-- 固定ボタン -->
-                    <button id="pinBtn" class="pin-btn hidden" title="固定">
+                    <button id="pinBtn" class="selection-btn pin-btn hidden" title="固定">
                         <!-- アウトライン版（未固定時） -->
                         <svg class="pin-icon-outline" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
                             <path d="m640-480 80 80v80H520v240l-40 40-40-40v-240H240v-80l80-80v-280h-40v-80h400v80h-40v280Zm-286 80h252l-46-46v-314H400v314l-46 46Zm126 0Z"/>
@@ -107,7 +107,7 @@
                 <!-- 右上ボタン群 -->
                 <div class="header-buttons">
                     <!-- 背景画像ボタン -->
-                    <button id="backgroundBtn" class="background-btn" title="背景画像">
+                    <button id="backgroundBtn" class="header-btn background-btn" title="背景画像">
                         <!-- 背景なし時：通常の画像アイコン -->
                         <svg class="background-icon-add" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
                             <path d="M200-120q-33 0-56.5-23.5T120-200v-240h80v240h240v80H200Zm320 0v-80h240v-240h80v240q0 33-23.5 56.5T760-120H520ZM240-280l120-160 90 120 120-160 150 200H240ZM120-520v-240q0-33 23.5-56.5T200-840h240v80H200v240h-80Zm640 0v-240H520v-80h240q33 0 56.5 23.5T840-760v240h-80Zm-140-40q-26 0-43-17t-17-43q0-26 17-43t43-17q26 0 43 17t17 43q0 26-17 43t-43 17Z"/>
@@ -119,14 +119,14 @@
                     </button>
                     
                     <!-- UI非表示ボタン -->
-                    <button id="hideUIBtn" class="hide-ui-btn" title="UIを非表示">
+                    <button id="hideUIBtn" class="header-btn hide-ui-btn" title="UIを非表示">
                         <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
                             <path d="m177-120-57-57 184-183H200v-80h240v240h-80v-104L177-120Zm343-400v-240h80v104l183-184 57 57-184 183h104v80H520Z"/>
                         </svg>
                     </button>
 
                     <!-- インフォボタン -->
-                    <button id="infoBtn" class="info-btn" title="操作方法">
+                    <button id="infoBtn" class="header-btn info-btn" title="操作方法">
                         <svg xmlns="http://www.w3.org/2000/svg" height="22px" viewBox="0 -960 960 960" width="22px" fill="currentColor">
                             <path d="M440-280h80v-240h-80v240Zm40-320q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Zm0 520q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/>
                         </svg>
