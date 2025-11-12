@@ -16,7 +16,7 @@
 
 import { state } from "../state.js";
 import { updateStickerPosition, saveAllStickerPositions } from "./sticker.js";
-import { showToast } from "./ui.js";
+import { showToast, elements } from "./ui.js";
 
 // ========================================
 // 定数
@@ -102,6 +102,22 @@ export function stopAutoLayout() {
   if (layoutAnimationId) {
     cancelAnimationFrame(layoutAnimationId);
     layoutAnimationId = null;
+  }
+  
+  // アニメーション中クラスを削除
+  removeLayoutAnimatingClass();
+  
+  // UIボタンの状態をリセット
+  resetLayoutButtonState();
+}
+
+/**
+ * レイアウトボタンの状態をリセット
+ */
+function resetLayoutButtonState() {
+  if (elements.layoutBtn) {
+    elements.layoutBtn.classList.remove("active");
+    elements.layoutBtn.disabled = false;
   }
 }
 
@@ -269,16 +285,19 @@ function animateToFinalPositions(finalPositions, resolve) {
   const startTime = performance.now();
   const startPositions = new Map();
   
-  // 開始位置を記録
+  // 開始位置を記録し、アニメーション中クラスを追加
   stickers.forEach(sticker => {
     startPositions.set(sticker.id, {
       x: sticker.x,
       yPercent: sticker.yPercent,
     });
+    sticker.element.classList.add('layout-animating');
   });
   
   function animate(currentTime) {
     if (!isLayoutActive) {
+      // アニメーション中断時はクラスを削除
+      removeLayoutAnimatingClass();
       resolve();
       return;
     }
@@ -304,6 +323,9 @@ function animateToFinalPositions(finalPositions, resolve) {
     
     // アニメーション完了判定
     if (progress >= 1) {
+      // アニメーション完了時はクラスを削除
+      removeLayoutAnimatingClass();
+      
       // 画面外チェックと保存
       checkAndFixAllOutOfBounds().then(() => {
         return saveAllStickersWithValidation();
@@ -319,6 +341,17 @@ function animateToFinalPositions(finalPositions, resolve) {
   }
   
   layoutAnimationId = requestAnimationFrame(animate);
+}
+
+/**
+ * 全ステッカーからlayout-animatingクラスを削除
+ */
+function removeLayoutAnimatingClass() {
+  state.stickers.forEach(sticker => {
+    if (sticker.element) {
+      sticker.element.classList.remove('layout-animating');
+    }
+  });
 }
 
 

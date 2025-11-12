@@ -624,6 +624,11 @@ a, button {
     animation: click-feedback 0.4s var(--ease-out-expo);
 }
 
+/* ヘルプステッカーにも同じフィードバックを適用 */
+.sticker.help-sticker.selected .help-sticker-content {
+    animation: click-feedback 0.4s var(--ease-out-expo);
+}
+
 @keyframes click-feedback {
     0% { transform: scale(1); }
     25% { transform: scale(0.98); }
@@ -652,6 +657,11 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
 /* 追加時のアニメーション */
 .sticker.appearing {
     animation: stickerAppear 0.4s var(--ease-out-expo);
+}
+
+/* レイアウトアニメーション中は操作不可 */
+.sticker.layout-animating {
+    pointer-events: none;
 }
 
 @keyframes stickerAppear {
