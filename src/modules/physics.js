@@ -58,6 +58,10 @@ export function initPhysicsEngine() {
       y: Y,
       scale: SCALE
     },
+    // Safari最適化：計算精度を下げて高速化
+    positionIterations: 3,  // デフォルト6→3（50%削減）
+    velocityIterations: 2,  // デフォルト4→2（50%削減）
+    constraintIterations: 1, // デフォルト2→1（50%削減）
   });
   
   world = engine.world;
@@ -127,6 +131,10 @@ export function enablePhysics() {
   
   // エンジンを起動
   Runner.run(runner, engine);
+  
+  // Safari最適化：30FPSに制限
+  runner.delta = 1000 / 30;  // 30FPS（デフォルトは60FPS）
+  runner.isFixed = true;      // 固定タイムステップ
   
   // イベントリスナーを登録
   setupEventListeners();
@@ -243,7 +251,7 @@ export function removePhysicsBody(stickerId) {
 // requestAnimationFrameによるDOM更新のスロットリング用
 let rafScheduled = false;
 let lastUpdateTime = 0;
-const MIN_UPDATE_INTERVAL = 16; // 60FPSに制限（Safari最適化）
+const MIN_UPDATE_INTERVAL = 33; // 30FPSに制限（Safari最適化：16ms→33ms）
 
 /**
  * 物理ボディとDOMを同期（requestAnimationFrameでスロットリング + FPS制限）

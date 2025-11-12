@@ -83,7 +83,7 @@ export const PHYSICS_CONFIG = {
   GRAVITY: {
     X: 0,
     Y: 1,           // 正の値 = 下向き
-    SCALE: 0.001,   // 重力の強さ
+    SCALE: 0.0005,  // 重力の強さ（0.001→0.0005に軽減）
   },
   
   // 壁
@@ -93,8 +93,8 @@ export const PHYSICS_CONFIG = {
   BODY: {
     RESTITUTION: 0.25, // 反発係数（ほんの少し跳ねる）
     FRICTION: 0.08,    // 摩擦
-    FRICTION_AIR: 0.015, // 空気抵抗（軽やかに）
-    DENSITY: 0.0015,   // 密度（軽く）
+    FRICTION_AIR: 0.02, // 空気抵抗（0.015→0.02に増加、よりふわっと）
+    DENSITY: 0.0008,   // 密度（0.0015→0.0008に軽減、約半分の重さ）
     RADIUS_SCALE: 0.7, // 物理ボディの半径スケール（小さくして重なりやすく）
   },
   

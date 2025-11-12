@@ -30,14 +30,16 @@ export async function setBackgroundImage(file) {
   document.body.style.backgroundImage = `url(${url})`;
   document.body.classList.add('has-background-image');
   
-  // IndexedDBに保存
+  // IndexedDBに保存（Safari対策：BlobをArrayBufferに変換）
   try {
+    const arrayBuffer = await file.arrayBuffer();
     const transaction = db.transaction([BACKGROUND_STORE_NAME], 'readwrite');
     const objectStore = transaction.objectStore(BACKGROUND_STORE_NAME);
     await new Promise((resolve, reject) => {
       const request = objectStore.put({
         id: BACKGROUND_KEY,
-        blob: file,
+        blobData: arrayBuffer,
+        blobType: file.type,
         timestamp: Date.now(),
       });
       request.onsuccess = () => resolve();
@@ -83,10 +85,22 @@ export async function restoreBackgroundImage() {
       request.onerror = () => reject(request.error);
     });
     
-    if (backgroundData && backgroundData.blob) {
-      const url = URL.createObjectURL(backgroundData.blob);
-      document.body.style.backgroundImage = `url(${url})`;
-      document.body.classList.add('has-background-image');
+    if (backgroundData) {
+      let blob;
+      
+      // Safari対策：ArrayBufferからBlobを復元
+      if (backgroundData.blobData && backgroundData.blobType) {
+        blob = new Blob([backgroundData.blobData], { type: backgroundData.blobType });
+      } else if (backgroundData.blob) {
+        // 旧形式（互換性のため）
+        blob = backgroundData.blob;
+      }
+      
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        document.body.style.backgroundImage = `url(${url})`;
+        document.body.classList.add('has-background-image');
+      }
     }
   } catch (error) {
     console.error('背景画像の復元エラー:', error);

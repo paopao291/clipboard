@@ -10,6 +10,73 @@ import { attachStickerEventListeners } from "./events.js";
 import { isPhysicsActive, addPhysicsBody, removePhysicsBody } from "./physics.js";
 
 /**
+ * Blobを適切なサイズにリサイズ（Safari最適化）
+ * @param {Blob} blob - 元の画像blob
+ * @param {number} maxSize - 長辺の最大サイズ（px）
+ * @returns {Promise<Blob>} リサイズ済みのblob
+ */
+async function resizeImageBlob(blob, maxSize = 1200) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      // 縦横比を維持してリサイズ
+      let width = img.width;
+      let height = img.height;
+      
+      // 既に小さい画像はそのまま返す
+      if (width <= maxSize && height <= maxSize) {
+        resolve(blob);
+        return;
+      }
+      
+      // 長辺をmaxSizeに合わせる
+      if (width > height) {
+        height = (height / width) * maxSize;
+        width = maxSize;
+      } else {
+        width = (width / height) * maxSize;
+        height = maxSize;
+      }
+      
+      // Canvasでリサイズ
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      
+      // 高品質なリサイズ設定
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // 元の画像フォーマットを判定
+      const mimeType = blob.type || 'image/png';
+      const isPNG = mimeType === 'image/png';
+      const quality = isPNG ? 1.0 : 0.9; // PNGは品質指定不要、JPEGは90%
+      
+      // Blobに変換（元のフォーマットを維持）
+      canvas.toBlob((resizedBlob) => {
+        if (resizedBlob) {
+          console.log(`画像リサイズ: ${img.width}x${img.height} → ${width}x${height} (${mimeType})`);
+          resolve(resizedBlob);
+        } else {
+          console.warn('リサイズ失敗、元の画像を使用');
+          resolve(blob);
+        }
+      }, mimeType, quality);
+    };
+    
+    img.onerror = () => {
+      console.warn('画像読み込み失敗、元の画像を使用');
+      resolve(blob);
+    };
+    
+    img.src = URL.createObjectURL(blob);
+  });
+}
+
+/**
  * ステッカーの基準幅を取得
  * @param {Object} sticker - シールオブジェクト
  * @returns {number} 基準幅
@@ -85,8 +152,11 @@ export async function addStickerFromBlob(
   zIndex = null,
   hasBorder = STICKER_DEFAULTS.HAS_BORDER,
 ) {
+  // Safari最適化：画像をリサイズ（長辺1200pxまで）
+  const resizedBlob = await resizeImageBlob(blob, 1200);
+  
   const stickerId = id || Date.now();
-  const url = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(resizedBlob);
 
   // DOMに追加
   const actualZIndex = addStickerToDOM(
@@ -101,10 +171,10 @@ export async function addStickerFromBlob(
     hasBorder,
   );
 
-  // IndexedDBに保存
+  // IndexedDBに保存（リサイズ済みのblobを保存）
   await saveStickerToDB({
     id: stickerId,
-    blob: blob,
+    blob: resizedBlob,
     x: x,
     yPercent: yPercent,
     width: width,

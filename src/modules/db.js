@@ -53,11 +53,25 @@ export function initDB() {
  * @param {Object} stickerData - シールのデータ
  * @returns {Promise<void>}
  */
-export function saveStickerToDB(stickerData) {
-    const transaction = db.transaction([DB_CONFIG.STORE_NAME], 'readwrite');
-    const objectStore = transaction.objectStore(DB_CONFIG.STORE_NAME);
-    const request = objectStore.put(stickerData);
-    return promisifyRequest(request);
+export async function saveStickerToDB(stickerData) {
+    try {
+        // Safari対策：BlobをArrayBufferに変換
+        const dataToSave = { ...stickerData };
+        if (stickerData.blob instanceof Blob) {
+            const arrayBuffer = await stickerData.blob.arrayBuffer();
+            dataToSave.blobData = arrayBuffer;
+            dataToSave.blobType = stickerData.blob.type;
+            delete dataToSave.blob; // 元のBlobプロパティを削除
+        }
+        
+        const transaction = db.transaction([DB_CONFIG.STORE_NAME], 'readwrite');
+        const objectStore = transaction.objectStore(DB_CONFIG.STORE_NAME);
+        const request = objectStore.put(dataToSave);
+        return promisifyRequest(request);
+    } catch (error) {
+        console.error('DB保存エラー:', error);
+        throw error;
+    }
 }
 
 /**
@@ -102,6 +116,16 @@ export async function loadAllStickersFromDB() {
         const transaction = db.transaction([DB_CONFIG.STORE_NAME], 'readonly');
         const objectStore = transaction.objectStore(DB_CONFIG.STORE_NAME);
         const stickers = await promisifyRequest(objectStore.getAll());
+        
+        // Safari対策：ArrayBufferをBlobに戻す
+        for (const sticker of stickers) {
+            if (sticker.blobData && sticker.blobType) {
+                // ArrayBufferからBlobを復元
+                sticker.blob = new Blob([sticker.blobData], { type: sticker.blobType });
+                delete sticker.blobData;
+                delete sticker.blobType;
+            }
+        }
         
         // z-index順にソート（小さい順から追加することで重ね順を再現）
         stickers.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));

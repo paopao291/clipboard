@@ -23,12 +23,12 @@ import { showToast, elements } from "./ui.js";
 // ========================================
 
 const LAYOUT_CONFIG = {
-  // 最終位置計算の反復回数（Safari最適化：200→100に削減）
-  CALCULATION_ITERATIONS: 100,
-  // 計算時の力の減衰（Safari最適化：収束を早めるため0.3→0.4に増加）
-  CALCULATION_DAMPING: 0.4,
-  // 計算時の最小移動量（収束判定：緩和して早期終了しやすく）
-  CALCULATION_MIN_MOVEMENT: 0.5,
+  // 最終位置計算の反復回数（Safari最適化：200→100→50にさらに削減）
+  CALCULATION_ITERATIONS: 50,
+  // 計算時の力の減衰（Safari最適化：収束を早めるため0.3→0.4→0.55に増加）
+  CALCULATION_DAMPING: 0.55,
+  // 計算時の最小移動量（収束判定：緩和して早期終了しやすく 0.5→1.0）
+  CALCULATION_MIN_MOVEMENT: 1.0,
   // 斥力の強さ
   REPULSION_STRENGTH: 100,
   // 画面境界からの斥力の強さ
@@ -173,10 +173,10 @@ function calculateFinalPositions() {
   for (let i = 0; i < LAYOUT_CONFIG.CALCULATION_ITERATIONS; i++) {
     const maxMovement = performCalculationStep(stickers, positions);
     
-    // 収束判定（3回連続で安定したら終了）
+    // 収束判定（2回連続で安定したら終了 - Safari最適化：3回→2回に緩和）
     if (maxMovement < LAYOUT_CONFIG.CALCULATION_MIN_MOVEMENT) {
       stableCount++;
-      if (stableCount >= 3) {
+      if (stableCount >= 2) {
         console.log(`自動レイアウト: ${i + 1}回のイテレーションで収束`);
         break;
       }
