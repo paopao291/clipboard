@@ -28,7 +28,7 @@ import {
 import { addStickerToDOM, toggleStickerPin, sendToBack } from "./modules/sticker.js";
 import { initPhysicsEngine, enablePhysics, disablePhysics, isPhysicsActive } from "./modules/physics.js";
 import { startAutoLayout, isLayoutRunning } from "./modules/layout.js";
-import { setBackgroundImage, removeBackgroundImage, restoreBackgroundImage, hasBackgroundImage } from "./modules/background.js";
+import { setBackgroundImage, removeBackgroundImage, restoreBackgroundImage, hasBackgroundImage, initBackgroundDB } from "./modules/background.js";
 
 /**
  * アプリケーションの初期化
@@ -38,7 +38,10 @@ async function init() {
   initElements();
 
   // IndexedDBを初期化
-  await initDB();
+  const database = await initDB();
+  
+  // 背景画像用のDBを初期化
+  initBackgroundDB(database);
 
   // 物理エンジンを初期化
   initPhysicsEngine();
@@ -123,7 +126,7 @@ async function init() {
   restoreHelpSticker();
   
   // 背景画像を復元
-  restoreBackgroundImage();
+  await restoreBackgroundImage();
 
   // インフォボタンの初期表示状態を設定
   updateInfoButtonVisibility();

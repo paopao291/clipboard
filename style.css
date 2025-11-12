@@ -19,8 +19,8 @@
     --color-white-translucent: rgba(255, 255, 255, 0.95);
     --color-white-overlay: rgba(255, 255, 255, 0.15);
     --color-white-overlay-hover: rgba(255, 255, 255, 0.25);
-    --color-overlay-dark: rgba(0, 0, 0, 0.2);
-    --color-overlay-darker: rgba(0, 0, 0, 0.3);
+    --color-overlay-dark: rgba(0, 0, 0, 0.3);
+    --color-overlay-darker: rgba(0, 0, 0, 0.4);
     --color-physics: rgb(0, 80, 58);        /* 重力ボタン：深い緑 */
     --color-layout: rgb(240, 90, 36);       /* 斥力ボタン：オレンジ */
     --color-cream: #FFFBF0;                 /* クリーム色 */
@@ -440,38 +440,36 @@ body.has-background-image .background-btn .background-icon-remove {
 
 /* header-buttons内のボタン：グレー背景 */
 .header-btn {
-    background: rgba(200, 200, 200, 0.5);
-}
+    background: rgba(33, 33, 33, 0.15);
+}   
 
 @media (hover: hover) {     
     .header-btn:hover {
         transform: scale(1.05);
-        background: rgba(200, 200, 200, 0.25);
+        background: rgba(33, 33, 33, 0.25);
     }
 }
 
 .header-btn:active {
     transform: scale(0.95);
-    background: rgba(200, 200, 200, 0.15);
-    filter: var(--shadow-button-active);
+    background: rgba(33, 33, 33, 0.25);
 }
 
 /* selection-buttons内のボタン：白背景 */
 .selection-btn {
-    background: rgba(100, 100, 100, 0.2);
+    background: rgba(33, 33, 33, 0.3);
 }
 
 @media (hover: hover) { 
     .selection-btn:hover {
         transform: scale(1.05);
-        background: rgba(100, 100, 100, 0.3);
+        background: rgba(33, 33, 33, 0.4);
     }
 }
 
 .selection-btn:active {
     transform: scale(0.95);
-    background: rgba(100, 100, 100, 0.3);
-    filter: var(--shadow-button-active);
+    background: rgba(33, 33, 33, 0.4);
 }
 
 /* 右上アイコンボタン：SVGサイズ */

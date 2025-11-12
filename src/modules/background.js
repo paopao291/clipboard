@@ -2,7 +2,20 @@
  * 背景画像管理モジュール
  */
 
-const STORAGE_KEY = 'backgroundImage';
+import { DB_CONFIG } from './constants.js';
+
+const BACKGROUND_STORE_NAME = 'background';
+const BACKGROUND_KEY = 'current';
+
+let db = null;
+
+/**
+ * 背景画像用のDBを初期化
+ * @param {IDBDatabase} database - IndexedDB
+ */
+export function initBackgroundDB(database) {
+  db = database;
+}
 
 /**
  * 背景画像を設定
@@ -17,35 +30,66 @@ export async function setBackgroundImage(file) {
   document.body.style.backgroundImage = `url(${url})`;
   document.body.classList.add('has-background-image');
   
-  // localStorageに保存（Base64化）
-  const reader = new FileReader();
-  reader.onload = function(event) {
-    localStorage.setItem(STORAGE_KEY, event.target.result);
-  };
-  reader.readAsDataURL(file);
+  // IndexedDBに保存
+  try {
+    const transaction = db.transaction([BACKGROUND_STORE_NAME], 'readwrite');
+    const objectStore = transaction.objectStore(BACKGROUND_STORE_NAME);
+    await new Promise((resolve, reject) => {
+      const request = objectStore.put({
+        id: BACKGROUND_KEY,
+        blob: file,
+        timestamp: Date.now(),
+      });
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  } catch (error) {
+    console.error('背景画像の保存エラー:', error);
+  }
 }
 
 /**
  * 背景画像を削除
  */
-export function removeBackgroundImage() {
+export async function removeBackgroundImage() {
   // 背景画像をクリア
   document.body.style.backgroundImage = '';
   document.body.classList.remove('has-background-image');
   
-  // localStorageから削除
-  localStorage.removeItem(STORAGE_KEY);
+  // IndexedDBから削除
+  try {
+    const transaction = db.transaction([BACKGROUND_STORE_NAME], 'readwrite');
+    const objectStore = transaction.objectStore(BACKGROUND_STORE_NAME);
+    await new Promise((resolve, reject) => {
+      const request = objectStore.delete(BACKGROUND_KEY);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  } catch (error) {
+    console.error('背景画像の削除エラー:', error);
+  }
 }
 
 /**
  * 背景画像を復元
  */
-export function restoreBackgroundImage() {
-  const savedBackground = localStorage.getItem(STORAGE_KEY);
-  
-  if (savedBackground) {
-    document.body.style.backgroundImage = `url(${savedBackground})`;
-    document.body.classList.add('has-background-image');
+export async function restoreBackgroundImage() {
+  try {
+    const transaction = db.transaction([BACKGROUND_STORE_NAME], 'readonly');
+    const objectStore = transaction.objectStore(BACKGROUND_STORE_NAME);
+    const backgroundData = await new Promise((resolve, reject) => {
+      const request = objectStore.get(BACKGROUND_KEY);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    
+    if (backgroundData && backgroundData.blob) {
+      const url = URL.createObjectURL(backgroundData.blob);
+      document.body.style.backgroundImage = `url(${url})`;
+      document.body.classList.add('has-background-image');
+    }
+  } catch (error) {
+    console.error('背景画像の復元エラー:', error);
   }
 }
 

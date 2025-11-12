@@ -29,7 +29,7 @@ export function initDB() {
 
         request.onsuccess = () => {
             db = request.result;
-            resolve(db);
+            resolve(db); // dbを返す
         };
 
         request.onupgradeneeded = (event) => {
@@ -38,6 +38,11 @@ export function initDB() {
             if (!db.objectStoreNames.contains(DB_CONFIG.STORE_NAME)) {
                 const objectStore = db.createObjectStore(DB_CONFIG.STORE_NAME, { keyPath: 'id' });
                 objectStore.createIndex('timestamp', 'timestamp', { unique: false });
+            }
+            
+            // 背景画像用のオブジェクトストアを作成
+            if (!db.objectStoreNames.contains('background')) {
+                db.createObjectStore('background', { keyPath: 'id' });
             }
         };
     });
