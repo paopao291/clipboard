@@ -228,7 +228,6 @@ a, button {
         font-size: var(--font-sm);
         padding: 10px 16px;
         max-width: 85%;
-        gap: var(--spacing-sm);
     }
 
     /* アクションボタンがある場合は右paddingを小さく */
