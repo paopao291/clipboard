@@ -408,9 +408,8 @@ export function updateInfoButtonVisibility() {
   // ステッカーあり + 未選択：右上ボタン群+FAB+左下ボタン群表示、選択ボタン群とゴミ箱非表示
   if (state.hasSelection()) {
     elements.headerButtons.classList.add("hidden");
-    // 選択ボタン群もUI表示状態を考慮
-    elements.selectionButtons.classList.toggle("hidden", !isUIVisible);
-    elements.trashBtn.classList.toggle("hidden", !isUIVisible);
+    elements.selectionButtons.classList.remove("hidden");
+    elements.trashBtn.classList.remove("hidden");
     if (!isPhysicsMode) {
       elements.addBtn.classList.add("hidden");
     }

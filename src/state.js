@@ -86,6 +86,8 @@ class AppState {
       sticker.element.classList.add("selected");
       // オーバーレイを表示
       showOverlay();
+      // UI非表示状態を解除（選択モードはUI表示が前提）
+      this.showUI();
     }
 
     this.selectedSticker = sticker;
