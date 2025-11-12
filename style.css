@@ -267,17 +267,20 @@ a, button {
     display: flex;
     gap: 12px;
     z-index: 10000;
-    transition: all 0.3s var(--ease-out-expo);
+    transition: opacity 0.3s var(--ease-out-expo), visibility 0.3s;
     opacity: 1;
     visibility: visible;
-    transform: scale(1);
 }
 
 .selection-buttons.hidden {
     opacity: 0;
     visibility: hidden;
-    transform: scale(0.8);
     pointer-events: none;
+}
+
+/* 非表示時は各ボタンを個別に縮小 */
+.selection-buttons.hidden .selection-btn {
+    transform: scale(0.8);
 }
 
 /* 背景画像ボタン：アイコンの切り替え */
@@ -407,10 +410,14 @@ body.has-background-image .background-btn .background-icon-remove {
     display: flex;
     gap: 12px;
     z-index: 10000;
-    transition: all 0.3s var(--ease-out-expo);
+    transition: opacity 0.3s var(--ease-out-expo), visibility 0.3s;
     opacity: 1;
     visibility: visible;
-    transform: scale(1);
+}
+
+/* 非表示時は各ボタンを個別に縮小 */
+.header-buttons.hidden .header-btn {
+    transform: scale(0.8);
 }
 
 /* 右上アイコンボタン：基本スタイル（共通） */
@@ -476,7 +483,12 @@ body.has-background-image .background-btn .background-icon-remove {
 
 /* ボタン共通：非表示状態 */
 .header-buttons.hidden,
-.footer-buttons.hidden,
+.footer-buttons.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
 .add-btn.hidden {
     opacity: 0;
     visibility: hidden;
@@ -484,8 +496,7 @@ body.has-background-image .background-btn .background-icon-remove {
     pointer-events: none;
 }
 
-.info-btn.hidden,
-.hide-ui-btn.hidden,
+/* 個別ボタンのhiddenクラス（左下ボタン用） */
 .physics-btn.hidden,
 .layout-btn.hidden {
     opacity: 0;
@@ -502,14 +513,18 @@ body.has-background-image .background-btn .background-icon-remove {
     display: flex;
     gap: 12px;
     z-index: 10000;
-    transition: all 0.3s var(--ease-out-expo);
+    transition: opacity 0.3s var(--ease-out-expo), visibility 0.3s;
     opacity: 1;
     visibility: visible;
-    transform: scale(1);
 }
 
-/* 物理モードボタン */
-.physics-btn {
+/* 非表示時は各ボタンを個別に縮小 */
+.footer-buttons.hidden .footer-btn {
+    transform: scale(0.8);
+}
+
+/* 左下ボタン：基本スタイル（共通） */
+.footer-btn {
     width: var(--size-button-md);
     height: var(--size-button-md);
     background: var(--color-white-translucent);
@@ -528,22 +543,26 @@ body.has-background-image .background-btn .background-icon-remove {
 }
 
 @media (hover: hover) { 
-    .physics-btn:not(.hidden):hover {
+    .footer-btn:not(.hidden):hover {
         transform: scale(1.05);
         background: var(--color-white);
-        border-color: rgba(0, 0, 0, 0.15);
         box-shadow: var(--shadow-md), 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 }
 
-.physics-btn:not(.hidden):active {
+.footer-btn:not(.hidden):active {
     transform: scale(0.95);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1), var(--shadow-sm);
 }
 
+.footer-btn svg {
+    width: var(--size-icon-md);
+    height: var(--size-icon-md);
+}
+
+/* 物理モードボタン：アクティブ状態 */
 .physics-btn.active:not(.hidden) {
     background: var(--color-physics);
-    border-color: rgba(0, 80, 58, 0.3);
     color: var(--color-cream);
 }
 
@@ -551,57 +570,14 @@ body.has-background-image .background-btn .background-icon-remove {
     background: rgb(0, 95, 70);
 }
 
-.physics-btn svg {
-    width: var(--size-icon-md);
-    height: var(--size-icon-md);
-}
-
-/* 自動レイアウトボタン */
-.layout-btn {
-    width: var(--size-button-md);
-    height: var(--size-button-md);
-    background: var(--color-white-translucent);
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #333;
-    transition: all 0.3s var(--ease-out-expo);
-    box-shadow: var(--shadow-base), var(--shadow-sm);
-    opacity: 1;
-    visibility: visible;
-    transform: scale(1);
-}
-
-@media (hover: hover) { 
-    .layout-btn:not(.hidden):hover {
-        transform: scale(1.05);
-        background: var(--color-white);
-        border-color: rgba(0, 0, 0, 0.15);
-        box-shadow: var(--shadow-md), 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-}
-
-.layout-btn:not(.hidden):active {
-    transform: scale(0.95);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1), var(--shadow-sm);
-}
-
+/* 自動レイアウトボタン：アクティブ状態 */
 .layout-btn.active:not(.hidden) {
     background: var(--color-layout);
-    border-color: rgba(240, 90, 36, 0.3);
-    color: var(--color-cream);
+    color: var(--color-white);
 }
 
 .layout-btn.active:not(.hidden):hover {
-    background: rgb(255, 105, 50);
-}
-
-.layout-btn svg {
-    width: var(--size-icon-md);
-    height: var(--size-icon-md);
+    background: rgb(255, 105, 51);
 }
 
 /* キャンバス：ミニマルな空間 */
