@@ -23,12 +23,12 @@ import { showToast, elements } from "./ui.js";
 // ========================================
 
 const LAYOUT_CONFIG = {
-  // 最終位置計算の反復回数（Safari最適化：200→100→50にさらに削減）
+  // 最終位置計算の反復回数
   CALCULATION_ITERATIONS: 50,
-  // 計算時の力の減衰（Safari最適化：収束を早めるため0.3→0.4→0.55に増加）
-  CALCULATION_DAMPING: 0.55,
-  // 計算時の最小移動量（収束判定：緩和して早期終了しやすく 0.5→1.0）
-  CALCULATION_MIN_MOVEMENT: 1.0,
+  // 計算時の力の減衰
+  CALCULATION_DAMPING: 0.3,
+  // 計算時の最小移動量（収束判定）
+  CALCULATION_MIN_MOVEMENT: 0.1,
   // 斥力の強さ
   REPULSION_STRENGTH: 100,
   // 画面境界からの斥力の強さ
@@ -168,16 +168,15 @@ function calculateFinalPositions() {
     });
   });
   
-  // 収束するまで計算を繰り返す（Safari最適化：早期終了条件を緩和）
+  // 収束するまで計算を繰り返す
   let stableCount = 0;
   for (let i = 0; i < LAYOUT_CONFIG.CALCULATION_ITERATIONS; i++) {
     const maxMovement = performCalculationStep(stickers, positions);
     
-    // 収束判定（2回連続で安定したら終了 - Safari最適化：3回→2回に緩和）
+    // 収束判定
     if (maxMovement < LAYOUT_CONFIG.CALCULATION_MIN_MOVEMENT) {
       stableCount++;
-      if (stableCount >= 2) {
-        console.log(`自動レイアウト: ${i + 1}回のイテレーションで収束`);
+      if (stableCount >= 5) {
         break;
       }
     } else {
@@ -552,4 +551,3 @@ async function saveAllStickersWithValidation() {
   // 共通の保存関数を使用
   await saveAllStickerPositions(state.stickers);
 }
-
