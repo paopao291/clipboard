@@ -96,15 +96,11 @@ export const PHYSICS_CONFIG = {
     FRICTION_AIR: 0.01, // 空気抵抗
     DENSITY: 0.0015,   // 密度
     RADIUS_SCALE: 0.7, // 物理ボディの半径スケール（小さくして重なりやすく）
-    
-    // 以下は未使用（SVGフィルター削除により統一されたため）
-    // SAFARI_FRICTION_AIR: 0.015,
-    // SAFARI_DENSITY: 0.0008,
   },
   
   // ジャイロ（スマホ用）
   GYRO: {
-    STRENGTH: 0.9,         // 重力の強さ係数
+    STRENGTH: 0.95,         // 重力の強さ係数
     NEUTRAL_BETA: 10,      // 中立位置（度）
     DEFAULT_GRAVITY: 0.08,  // 平行時の下向き重力
     INITIAL_X: 0,          // 初期X重力
