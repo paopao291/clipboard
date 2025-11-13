@@ -30,33 +30,30 @@ const OUTLINE_CONFIG = {
 };
 
 /**
- * 16方向のオフセットを生成（縁取り用）
+ * 36方向のオフセットを生成（縁取り用）
  * @param {number} borderWidth - 縁取りの太さ
  * @returns {Array<{x: number, y: number}>} オフセット配列
  */
 function generateOutlineOffsets(borderWidth) {
-  // 16方向に拡張
-  return [
-    // 元の8方向
-    { x: -borderWidth, y: 0 }, // 左
-    { x: borderWidth, y: 0 }, // 右
-    { x: 0, y: -borderWidth }, // 上
-    { x: 0, y: borderWidth }, // 下
-    { x: -borderWidth, y: -borderWidth }, // 左上
-    { x: borderWidth, y: -borderWidth }, // 右上
-    { x: -borderWidth, y: borderWidth }, // 左下
-    { x: borderWidth, y: borderWidth }, // 右下
+  // 36方向に拡張（10度ごとに均等に配置）
+  const offsets = [];
+  
+  // 0度から350度まで、10度ずつ36方向を生成
+  for (let angle = 0; angle < 360; angle += 10) {
+    // 角度をラジアンに変換
+    const angleRad = angle * (Math.PI / 180);
     
-    // 追加の8方向
-    { x: -borderWidth, y: -borderWidth / 2 }, // 左上より（左寄り）
-    { x: -borderWidth / 2, y: -borderWidth }, // 左上より（上寄り）
-    { x: borderWidth / 2, y: -borderWidth }, // 右上より（上寄り）
-    { x: borderWidth, y: -borderWidth / 2 }, // 右上より（右寄り）
-    { x: borderWidth, y: borderWidth / 2 }, // 右下より（右寄り）
-    { x: borderWidth / 2, y: borderWidth }, // 右下より（下寄り）
-    { x: -borderWidth / 2, y: borderWidth }, // 左下より（下寄り）
-    { x: -borderWidth, y: borderWidth / 2 }, // 左下より（左寄り）
-  ];
+    // 三角関数でx,y座標を計算（cos,sin）
+    const x = Math.cos(angleRad) * borderWidth;
+    const y = Math.sin(angleRad) * borderWidth;
+    
+    offsets.push({ 
+      x: Math.round(x * 100) / 100, 
+      y: Math.round(y * 100) / 100 
+    });
+  }
+  
+  return offsets;
 }
 
 /**
