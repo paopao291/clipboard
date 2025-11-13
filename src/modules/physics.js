@@ -67,18 +67,10 @@ export function initPhysicsEngine() {
     enableSleeping: false,
   };
   
-  // Safari/iOSにはさらに軽量な設定
-  if (isSafari || isIOS) {
-    // さらに精度削減（極限まで軽量化）
-    engineOptions.positionIterations = 2;  // 3→2にさらに削減
-    engineOptions.velocityIterations = 1;  // 2→1にさらに削減
-    engineOptions.constraintIterations = 1;
-  } else {
-    // 他のブラウザは現状維持
-    engineOptions.positionIterations = 3;
-    engineOptions.velocityIterations = 2;
-    engineOptions.constraintIterations = 1;
-  }
+  // SVGフィルターを削除したため、全ブラウザで同じ精度設定を使用
+  engineOptions.positionIterations = 3;
+  engineOptions.velocityIterations = 2;
+  engineOptions.constraintIterations = 1;
   
   engine = Engine.create(engineOptions);
   
@@ -150,7 +142,7 @@ export function enablePhysics() {
   accumulator = 0;
   previousBodyStates.clear();
   
-  // Safari最適化: キャッシュをクリア
+  // キャッシュをクリア
   domUpdateCache.clear();
   updateBuffer.clear();
   batchUpdateScheduled = false;
@@ -158,7 +150,7 @@ export function enablePhysics() {
   // 独自のレンダリングループを開始（固定タイムステップ + 補間）
   renderLoopId = requestAnimationFrame(renderLoop);
   
-  console.log(`物理モード: 物理演算${PHYSICS_HZ}Hz、レンダリング${RENDER_FPS}FPS (${isSafari || isIOS ? 'Safari/iOS' : 'Chrome/他'}) - Safari最適化適用中`);
+  console.log(`物理モード: 物理演算${PHYSICS_HZ}Hz、レンダリング${RENDER_FPS}FPS`);
   
   // イベントリスナーを登録
   setupEventListeners();
@@ -189,11 +181,9 @@ export async function disablePhysics() {
       // 現在の物理位置をDOMに反映して固定
       syncStickerFromPhysics(sticker, body);
       
-      // Safari最適化: will-changeを削除（メモリ解放）
-      if (isSafari || isIOS) {
-        if (sticker.imgWrapper) {
-          sticker.imgWrapper.style.willChange = 'auto';
-        }
+      // will-changeを削除（メモリ解放）
+      if (sticker.imgWrapper) {
+        sticker.imgWrapper.style.willChange = 'auto';
       }
     }
     World.remove(world, body);
@@ -202,7 +192,7 @@ export async function disablePhysics() {
   stickerBodyMap.clear();
   previousBodyStates.clear();
   
-  // Safari最適化: キャッシュをクリア
+  // キャッシュをクリア
   domUpdateCache.clear();
   updateBuffer.clear();
   batchUpdateScheduled = false;
@@ -255,19 +245,17 @@ export function addPhysicsBody(sticker) {
   const { RADIUS_SCALE } = PHYSICS_CONFIG.BODY;
   const radius = (wrapperRect.width / 2) * RADIUS_SCALE;
   
-  // 円形の物理ボディを作成（ブラウザによって物理特性を分岐）
+  // 円形の物理ボディを作成
   const { 
     RESTITUTION, 
     FRICTION, 
-    FRICTION_AIR, 
-    SAFARI_FRICTION_AIR,
-    DENSITY, 
-    SAFARI_DENSITY 
+    FRICTION_AIR,
+    DENSITY,
   } = PHYSICS_CONFIG.BODY;
   
-  // Safari/iOSはちょっと重めに
-  const frictionAir = (isSafari || isIOS) ? SAFARI_FRICTION_AIR : FRICTION_AIR;
-  const density = (isSafari || isIOS) ? SAFARI_DENSITY : DENSITY;
+  // SVGフィルターを削除したため、全ブラウザで同じ物理パラメータを使用
+  const frictionAir = FRICTION_AIR;
+  const density = DENSITY;
   
   const body = Bodies.circle(x, y, radius, {
     restitution: RESTITUTION,
@@ -307,17 +295,9 @@ export function removePhysicsBody(stickerId) {
 // 同期・更新処理
 // ========================================
 
-// ブラウザ検出
-const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
 // 固定タイムステップ + 補間の設定
-const PHYSICS_HZ_SAFARI = 30;  // Safari/iOS: 物理演算30Hz（軽量）
-const PHYSICS_HZ_CHROME = 60;  // Chrome: 物理演算60Hz（高精度）
+const PHYSICS_HZ = 60;         // 物理演算60Hz（全ブラウザ共通）
 const RENDER_FPS = 60;         // レンダリング: 常に60FPS（滑らか）
-
-const PHYSICS_HZ = isSafari || isIOS ? PHYSICS_HZ_SAFARI : PHYSICS_HZ_CHROME;
 const PHYSICS_DELTA = 1000 / PHYSICS_HZ; // 物理演算の間隔（ms）
 const RENDER_DELTA = 1000 / RENDER_FPS;  // レンダリングの間隔（ms）
 
@@ -408,7 +388,7 @@ function renderLoop(currentTime) {
 const updateBuffer = new Map();
 let batchUpdateScheduled = false;
 
-// Safari向けの更新キャッシュ（パフォーマンス最適化）
+// DOM更新のキャッシュ（パフォーマンス最適化）
 const domUpdateCache = new Map();
 
 /**
@@ -423,7 +403,7 @@ function renderWithInterpolation(alpha) {
     const sticker = state.getStickerById(stickerId);
     if (!sticker) return;
     
-    // ドラッグ中のステッカーはスキップ（Safari対策：ドラッグ操作と競合しないように）
+    // ドラッグ中のステッカーはスキップ（ドラッグ操作と競合しないように）
     if (state.selectedSticker && state.selectedSticker.id === stickerId && state.isDragging) {
       return;
     }
@@ -448,15 +428,15 @@ function renderWithInterpolation(alpha) {
     const deltaY = Math.abs(body.position.y - prevState.position.y);
     const deltaAngle = Math.abs(body.angle - prevState.angle);
     
-    // Safari用により高い閾値を使用
-    const posThreshold = isSafari || isIOS ? POSITION_THRESHOLD * 1.5 : POSITION_THRESHOLD;
+    // SVGフィルターを削除したため、全ブラウザで同じ閾値を使用
+    const posThreshold = POSITION_THRESHOLD;
     
     // 変化が閾値以下なら更新スキップ
     if (deltaX < posThreshold && deltaY < posThreshold && deltaAngle < ANGLE_THRESHOLD) {
       return;
     }
     
-    // キャッシュをチェック（Safari最適化）
+    // キャッシュをチェック
     const cachedValues = domUpdateCache.get(stickerId);
     if (cachedValues) {
       const [lastX, lastY, lastRotation] = cachedValues;
@@ -466,8 +446,8 @@ function renderWithInterpolation(alpha) {
       const interpY = lerp(prevState.position.y, body.position.y, alpha);
       const interpAngle = lerpAngle(prevState.angle, body.angle, alpha);
       
-      // Safari用に大きい閾値を適用
-      const cacheThreshold = isSafari || isIOS ? 0.5 : 0.1;
+      // SVGフィルターを削除したため、全ブラウザで同じ閾値を使用
+      const cacheThreshold = 0.1;
       
       // キャッシュ値と近ければスキップ
       if (Math.abs(interpX - lastX) < cacheThreshold && 
@@ -505,7 +485,7 @@ function renderWithInterpolation(alpha) {
     }
   });
   
-  // 更新があるときだけ処理（Safari最適化）
+  // 更新があるときだけ処理
   if (updatesNeeded.length === 0) return;
   
   // 一括でDOMを更新（バッチ処理）
@@ -634,21 +614,18 @@ function updateStickerDOM(sticker, x, yPercent, rotation) {
   sticker.element.style.left = `calc(50% + ${x}px)`;
   sticker.element.style.top = `${yPercent}%`;
   
-  // 回転とスケールを更新（Safari最適化）
+  // 回転とスケールを更新
   if (sticker.imgWrapper) {
     const baseWidth = getBaseWidth(sticker);
     const scale = sticker.width / baseWidth;
     
-    // Safari最適化: transform一括指定
+    // transform一括指定
     sticker.imgWrapper.style.transform = `rotate(${rotation}deg) scale(${scale})`;
     
-    // Safari最適化: 物理モード中はwill-changeを常に適用
-    if (isSafari || isIOS) {
-      // パフォーマンス向上のためのGPU加速強化
-      sticker.imgWrapper.style.willChange = 'transform';
-      sticker.imgWrapper.style.backfaceVisibility = 'hidden';
-      sticker.imgWrapper.style.webkitBackfaceVisibility = 'hidden';
-    }
+    // 物理モード中はwill-changeを常に適用（パフォーマンス向上のためのGPU加速強化）
+    sticker.imgWrapper.style.willChange = 'transform';
+    sticker.imgWrapper.style.backfaceVisibility = 'hidden';
+    sticker.imgWrapper.style.webkitBackfaceVisibility = 'hidden';
   }
 }
 

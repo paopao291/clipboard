@@ -97,9 +97,9 @@ export const PHYSICS_CONFIG = {
     DENSITY: 0.0015,   // 密度
     RADIUS_SCALE: 0.7, // 物理ボディの半径スケール（小さくして重なりやすく）
     
-    // Safari/iOS用の調整値（少し重め）
-    SAFARI_FRICTION_AIR: 0.015, // 空気抵抗（Chromeより少なめ）
-    SAFARI_DENSITY: 0.0008,     // 密度（Chromeより少し重め）
+    // 以下は未使用（SVGフィルター削除により統一されたため）
+    // SAFARI_FRICTION_AIR: 0.015,
+    // SAFARI_DENSITY: 0.0008,
   },
   
   // ジャイロ（スマホ用）
