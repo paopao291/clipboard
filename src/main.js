@@ -691,6 +691,7 @@ async function handleLayoutButton() {
     disablePhysics();
     state.disablePhysicsMode();
     elements.physicsBtn.classList.remove("active");
+    elements.canvas.classList.remove("physics-mode");
   }
 
   // 選択状態を解除してUIを表示

@@ -2,7 +2,6 @@ import { state } from "../state.js";
 import {
   RESIZE_CONFIG,
   PASTE_AREA_CONFIG,
-  MESSAGES,
   INTERACTION_CONFIG,
 } from "./constants.js";
 import {
@@ -272,7 +271,6 @@ export async function handlePaste(e) {
           : getCenterCoordinates();
 
       await addStickerFromBlob(blob, coords.x, coords.yPercent);
-      showToast(MESSAGES.IMAGE_ADDED);
       elements.pasteArea.blur();
       break;
     }
@@ -324,10 +322,6 @@ export async function handleFileSelect(e) {
 
       addedCount++;
     }
-  }
-
-  if (addedCount > 0) {
-    showToast(MESSAGES.IMAGES_ADDED(addedCount));
   }
 
   // フラグをリセット

@@ -70,13 +70,6 @@ export const DOM_IDS = {
   ADD_BTN: "addBtn",
 };
 
-// メッセージ
-export const MESSAGES = {
-  IMAGE_ADDED: "画像を追加しました！",
-  IMAGES_ADDED: (count) => `${count}枚の画像を追加しました！`,
-  SELECT_FROM_LIBRARY: "写真ライブラリから選択してください",
-};
-
 // 物理エンジンの設定
 export const PHYSICS_CONFIG = {
   // 重力（PC用）
