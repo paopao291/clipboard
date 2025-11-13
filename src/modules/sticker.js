@@ -5,25 +5,90 @@ import {
   updateStickerInDB,
   deleteStickerFromDB,
 } from "./db.js";
-import { elements, showToast, updateInfoButtonVisibility, updateHelpStickerState, clearHelpStickerState } from "./ui.js";
+import { elements, showToast, updateInfoButtonVisibility, updateHelpStickerState, clearHelpStickerState, updateHelpStickerBorder } from "./ui.js";
 import { attachStickerEventListeners } from "./events.js";
 import { isPhysicsActive, addPhysicsBody, removePhysicsBody } from "./physics.js";
 
 /**
- * SVGフィルターを適用した画像を生成（8方向drop-shadow方式：高速・確実）
+ * 縁取りの設定
+ */
+const OUTLINE_CONFIG = {
+  RATIO: 0.05,        // 画像サイズに対する縁取りの比率（5%）
+  MIN_WIDTH: 8,       // 最小縁取り幅（px）
+  EXTRA_PADDING: 2,   // 余白の追加分（px）
+  COLOR: '#ffffff',   // 縁取りの色
+};
+
+/**
+ * 8方向のオフセットを生成
+ * @param {number} borderWidth - 縁取りの太さ
+ * @returns {Array<{x: number, y: number}>} オフセット配列
+ */
+function generateOutlineOffsets(borderWidth) {
+  return [
+    { x: -borderWidth, y: 0 },              // 左
+    { x: borderWidth, y: 0 },               // 右
+    { x: 0, y: -borderWidth },              // 上
+    { x: 0, y: borderWidth },               // 下
+    { x: -borderWidth, y: -borderWidth },   // 左上
+    { x: borderWidth, y: -borderWidth },    // 右上
+    { x: -borderWidth, y: borderWidth },    // 左下
+    { x: borderWidth, y: borderWidth },     // 右下
+  ];
+}
+
+/**
+ * 画像サイズから縁取りの太さを計算
+ * @param {number} width - 画像の幅
+ * @param {number} height - 画像の高さ
+ * @returns {number} 縁取りの太さ（px）
+ */
+function calculateBorderWidth(width, height) {
+  const imageSize = Math.max(width, height);
+  return Math.max(
+    OUTLINE_CONFIG.MIN_WIDTH,
+    Math.round(imageSize * OUTLINE_CONFIG.RATIO)
+  );
+}
+
+/**
+ * 白い縁取り用の画像を作成（画像の形状に沿った白い画像）
+ * @param {HTMLImageElement} img - 元の画像
+ * @returns {HTMLCanvasElement} 白い縁取り用のCanvas
+ */
+function createWhiteMaskedImage(img) {
+  const canvas = document.createElement('canvas');
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext('2d');
+  
+  // 白い矩形を描画
+  ctx.fillStyle = OUTLINE_CONFIG.COLOR;
+  ctx.fillRect(0, 0, img.width, img.height);
+  
+  // 画像のアルファチャンネルでマスク（画像の形状に沿った白い画像）
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.drawImage(img, 0, 0);
+  
+  return canvas;
+}
+
+/**
+ * SVGフィルターを適用した画像を生成（8方向ソリッドシャドウ：高速・シャープ）
  * @param {Blob} blob - 元の画像blob
  * @returns {Promise<Blob>} 縁取りが焼き込まれたblob
  */
 async function applyOutlineFilter(blob) {
   return new Promise((resolve) => {
     const img = new Image();
+    
     img.onload = () => {
       try {
-        // 縁取りの太さ
-        const borderWidth = 12;
-        const padding = borderWidth + 2; // 余白
+        // 縁取りの太さを計算
+        const borderWidth = calculateBorderWidth(img.width, img.height);
+        const padding = borderWidth + OUTLINE_CONFIG.EXTRA_PADDING;
         
-        // 縁取り用のCanvas（余白を含む）
+        // 縁取り用のCanvasを作成（余白を含む）
         const canvas = document.createElement('canvas');
         canvas.width = img.width + padding * 2;
         canvas.height = img.height + padding * 2;
@@ -31,48 +96,33 @@ async function applyOutlineFilter(blob) {
         
         // 背景を透明にする
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.globalCompositeOperation = 'source-over';
         
-        // 8方向に白い影を描画して縁取りを作成
-        // 各方向に影を重ねることで均一な縁取りを実現
-        ctx.shadowColor = '#ffffff';
-        ctx.shadowBlur = borderWidth;
+        // 白い縁取り用の画像を1回だけ作成（パフォーマンス最適化）
+        const whiteMaskedImage = createWhiteMaskedImage(img);
         
-        // 8方向に影を描画
-        const offsets = [
-          { x: -borderWidth, y: 0 },      // 左
-          { x: borderWidth, y: 0 },       // 右
-          { x: 0, y: -borderWidth },      // 上
-          { x: 0, y: borderWidth },       // 下
-          { x: -borderWidth, y: -borderWidth }, // 左上
-          { x: borderWidth, y: -borderWidth },   // 右上
-          { x: -borderWidth, y: borderWidth },   // 左下
-          { x: borderWidth, y: borderWidth },    // 右下
-        ];
-        
-        // 各方向に影を描画
+        // 8方向に白い画像を描画（累積的に追加）
+        const offsets = generateOutlineOffsets(borderWidth);
         for (const offset of offsets) {
-          ctx.shadowOffsetX = offset.x;
-          ctx.shadowOffsetY = offset.y;
-          ctx.drawImage(img, padding, padding);
+          ctx.drawImage(whiteMaskedImage, offset.x + padding, offset.y + padding);
         }
         
-        // 元の画像を上に描画（影なし）
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
+        // 元の画像を上に描画
         ctx.drawImage(img, padding, padding);
         
         // PNGとして保存（透過を保持）
         // ドロップシャドウはCSSで適用されるため、画像には焼き込まない
-        canvas.toBlob((filteredBlob) => {
-          if (filteredBlob) {
-            resolve(filteredBlob);
-          } else {
-            console.warn('縁取り画像生成失敗、元の画像を使用');
-            resolve(blob);
-          }
-        }, 'image/png');
+        canvas.toBlob(
+          (filteredBlob) => {
+            if (filteredBlob) {
+              resolve(filteredBlob);
+            } else {
+              console.warn('縁取り画像生成失敗、元の画像を使用');
+              resolve(blob);
+            }
+          },
+          'image/png'
+        );
       } catch (error) {
         console.warn('縁取り画像生成エラー:', error);
         resolve(blob);
@@ -655,6 +705,9 @@ export function updateStickerSize(sticker, width) {
   
   // transformを適用（scaleと回転）
   applyStickerTransform(sticker);
+
+  // ヘルプステッカーのボーダーは初期値のみ設定し、transform: scale()でスケールされるため
+  // サイズ変更時は再計算しない
 }
 
 /**
@@ -752,6 +805,11 @@ export async function toggleStickerBorder(sticker) {
     sticker.element.classList.add('no-border');
   } else {
     sticker.element.classList.remove('no-border');
+  }
+  
+  // ヘルプステッカーの場合は縁取りを更新
+  if (sticker.isHelpSticker) {
+    updateHelpStickerBorder(sticker);
   }
   
   // ヘルプステッカーでない場合はDBに保存

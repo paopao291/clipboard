@@ -2,6 +2,48 @@ import { DOM_IDS, TOAST_CONFIG, HELP_CONFIG, HELP_STICKER_CONFIG } from "./const
 import { state } from "../state.js";
 import { attachStickerEventListeners } from "./events.js";
 
+/**
+ * ヘルプステッカーの縁取り設定
+ */
+const HELP_STICKER_OUTLINE_CONFIG = {
+  RATIO: 0.05,        // サイズに対する縁取りの比率（5%）
+  MIN_WIDTH: 8,       // 最小縁取り幅（px）
+  COLOR: '#ffffff',   // 縁取りの色
+};
+
+/**
+ * ヘルプステッカーの縁取りを設定
+ * @param {Object} sticker - ヘルプステッカーオブジェクト
+ */
+export function updateHelpStickerBorder(sticker) {
+  if (!sticker.isHelpSticker || !sticker.element) {
+    return;
+  }
+
+  const helpContent = sticker.element.querySelector('.help-sticker-content');
+  if (!helpContent) {
+    return;
+  }
+
+  // 初期ボーダー幅を計算（BASE_WIDTHの5%、最小8px）
+  // 拡大縮小時はtransform: scale()でスケールされるため、初期値のみ設定
+  const baseBorderWidth = Math.max(
+    HELP_STICKER_OUTLINE_CONFIG.MIN_WIDTH,
+    Math.round(HELP_STICKER_CONFIG.BASE_WIDTH * HELP_STICKER_OUTLINE_CONFIG.RATIO)
+  );
+
+  // borderとbox-shadowを設定
+  if (sticker.hasBorder) {
+    // 縁取りあり：白いborder + ドロップシャドウ
+    helpContent.style.border = `${baseBorderWidth}px solid ${HELP_STICKER_OUTLINE_CONFIG.COLOR}`;
+    helpContent.style.boxShadow = 'var(--shadow-md)';
+  } else {
+    // 縁取りなし：ドロップシャドウのみ
+    helpContent.style.border = 'none';
+    helpContent.style.boxShadow = 'var(--shadow-md)';
+  }
+}
+
 // DOM要素の取得
 export const elements = {
   canvas: null,
@@ -11,6 +53,7 @@ export const elements = {
   pasteArea: null,
   headerButtons: null,
   backgroundBtn: null,
+  saveBtn: null,
   infoBtn: null,
   hideUIBtn: null,
   selectionButtons: null,
@@ -41,6 +84,7 @@ export function initElements() {
   elements.pasteArea = document.getElementById(DOM_IDS.PASTE_AREA);
   elements.headerButtons = document.querySelector(".header-buttons");
   elements.backgroundBtn = document.getElementById("backgroundBtn");
+  elements.saveBtn = document.getElementById("saveBtn");
   elements.infoBtn = document.getElementById(DOM_IDS.INFO_BTN);
   elements.hideUIBtn = document.getElementById("hideUIBtn");
   elements.selectionButtons = document.querySelector(".selection-buttons");
@@ -215,7 +259,7 @@ export function showHelp() {
   elements.canvas.appendChild(stickerDiv);
 
   // 状態に追加（imgWrapperの代わりにcontentWrapperを使用）
-  state.addSticker({
+  const helpSticker = {
     id: stickerId,
     url: null, // 画像ではないのでnull
     x: 0, // 中央からのオフセット
@@ -228,7 +272,11 @@ export function showHelp() {
     isHelpSticker: true, // ヘルプステッカーであることを示すフラグ
     isPinned: false,
     hasBorder: true, // ヘルプステッカーもデフォルトで縁取りあり
-  });
+  };
+  state.addSticker(helpSticker);
+
+  // 縁取りを設定
+  updateHelpStickerBorder(helpSticker);
 
   // 選択状態にする（オーバーレイ表示）
   state.selectSticker(state.getStickerById(stickerId));
@@ -358,6 +406,9 @@ export function restoreHelpSticker() {
   if (!helpSticker.hasBorder) {
     stickerDiv.classList.add('no-border');
   }
+
+  // 縁取りを設定
+  updateHelpStickerBorder(helpSticker);
 }
 
 /**

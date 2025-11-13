@@ -131,6 +131,13 @@
                         </svg>
                     </button>
                     
+                    <!-- 保存ボタン -->
+                    <button id="saveBtn" class="header-btn save-btn" title="画像として保存">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
+                            <path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/>
+                        </svg>
+                    </button>
+                    
                     <!-- UI非表示ボタン -->
                     <button id="hideUIBtn" class="header-btn hide-ui-btn" title="UIを非表示">
                         <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
@@ -212,6 +219,8 @@
 
         <!-- Matter.js物理エンジン -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+        <!-- html2canvas（画像保存用） -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
         <script type="module" src="src/main.js"></script>
     </body>
 </html>

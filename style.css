@@ -649,10 +649,7 @@ body.has-background-image .background-btn .background-icon-remove {
     max-height: 75vh;
     overflow-y: auto;
     position: relative;
-    /* SafariではdivにSVGフィルターが効かないため、box-shadowで代替 */
-    box-shadow: 
-        0 0 0 12px white,
-        var(--shadow-md);
+    /* box-shadowはJavaScriptで動的に設定される */
     /* iOS最適化：スクロールのスムーズさ */
     -webkit-overflow-scrolling: touch;
 }

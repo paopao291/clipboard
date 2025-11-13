@@ -1,5 +1,5 @@
 import { initDB, loadAllStickersFromDB, updateStickerInDB } from "./modules/db.js";
-import { PASTE_AREA_CONFIG, STICKER_DEFAULTS } from "./modules/constants.js";
+import { PASTE_AREA_CONFIG, STICKER_DEFAULTS, HELP_STICKER_CONFIG } from "./modules/constants.js";
 import { state } from "./state.js";
 import {
   initElements,
@@ -9,6 +9,7 @@ import {
   showInitialHelp,
   restoreHelpSticker,
   elements,
+  showToast,
 } from "./modules/ui.js";
 import {
   handlePaste,
@@ -61,6 +62,7 @@ async function init() {
 
   // ボタンイベント
   elements.backgroundBtn.addEventListener("click", handleBackgroundButton);
+  elements.saveBtn.addEventListener("click", handleSaveButton);
   elements.infoBtn.addEventListener("click", showHelp);
   elements.hideUIBtn.addEventListener("click", () => {
     state.hideUI();
@@ -292,6 +294,228 @@ async function togglePhysicsMode() {
   
   // ボタンの表示状態を更新
   updateInfoButtonVisibility();
+}
+
+/**
+ * 保存時の設定
+ */
+const SAVE_CONFIG = {
+  SCALE_WITH_BG: 3,              // 背景画像がある場合のscale
+  SCALE_WITHOUT_BG_MULTIPLIER: 2, // 背景画像がない場合のscale倍率
+  DOT_SIZE_MULTIPLIER: 2,        // ドットサイズの倍率
+  DOT_SPACING: 24,               // ドット間隔（px）
+  DOT_COLOR: 'rgba(0, 0, 0, 0.15)', // ドットの色
+  BG_COLOR: '#f7f7f4',           // 背景色（--color-bg-main）
+};
+
+/**
+ * UI要素を一時的に非表示にする
+ * @returns {Array} 元の表示状態を保存した配列
+ */
+function hideUIElements() {
+  const uiElements = [
+    elements.headerButtons,
+    elements.footerButtons,
+    elements.addBtn,
+    elements.trashBtn,
+    elements.selectionButtons,
+    elements.selectionOverlay,
+  ];
+  
+  const originalDisplay = [];
+  uiElements.forEach((el) => {
+    if (el) {
+      originalDisplay.push({ element: el, display: el.style.display });
+      el.style.display = 'none';
+    }
+  });
+  
+  return originalDisplay;
+}
+
+/**
+ * UI要素を元の表示状態に戻す
+ * @param {Array} originalDisplay - 元の表示状態の配列
+ */
+function restoreUIElements(originalDisplay) {
+  originalDisplay.forEach(({ element, display }) => {
+    element.style.display = display;
+  });
+}
+
+/**
+ * html2canvasのoncloneコールバックでUI要素を非表示にする
+ * @param {Document} clonedDoc - クローンされたドキュメント
+ */
+function hideUIElementsInClone(clonedDoc) {
+  const clonedUIElements = [
+    clonedDoc.querySelector('.header-buttons'),
+    clonedDoc.querySelector('.footer-buttons'),
+    clonedDoc.querySelector('.add-btn'),
+    clonedDoc.querySelector('.trash-btn'),
+    clonedDoc.querySelector('.selection-buttons'),
+    clonedDoc.querySelector('.selection-overlay'),
+  ];
+  clonedUIElements.forEach((el) => {
+    if (el) el.style.display = 'none';
+  });
+}
+
+/**
+ * 背景画像をCanvasに描画する
+ * @param {CanvasRenderingContext2D} ctx - Canvasコンテキスト
+ * @param {HTMLCanvasElement} canvas - Canvas要素
+ * @returns {Promise<void>}
+ */
+async function drawBackgroundImage(ctx, canvas) {
+  const bgImageUrl = document.body.style.backgroundImage.match(/url\(['"]?([^'"]+)['"]?\)/);
+  if (!bgImageUrl || !bgImageUrl[1]) {
+    return;
+  }
+  
+  const bgImage = new Image();
+  const url = bgImageUrl[1];
+  
+  // blob: URLの場合はcrossOriginを設定しない
+  if (!url.startsWith('blob:')) {
+    bgImage.crossOrigin = 'anonymous';
+  }
+  
+  await new Promise((resolve, reject) => {
+    bgImage.onload = resolve;
+    bgImage.onerror = reject;
+    bgImage.src = url;
+  });
+  
+  // 背景画像をcoverで描画
+  const imgAspect = bgImage.width / bgImage.height;
+  const canvasAspect = canvas.width / canvas.height;
+  let drawWidth, drawHeight, drawX, drawY;
+  
+  if (imgAspect > canvasAspect) {
+    // 画像が横長
+    drawHeight = canvas.height;
+    drawWidth = drawHeight * imgAspect;
+    drawX = (canvas.width - drawWidth) / 2;
+    drawY = 0;
+  } else {
+    // 画像が縦長
+    drawWidth = canvas.width;
+    drawHeight = drawWidth / imgAspect;
+    drawX = 0;
+    drawY = (canvas.height - drawHeight) / 2;
+  }
+  
+  ctx.drawImage(bgImage, drawX, drawY, drawWidth, drawHeight);
+}
+
+/**
+ * ドットパターンをCanvasに描画する
+ * @param {CanvasRenderingContext2D} ctx - Canvasコンテキスト
+ * @param {HTMLCanvasElement} canvas - Canvas要素
+ * @param {number} scale - スケール値
+ */
+function drawDotPattern(ctx, canvas, scale) {
+  // クリーム色の背景を描画
+  ctx.fillStyle = SAVE_CONFIG.BG_COLOR;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // ドットパターンを描画
+  // CSS: radial-gradient(circle, rgba(0, 0, 0, 0.15) 1px, transparent 1px)
+  // CSS: background-size: 24px 24px
+  const dotRadius = 0.5 * scale; // 1pxのドットの半径（0.5px）をscale倍
+  const spacing = SAVE_CONFIG.DOT_SPACING * scale; // 24px間隔をscale倍
+  
+  ctx.fillStyle = SAVE_CONFIG.DOT_COLOR;
+  for (let x = 0; x < canvas.width; x += spacing) {
+    for (let y = 0; y < canvas.height; y += spacing) {
+      ctx.beginPath();
+      ctx.arc(x, y, dotRadius * SAVE_CONFIG.DOT_SIZE_MULTIPLIER, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+/**
+ * Canvasを画像ファイルとしてダウンロードする
+ * @param {HTMLCanvasElement} canvas - Canvas要素
+ */
+function downloadCanvasAsImage(canvas) {
+  canvas.toBlob((blob) => {
+    if (blob) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sticker-album-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      showToast('画像を保存しました');
+    } else {
+      showToast('保存に失敗しました');
+    }
+  }, 'image/png');
+}
+
+/**
+ * 保存ボタンハンドラ（画像として保存）
+ */
+async function handleSaveButton() {
+  try {
+    // UI要素を一時的に非表示
+    const originalDisplay = hideUIElements();
+    
+    // 背景画像があるか確認
+    const hasBgImage = document.body.classList.contains('has-background-image');
+    
+    // 高解像度対応：scaleを設定
+    const scale = hasBgImage
+      ? SAVE_CONFIG.SCALE_WITH_BG
+      : (window.devicePixelRatio || 1) * SAVE_CONFIG.SCALE_WITHOUT_BG_MULTIPLIER;
+    
+    // 画面サイズを取得
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+    
+    // 最終的なCanvasを作成
+    const finalCanvas = document.createElement('canvas');
+    finalCanvas.width = screenWidth * scale;
+    finalCanvas.height = screenHeight * scale;
+    const finalCtx = finalCanvas.getContext('2d');
+    
+    // 背景を描画
+    if (hasBgImage) {
+      await drawBackgroundImage(finalCtx, finalCanvas);
+    } else {
+      drawDotPattern(finalCtx, finalCanvas, scale);
+    }
+    
+    // html2canvasで#app要素だけを画像化（背景は含めない）
+    const html2canvasResult = await html2canvas(document.getElementById('app'), {
+      backgroundColor: null,
+      useCORS: true,
+      scale: scale,
+      logging: false,
+      allowTaint: true,
+      width: screenWidth,
+      height: screenHeight,
+      onclone: hideUIElementsInClone,
+    });
+    
+    // UI要素を元に戻す
+    restoreUIElements(originalDisplay);
+    
+    // html2canvasの結果を背景の上に描画（シールがドット/背景画像の上に来るように）
+    finalCtx.drawImage(html2canvasResult, 0, 0);
+    
+    // Canvasを画像ファイルとしてダウンロード
+    downloadCanvasAsImage(finalCanvas);
+  } catch (error) {
+    console.error('画像保存エラー:', error);
+    showToast('保存に失敗しました');
+  }
 }
 
 /**
