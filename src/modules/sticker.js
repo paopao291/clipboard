@@ -63,24 +63,155 @@ function calculateBorderWidth(width, height) {
 
 /**
  * 白い縁取り用の画像を作成（画像の形状に沿った白い画像）
- * @param {HTMLImageElement} img - 元の画像
+ * @param {HTMLImageElement|HTMLCanvasElement} source - 元の画像またはcanvas
  * @returns {HTMLCanvasElement} 白い縁取り用のCanvas
  */
-function createWhiteMaskedImage(img) {
+function createWhiteMaskedImage(source) {
   const canvas = document.createElement("canvas");
-  canvas.width = img.width;
-  canvas.height = img.height;
+  canvas.width = source.width;
+  canvas.height = source.height;
   const ctx = canvas.getContext("2d");
 
   // 白い矩形を描画
   ctx.fillStyle = OUTLINE_CONFIG.COLOR;
-  ctx.fillRect(0, 0, img.width, img.height);
+  ctx.fillRect(0, 0, source.width, source.height);
 
   // 画像のアルファチャンネルでマスク（画像の形状に沿った白い画像）
   ctx.globalCompositeOperation = "destination-in";
-  ctx.drawImage(img, 0, 0);
+  ctx.drawImage(source, 0, 0);
 
   return canvas;
+}
+
+/**
+ * 画像を縮小して中身部分のcanvasを作成
+ * @param {HTMLImageElement} img - 元の画像
+ * @param {number} borderWidth - 縁取り幅（この分だけ縮小される）
+ * @returns {HTMLCanvasElement} 縮小された中身部分のcanvas
+ */
+function createResizedContentCanvas(img, borderWidth) {
+  const contentWidth = img.width - borderWidth * 2;
+  const contentHeight = img.height - borderWidth * 2;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = contentWidth;
+  canvas.height = contentHeight;
+  const ctx = canvas.getContext("2d");
+
+  // 高品質な縮小
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, 0, 0, contentWidth, contentHeight);
+
+  return canvas;
+}
+
+/**
+ * 中身canvasに透明paddingまたは縁取りを追加
+ * @param {HTMLCanvasElement} contentCanvas - 中身部分のcanvas
+ * @param {number} borderWidth - 縁取り幅
+ * @param {boolean} withOutline - 縁取りを追加するか（falseの場合は透明padding）
+ * @param {number} finalWidth - 最終的な幅
+ * @param {number} finalHeight - 最終的な高さ
+ * @returns {HTMLCanvasElement} 完成したcanvas
+ */
+function addBorderOrPadding(contentCanvas, borderWidth, withOutline, finalWidth, finalHeight) {
+  const canvas = document.createElement("canvas");
+  canvas.width = finalWidth;
+  canvas.height = finalHeight;
+  const ctx = canvas.getContext("2d");
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (withOutline) {
+    // 縁取りを追加
+    ctx.globalCompositeOperation = "source-over";
+
+    // 白い縁取り用の画像を作成
+    const whiteMaskedImage = createWhiteMaskedImage(contentCanvas);
+
+    // 8方向に白い画像を描画（累積的に追加）
+    const offsets = generateOutlineOffsets(borderWidth);
+    for (const offset of offsets) {
+      ctx.drawImage(
+        whiteMaskedImage,
+        offset.x + borderWidth,
+        offset.y + borderWidth
+      );
+    }
+  }
+
+  // 中身を中央に描画
+  ctx.drawImage(contentCanvas, borderWidth, borderWidth);
+
+  return canvas;
+}
+
+/**
+ * canvasをblobに変換
+ * @param {HTMLCanvasElement} canvas - 変換するcanvas
+ * @param {Blob} fallbackBlob - エラー時に返すblob
+ * @param {string} errorMessage - エラーメッセージ
+ * @returns {Promise<Blob>} 変換されたblob
+ */
+function canvasToBlob(canvas, fallbackBlob, errorMessage) {
+  return new Promise((resolve) => {
+    canvas.toBlob((resultBlob) => {
+      if (resultBlob) {
+        resolve(resultBlob);
+      } else {
+        console.warn(errorMessage);
+        resolve(fallbackBlob);
+      }
+    }, "image/png");
+  });
+}
+
+/**
+ * blobから画像を読み込んで処理を実行
+ * @param {Blob} blob - 元の画像blob
+ * @param {Function} processImage - 画像処理関数 (img) => result
+ * @param {*} fallbackResult - エラー時に返す値
+ * @returns {Promise<*>} 処理結果
+ */
+function loadImageAndProcess(blob, processImage, fallbackResult) {
+  return new Promise((resolve) => {
+    const img = new Image();
+
+    img.onload = () => {
+      try {
+        resolve(processImage(img));
+      } catch (error) {
+        console.warn("画像処理エラー:", error);
+        resolve(fallbackResult);
+      }
+    };
+
+    img.onerror = () => {
+      console.warn("画像読み込み失敗");
+      resolve(fallbackResult);
+    };
+
+    img.src = URL.createObjectURL(blob);
+  });
+}
+
+/**
+ * 画像を縮小して透明なpaddingを追加（縁取りあり版と同じサイズにする）
+ * @param {Blob} blob - 元の画像blob
+ * @param {number} borderWidth - 追加するpadding幅
+ * @returns {Promise<Blob>} padding付き画像blob
+ */
+async function addPaddingToImage(blob, borderWidth) {
+  return loadImageAndProcess(
+    blob,
+    async (img) => {
+      const contentCanvas = createResizedContentCanvas(img, borderWidth);
+      const finalCanvas = addBorderOrPadding(contentCanvas, borderWidth, false, img.width, img.height);
+      return await canvasToBlob(finalCanvas, blob, "padding追加失敗、元の画像を使用");
+    },
+    blob
+  );
 }
 
 /**
@@ -89,67 +220,17 @@ function createWhiteMaskedImage(img) {
  * @returns {Promise<{blob: Blob, borderWidth: number}>} 縁取りが焼き込まれたblobと縁取りの幅
  */
 async function applyOutlineFilter(blob) {
-  return new Promise((resolve) => {
-    const img = new Image();
-
-    img.onload = () => {
-      try {
-        // 縁取りの太さを計算
-        const borderWidth = calculateBorderWidth(img.width, img.height);
-        const padding = borderWidth;
-        console.log(
-          `[applyOutlineFilter] Image size: ${img.width}x${img.height}, calculated borderWidth: ${borderWidth}px, padding: ${padding}px`,
-        );
-
-        // 縁取り用のCanvasを作成（余白を含む）
-        const canvas = document.createElement("canvas");
-        canvas.width = img.width + padding * 2;
-        canvas.height = img.height + padding * 2;
-        const ctx = canvas.getContext("2d");
-
-        // 背景を透明にする
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.globalCompositeOperation = "source-over";
-
-        // 白い縁取り用の画像を1回だけ作成（パフォーマンス最適化）
-        const whiteMaskedImage = createWhiteMaskedImage(img);
-
-        // 8方向に白い画像を描画（累積的に追加）
-        const offsets = generateOutlineOffsets(borderWidth);
-        for (const offset of offsets) {
-          ctx.drawImage(
-            whiteMaskedImage,
-            offset.x + padding,
-            offset.y + padding,
-          );
-        }
-
-        // 元の画像を上に描画
-        ctx.drawImage(img, padding, padding);
-
-        // PNGとして保存（透過を保持）
-        // ドロップシャドウはCSSで適用されるため、画像には焼き込まない
-        canvas.toBlob((filteredBlob) => {
-          if (filteredBlob) {
-            resolve({ blob: filteredBlob, borderWidth });
-          } else {
-            console.warn("縁取り画像生成失敗、元の画像を使用");
-            resolve({ blob: blob, borderWidth: 0 });
-          }
-        }, "image/png");
-      } catch (error) {
-        console.warn("縁取り画像生成エラー:", error);
-        resolve({ blob: blob, borderWidth: 0 });
-      }
-    };
-
-    img.onerror = () => {
-      console.warn("画像読み込み失敗、元の画像を使用");
-      resolve({ blob: blob, borderWidth: 0 });
-    };
-
-    img.src = URL.createObjectURL(blob);
-  });
+  return loadImageAndProcess(
+    blob,
+    async (img) => {
+      const borderWidth = calculateBorderWidth(img.width, img.height);
+      const contentCanvas = createResizedContentCanvas(img, borderWidth);
+      const finalCanvas = addBorderOrPadding(contentCanvas, borderWidth, true, img.width, img.height);
+      const resultBlob = await canvasToBlob(finalCanvas, blob, "縁取り画像生成失敗、元の画像を使用");
+      return { blob: resultBlob, borderWidth };
+    },
+    { blob: blob, borderWidth: 0 }
+  );
 }
 
 /**
@@ -165,13 +246,13 @@ async function resizeImageBlob(blob, maxSize = 1200) {
       // 縦横比を維持してリサイズ
       let width = img.width;
       let height = img.height;
-
+      
       // 既に小さい画像はそのまま返す
       if (width <= maxSize && height <= maxSize) {
         resolve(blob);
         return;
       }
-
+      
       // 長辺をmaxSizeに合わせる
       if (width > height) {
         height = (height / width) * maxSize;
@@ -180,47 +261,47 @@ async function resizeImageBlob(blob, maxSize = 1200) {
         width = (width / height) * maxSize;
         height = maxSize;
       }
-
+      
       // Canvasでリサイズ
       const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext("2d");
-
+      
       // 高品質なリサイズ設定
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = "high";
-
+      
       ctx.drawImage(img, 0, 0, width, height);
-
+      
       // 元の画像フォーマットを判定
       const mimeType = blob.type || "image/png";
       const isPNG = mimeType === "image/png";
       const quality = isPNG ? 1.0 : 0.9; // PNGは品質指定不要、JPEGは90%
-
+      
       // Blobに変換（元のフォーマットを維持）
       canvas.toBlob(
         (resizedBlob) => {
-          if (resizedBlob) {
+        if (resizedBlob) {
             console.log(
               `画像リサイズ: ${img.width}x${img.height} → ${width}x${height} (${mimeType})`,
             );
-            resolve(resizedBlob);
-          } else {
+          resolve(resizedBlob);
+        } else {
             console.warn("リサイズ失敗、元の画像を使用");
-            resolve(blob);
-          }
+          resolve(blob);
+        }
         },
         mimeType,
         quality,
       );
     };
-
+    
     img.onerror = () => {
       console.warn("画像読み込み失敗、元の画像を使用");
       resolve(blob);
     };
-
+    
     img.src = URL.createObjectURL(blob);
   });
 }
@@ -250,8 +331,8 @@ async function resizeImageBlobWithBorder(blob, maxSize = 1200) {
  * @returns {number} 基準幅
  */
 function getBaseWidth(sticker) {
-  return sticker.isHelpSticker
-    ? HELP_STICKER_CONFIG.BASE_WIDTH
+  return sticker.isHelpSticker 
+    ? HELP_STICKER_CONFIG.BASE_WIDTH 
     : STICKER_DEFAULTS.BASE_WIDTH;
 }
 
@@ -272,7 +353,7 @@ function calculateScale(sticker) {
 function getSizeConstraints(sticker) {
   if (sticker.isHelpSticker) {
     const isMobile = window.innerWidth <= 768;
-    const maxWidth = isMobile
+    const maxWidth = isMobile 
       ? Math.min(
           HELP_STICKER_CONFIG.MAX_WIDTH_DESKTOP,
           (window.innerWidth * HELP_STICKER_CONFIG.MAX_WIDTH_MOBILE_PERCENT) /
@@ -327,29 +408,26 @@ export async function addStickerFromBlob(
 ) {
   // まずリサイズだけ実行（高速）
   const resizedBlob = await resizeImageBlob(blob, 1200);
-
+  
   const stickerId = id || Date.now();
 
   // リサイズ後の画像サイズからborderWidthを計算
   const borderWidth = await new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
-      const bw = calculateBorderWidth(img.naturalWidth, img.naturalHeight);
-      console.log(
-        `[BorderWidth] Calculated for sticker ${stickerId}: ${bw}px from image size ${img.naturalWidth}x${img.naturalHeight}`,
-      );
+      const bw = calculateBorderWidth(img.width, img.height);
       resolve(bw);
     };
     img.onerror = () => {
-      console.warn(`[BorderWidth] Error loading image, using default 8px`);
       resolve(8); // エラー時は最小値
     };
     img.src = URL.createObjectURL(resizedBlob);
   });
 
-  // まず縁取りなし版で表示（即座に表示）
-  const blobUrl = URL.createObjectURL(resizedBlob);
-  const url = hasBorder ? blobUrl : blobUrl; // 一時的に縁取りなし版を使用
+  // 縁取りなし版にもpadding追加（縁取りあり版と同じサイズにする）
+  const paddedBlob = await addPaddingToImage(resizedBlob, borderWidth);
+  const blobUrl = URL.createObjectURL(paddedBlob);
+  const url = blobUrl; // 一時的にpadding付き版を使用
   let blobWithBorderUrl = blobUrl; // 一時的に同じURLを使用
 
   // DOMに追加（即座に表示）
@@ -525,19 +603,19 @@ export function addStickerToDOM(
     borderWidth: borderWidth,
   };
   state.addSticker(stickerObject);
-
+  
   // 固定状態を反映
   if (isPinned) {
     stickerDiv.classList.add("pinned");
   }
-
+  
   // 縁取り状態を反映
   if (!hasBorder) {
     stickerDiv.classList.add("no-border");
   }
 
   // 画像ステッカーのpadding設定は削除（ヘルプステッカーのみ使用）
-
+  
   // transformを適用（scaleと回転）
   applyStickerTransform(stickerObject);
 
@@ -576,7 +654,7 @@ export async function removeSticker(id) {
 
     // 削除時にUIを表示
     state.showUI();
-
+    
     // インフォボタンの表示状態を更新
     updateInfoButtonVisibility();
 
@@ -646,12 +724,12 @@ async function undoRemoveSticker(stickerData) {
 
   // 状態に再追加
   state.addSticker(stickerData);
-
+  
   // 固定状態を復元
   if (stickerData.isPinned) {
     stickerData.element.classList.add("pinned");
   }
-
+  
   // 縁取り状態を復元
   if (stickerData.hasBorder === false) {
     stickerData.element.classList.add("no-border");
@@ -707,11 +785,11 @@ export async function bringToFront(sticker) {
 export async function sendToBack(sticker) {
   // 現在の最小z-indexを見つける
   const minZIndex = Math.min(...state.stickers.map((s) => s.zIndex));
-
+  
   // 最小値-1を設定（ただし1以上を保持）
   const newZIndex = Math.max(1, minZIndex - 1);
   await updateStickerZIndex(sticker, newZIndex);
-
+  
   showToast("最背面に移動しました");
 }
 
@@ -746,14 +824,14 @@ export function updateStickerRotation(sticker, rotation) {
 export function updateStickerSize(sticker, width) {
   // サイズ制限を取得
   const { minWidth, maxWidth } = getSizeConstraints(sticker);
-
+  
   // サイズを制限して保存
   sticker.width = Math.max(minWidth, Math.min(maxWidth, width));
-
+  
   // 固定幅を設定
   const baseWidth = getBaseWidth(sticker);
   sticker.element.style.width = `${baseWidth}px`;
-
+  
   // transformを適用（scaleと回転）
   applyStickerTransform(sticker);
 
@@ -777,7 +855,7 @@ export async function saveStickerChanges(sticker) {
     updateHelpStickerState(sticker);
     return;
   }
-
+  
   await updateStickerInDB(sticker.id, {
     x: sticker.x,
     yPercent: sticker.yPercent,
@@ -806,7 +884,7 @@ export async function saveAllStickerPositions(stickers, options = {}) {
   });
 
   await Promise.all(promises);
-
+  
   if (options.showToastOnComplete) {
     showToast("位置を保存しました");
   }
@@ -818,14 +896,14 @@ export async function saveAllStickerPositions(stickers, options = {}) {
  */
 export async function toggleStickerPin(sticker) {
   sticker.isPinned = !sticker.isPinned;
-
+  
   // DOMクラスを更新
   if (sticker.isPinned) {
     sticker.element.classList.add("pinned");
   } else {
     sticker.element.classList.remove("pinned");
   }
-
+  
   // ヘルプステッカーでない場合はDBに保存
   if (!sticker.isHelpSticker) {
     await updateStickerInDB(sticker.id, { isPinned: sticker.isPinned });
@@ -833,40 +911,11 @@ export async function toggleStickerPin(sticker) {
     // ヘルプステッカーはlocalStorageに保存
     updateHelpStickerState(sticker);
   }
-
+  
   // ボタンの表示状態を更新
   updateInfoButtonVisibility();
 }
 
-/**
- * 画像ステッカーのpaddingを更新（縁取りがない時は縁取り分のpaddingを追加）
- * @param {Object} sticker - シールオブジェクト
- */
-function updateStickerImagePadding(sticker) {
-  if (!sticker.img || !sticker.imgWrapper) {
-    return;
-  }
-
-  if (sticker.hasBorder) {
-    // 縁取りあり：paddingを削除
-    sticker.imgWrapper.style.padding = "";
-    const imgSize = sticker.img
-      ? `${sticker.img.naturalWidth}x${sticker.img.naturalHeight}`
-      : "unknown";
-    console.log(
-      `[Padding] Sticker ${sticker.id}: hasBorder=true, padding removed, current image size: ${imgSize}, saved borderWidth: ${sticker.borderWidth}px`,
-    );
-  } else {
-    // 縁取りなし：固定で8pxのpaddingを追加
-    sticker.imgWrapper.style.padding = "9px";
-    const imgSize = sticker.img
-      ? `${sticker.img.naturalWidth}x${sticker.img.naturalHeight}`
-      : "unknown";
-    console.log(
-      `[Padding] Sticker ${sticker.id}: hasBorder=false, padding=8px (fixed), current image size: ${imgSize}`,
-    );
-  }
-}
 
 /**
  * ステッカーの縁取り状態をトグル
@@ -884,7 +933,7 @@ export async function toggleStickerBorder(sticker) {
       ? sticker.blobWithBorderUrl
       : sticker.blobUrl;
   }
-
+  
   // DOMクラスを更新
   if (!sticker.hasBorder) {
     sticker.element.classList.add("no-border");
@@ -892,11 +941,12 @@ export async function toggleStickerBorder(sticker) {
     sticker.element.classList.remove("no-border");
   }
 
+
   // ヘルプステッカーの場合は縁取りを更新
   if (sticker.isHelpSticker) {
     updateHelpStickerBorder(sticker);
   }
-
+  
   // ヘルプステッカーでない場合はDBに保存
   if (!sticker.isHelpSticker) {
     await updateStickerInDB(sticker.id, { hasBorder: sticker.hasBorder });
@@ -904,7 +954,7 @@ export async function toggleStickerBorder(sticker) {
     // ヘルプステッカーはlocalStorageに保存
     updateHelpStickerState(sticker);
   }
-
+  
   // ボタンの表示状態を更新
   updateInfoButtonVisibility();
 }
