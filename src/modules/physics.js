@@ -150,8 +150,6 @@ export function enablePhysics() {
   // 独自のレンダリングループを開始（固定タイムステップ + 補間）
   renderLoopId = requestAnimationFrame(renderLoop);
   
-  console.log(`物理モード: 物理演算${PHYSICS_HZ}Hz、レンダリング${RENDER_FPS}FPS`);
-  
   // イベントリスナーを登録
   setupEventListeners();
   
