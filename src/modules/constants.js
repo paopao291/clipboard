@@ -83,7 +83,7 @@ export const PHYSICS_CONFIG = {
   GRAVITY: {
     X: 0,
     Y: 1,           // 正の値 = 下向き
-    SCALE: 0.0005,  // 重力の強さ（0.001→0.0005に軽減）
+    SCALE: 0.00075,  // 重力の強さ（0.001→0.0005に軽減）
   },
   
   // 壁
@@ -93,7 +93,7 @@ export const PHYSICS_CONFIG = {
   BODY: {
     RESTITUTION: 0.25, // 反発係数（ほんの少し跳ねる）
     FRICTION: 0.08,    // 摩擦
-    FRICTION_AIR: 0.015, // 空気抵抗
+    FRICTION_AIR: 0.01, // 空気抵抗
     DENSITY: 0.0015,   // 密度
     RADIUS_SCALE: 0.7, // 物理ボディの半径スケール（小さくして重なりやすく）
     
@@ -104,7 +104,7 @@ export const PHYSICS_CONFIG = {
   
   // ジャイロ（スマホ用）
   GYRO: {
-    STRENGTH: 0.8,         // 重力の強さ係数
+    STRENGTH: 0.9,         // 重力の強さ係数
     NEUTRAL_BETA: 10,      // 中立位置（度）
     DEFAULT_GRAVITY: 0.08,  // 平行時の下向き重力
     INITIAL_X: 0,          // 初期X重力
