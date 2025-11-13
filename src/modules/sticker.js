@@ -53,7 +53,7 @@ function generateOutlineOffsets(borderWidth) {
  * @param {number} height - 画像の高さ
  * @returns {number} 縁取りの太さ（px）
  */
-function calculateBorderWidth(width, height) {
+export function calculateBorderWidth(width, height) {
   const imageSize = Math.max(width, height);
   return Math.max(
     OUTLINE_CONFIG.MIN_WIDTH,
@@ -202,7 +202,7 @@ function loadImageAndProcess(blob, processImage, fallbackResult) {
  * @param {number} borderWidth - 追加するpadding幅
  * @returns {Promise<Blob>} padding付き画像blob
  */
-async function addPaddingToImage(blob, borderWidth) {
+export async function addPaddingToImage(blob, borderWidth) {
   return loadImageAndProcess(
     blob,
     async (img) => {

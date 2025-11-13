@@ -157,8 +157,23 @@ async function loadStickersFromDB() {
   const screenHeight = window.innerHeight;
 
   for (const stickerData of stickers) {
-    // blobWithBorderがない既存データの場合、blobを使用（互換性維持）
-    const blobUrl = URL.createObjectURL(stickerData.blob);
+    // borderWidthを計算
+    const borderWidth = await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = async () => {
+        const { calculateBorderWidth } = await import('./modules/sticker.js');
+        const bw = calculateBorderWidth(img.width, img.height);
+        resolve(bw);
+      };
+      img.onerror = () => resolve(8);
+      img.src = URL.createObjectURL(stickerData.blob);
+    });
+    
+    // padding付き版を生成（縁取りなし版と同じサイズにする）
+    const { addPaddingToImage } = await import('./modules/sticker.js');
+    const paddedBlob = await addPaddingToImage(stickerData.blob, borderWidth);
+    const blobUrl = URL.createObjectURL(paddedBlob);
+    
     const blobWithBorderUrl = stickerData.blobWithBorder 
       ? URL.createObjectURL(stickerData.blobWithBorder)
       : blobUrl; // 既存データの場合はblobを使用
