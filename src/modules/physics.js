@@ -68,9 +68,9 @@ export function initPhysicsEngine() {
   };
   
   // SVGフィルターを削除したため、全ブラウザで同じ精度設定を使用
-  engineOptions.positionIterations = 3;
-  engineOptions.velocityIterations = 2;
-  engineOptions.constraintIterations = 1;
+    engineOptions.positionIterations = 3;
+    engineOptions.velocityIterations = 2;
+    engineOptions.constraintIterations = 1;
   
   engine = Engine.create(engineOptions);
   
@@ -182,8 +182,8 @@ export async function disablePhysics() {
       syncStickerFromPhysics(sticker, body);
       
       // will-changeを削除（メモリ解放）
-      if (sticker.imgWrapper) {
-        sticker.imgWrapper.style.willChange = 'auto';
+        if (sticker.imgWrapper) {
+          sticker.imgWrapper.style.willChange = 'auto';
       }
     }
     World.remove(world, body);
@@ -249,8 +249,8 @@ export function addPhysicsBody(sticker) {
   const { 
     RESTITUTION, 
     FRICTION, 
-    FRICTION_AIR,
-    DENSITY,
+    FRICTION_AIR, 
+    DENSITY, 
   } = PHYSICS_CONFIG.BODY;
   
   // SVGフィルターを削除したため、全ブラウザで同じ物理パラメータを使用
@@ -623,9 +623,9 @@ function updateStickerDOM(sticker, x, yPercent, rotation) {
     sticker.imgWrapper.style.transform = `rotate(${rotation}deg) scale(${scale})`;
     
     // 物理モード中はwill-changeを常に適用（パフォーマンス向上のためのGPU加速強化）
-    sticker.imgWrapper.style.willChange = 'transform';
-    sticker.imgWrapper.style.backfaceVisibility = 'hidden';
-    sticker.imgWrapper.style.webkitBackfaceVisibility = 'hidden';
+      sticker.imgWrapper.style.willChange = 'transform';
+      sticker.imgWrapper.style.backfaceVisibility = 'hidden';
+      sticker.imgWrapper.style.webkitBackfaceVisibility = 'hidden';
   }
 }
 

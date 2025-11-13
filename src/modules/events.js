@@ -1,5 +1,10 @@
 import { state } from "../state.js";
-import { RESIZE_CONFIG, PASTE_AREA_CONFIG, MESSAGES, INTERACTION_CONFIG } from "./constants.js";
+import {
+  RESIZE_CONFIG,
+  PASTE_AREA_CONFIG,
+  MESSAGES,
+  INTERACTION_CONFIG,
+} from "./constants.js";
 import {
   addStickerFromBlob,
   bringToFront,
@@ -52,64 +57,72 @@ export function setAddButtonTriggered() {
  * @returns {Promise<boolean>} 中央に戻した場合true
  */
 async function checkAndFixOutOfBounds(sticker) {
+  if (!sticker || !sticker.element) {
+    return false;
+  }
   const rect = sticker.element.getBoundingClientRect();
-  
+
   // 完全に画面外に出たかチェック（回転していても確実に判定）
-  const isCompletelyOutside = 
-    rect.right <= 0 || 
-    rect.left >= window.innerWidth || 
-    rect.bottom <= 0 || 
+  const isCompletelyOutside =
+    rect.right <= 0 ||
+    rect.left >= window.innerWidth ||
+    rect.bottom <= 0 ||
     rect.top >= window.innerHeight;
-  
+
   if (isCompletelyOutside) {
     // 完全に画面外に出た場合は中央に戻す
     updateStickerPosition(sticker, 0, 50);
-    
+
     // 物理モード中は物理ボディの位置も更新
     if (isPhysicsActive()) {
       const centerX = window.innerWidth / 2;
       const centerY = window.innerHeight / 2;
       setStickerPhysicsPosition(sticker.id, centerX, centerY);
     }
-    
+
     await saveStickerChanges(sticker);
     showToast("画面外に出たため中央に戻しました");
     return true;
   }
-  
+
   // 画面内に見えている部分の幅と高さを計算
-  const visibleWidth = Math.min(rect.right, window.innerWidth) - Math.max(rect.left, 0);
-  const visibleHeight = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
-  
+  const visibleWidth =
+    Math.min(rect.right, window.innerWidth) - Math.max(rect.left, 0);
+  const visibleHeight =
+    Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
+
   // ステッカーの実際のサイズ
   const stickerWidth = rect.width;
   const stickerHeight = rect.height;
-  
+
   // 画面内に見えている割合を計算（幅と高さの両方で判定）
   const visibleRatioX = visibleWidth / stickerWidth;
   const visibleRatioY = visibleHeight / stickerHeight;
-  
+
   // 90%以上が画面外に出ている、または見えている部分が閾値未満の場合は中央に戻す
   const minVisiblePx = 16;
-  const isMostlyOutside = visibleRatioX < 0.1 || visibleRatioY < 0.1 || 
-                          visibleWidth < minVisiblePx || visibleHeight < minVisiblePx;
-  
+  const isMostlyOutside =
+    visibleRatioX < 0.1 ||
+    visibleRatioY < 0.1 ||
+    visibleWidth < minVisiblePx ||
+    visibleHeight < minVisiblePx;
+
   if (isMostlyOutside) {
     // 中央に戻す
     updateStickerPosition(sticker, 0, 50);
-    
+
     // 物理モード中は物理ボディの位置も更新
     if (isPhysicsActive()) {
       const centerX = window.innerWidth / 2;
       const centerY = window.innerHeight / 2;
       setStickerPhysicsPosition(sticker.id, centerX, centerY);
     }
-    
+
     await saveStickerChanges(sticker);
     showToast("画面外に出たため中央に戻しました");
     return true;
   }
-  
+
   return false;
 }
 
@@ -137,10 +150,10 @@ async function handleTrashDrop(clientX, clientY) {
  */
 async function finishInteraction() {
   if (!state.selectedSticker) return;
-  
+
   state.selectedSticker.element.classList.remove("rotating", "resizing");
   await saveStickerChanges(state.selectedSticker);
-  
+
   // ドラッグ終了時に画面外判定
   if (state.isDragging) {
     await checkAndFixOutOfBounds(state.selectedSticker);
@@ -156,7 +169,11 @@ async function finishInteraction() {
 function handleTapOrClick(possibleTap, startTime) {
   if (possibleTap && state.selectedSticker) {
     const duration = Date.now() - (startTime || 0);
-    if (duration < INTERACTION_CONFIG.TAP_MAX_DURATION_MS && !state.isDragging && !state.isRotating) {
+    if (
+      duration < INTERACTION_CONFIG.TAP_MAX_DURATION_MS &&
+      !state.isDragging &&
+      !state.isRotating
+    ) {
       state.deselectAll();
       state.showUI(); // ステッカー選択解除時にUIを表示
       updateInfoButtonVisibility();
@@ -187,10 +204,13 @@ function startPinchGesture(touch1, touch2, targetSticker) {
 
   // 初期角度を保存（回転用）
   const angle =
-    Math.atan2(touch2.clientY - touch1.clientY, touch2.clientX - touch1.clientX) *
+    Math.atan2(
+      touch2.clientY - touch1.clientY,
+      touch2.clientX - touch1.clientX,
+    ) *
     (180 / Math.PI);
   state.startRotating(angle);
-  
+
   return true;
 }
 
@@ -208,7 +228,7 @@ async function handlePinnedStickerInteraction(sticker, id, isTouch = false) {
     updateInfoButtonVisibility();
     return true;
   }
-  
+
   // 未選択なら選択、選択中ならクリック/タップ判定準備
   if (!state.selectedSticker) {
     state.selectSticker(sticker);
@@ -246,9 +266,10 @@ export async function handlePaste(e) {
       hasImage = true;
       const blob = item.getAsFile();
 
-      const coords = state.lastTouchX && state.lastTouchY
-        ? absoluteToHybrid(state.lastTouchX, state.lastTouchY)
-        : getCenterCoordinates();
+      const coords =
+        state.lastTouchX && state.lastTouchY
+          ? absoluteToHybrid(state.lastTouchX, state.lastTouchY)
+          : getCenterCoordinates();
 
       await addStickerFromBlob(blob, coords.x, coords.yPercent);
       showToast(MESSAGES.IMAGE_ADDED);
@@ -274,13 +295,13 @@ export async function handleFileSelect(e) {
   if (files.length === 0) return;
 
   let addedCount = 0;
-  
+
   for (let file of files) {
     if (file.type.indexOf("image") !== -1) {
       // 画像を少しずつずらして配置
       const offsetXPx = addedCount * INTERACTION_CONFIG.STICKER_OFFSET_PX;
       const offsetYPx = addedCount * INTERACTION_CONFIG.STICKER_OFFSET_PX;
-      
+
       let coords;
       // 右下の追加ボタンから：常に画面中央
       // ペースト失敗のダイアログから：最後のタッチ位置（あれば）、なければ中央
@@ -291,14 +312,14 @@ export async function handleFileSelect(e) {
       } else if (state.lastTouchX && state.lastTouchY) {
         coords = absoluteToHybrid(
           state.lastTouchX + offsetXPx,
-          state.lastTouchY + offsetYPx
+          state.lastTouchY + offsetYPx,
         );
       } else {
         const center = getCenterCoordinates();
         const offsetYPercent = (offsetYPx / window.innerHeight) * 100;
         coords = { x: offsetXPx, yPercent: center.yPercent + offsetYPercent };
       }
-      
+
       await addStickerFromBlob(file, coords.x, coords.yPercent);
 
       addedCount++;
@@ -311,7 +332,7 @@ export async function handleFileSelect(e) {
 
   // フラグをリセット
   addButtonTriggered = false;
-  
+
   // 入力をリセット
   e.target.value = "";
 }
@@ -326,7 +347,7 @@ export function handleCanvasMouseDown(e) {
   if (now - lastTouchTime < 500) {
     return;
   }
-  
+
   if (e.target === elements.canvas || e.target === elements.pasteArea) {
     // ステッカーが選択中の場合は選択解除してUIを表示
     if (state.hasSelection()) {
@@ -352,7 +373,12 @@ export function handleCanvasTouchStart(e) {
     const touches = e.touches;
 
     // 選択中のステッカーがあり、2本指でタッチした場合は即座にピンチ開始
-    if (touches.length === 2 && state.selectedSticker && !state.selectedSticker.isPinned && !isPhysicsActive()) {
+    if (
+      touches.length === 2 &&
+      state.selectedSticker &&
+      !state.selectedSticker.isPinned &&
+      !isPhysicsActive()
+    ) {
       e.preventDefault();
       startPinchGesture(touches[0], touches[1], state.selectedSticker);
       return;
@@ -385,7 +411,6 @@ export function handleCanvasTouchStart(e) {
   }
 }
 
-
 /**
  * シールマウスダウンイベント
  * @param {MouseEvent} e
@@ -394,7 +419,7 @@ export function handleCanvasTouchStart(e) {
 export async function handleStickerMouseDown(e, id) {
   e.preventDefault();
   e.stopPropagation();
-  
+
   // レイアウトアニメーション中なら停止
   stopAutoLayout();
 
@@ -409,22 +434,22 @@ export async function handleStickerMouseDown(e, id) {
       return;
     }
     state.selectedSticker = sticker; // 内部的には必要だがUI的には選択しない
-    
+
     // 最前面に移動
     await bringToFront(sticker);
-    
+
     state.isDragging = true;
     const coords = absoluteToHybrid(e.clientX, e.clientY);
     state.dragStartX = coords.x - sticker.x;
     state.dragStartYPercent = coords.yPercent - sticker.yPercent;
-    
+
     // 速度追跡の初期化
     lastDragX = e.clientX;
     lastDragY = e.clientY;
     lastDragTime = Date.now();
     return;
   }
-  
+
   // 固定されているステッカーは選択のみ可能（通常モードのみ）
   if (sticker.isPinned) {
     await handlePinnedStickerInteraction(sticker, id, false);
@@ -514,7 +539,7 @@ export function handleMouseMove(e) {
       const isOver = isOverTrashBtn(e.clientX, e.clientY);
       setTrashDragOver(isOver);
       setOverlayDeleteMode(isOver);
-      
+
       // ゴミ箱に重なっていない時だけ位置を更新
       if (!isOver) {
         const coords = absoluteToHybrid(e.clientX, e.clientY);
@@ -528,15 +553,19 @@ export function handleMouseMove(e) {
       const newX = coords.x - state.dragStartX;
       const newYPercent = coords.yPercent - state.dragStartYPercent;
       updateStickerPosition(state.selectedSticker, newX, newYPercent);
-      
+
       // 物理ボディも更新（速度は保持して重力を維持）
       const now = Date.now();
       const rect = state.selectedSticker.element.getBoundingClientRect();
       const physicsX = rect.left + rect.width / 2;
       const physicsY = rect.top + rect.height / 2;
-      
-      updateStickerPhysicsPositionDuringDrag(state.selectedSticker.id, physicsX, physicsY);
-      
+
+      updateStickerPhysicsPositionDuringDrag(
+        state.selectedSticker.id,
+        physicsX,
+        physicsY,
+      );
+
       // 速度を追跡（投げる動作用）
       lastDragX = e.clientX;
       lastDragY = e.clientY;
@@ -547,7 +576,7 @@ export function handleMouseMove(e) {
     if (isPhysicsActive()) {
       return;
     }
-    
+
     const rect = state.selectedSticker.element.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
@@ -571,7 +600,7 @@ export async function handleMouseUp(e) {
     state.dragPrepareY = undefined;
     return;
   }
-  
+
   state.possibleClick = false;
   state.dragPrepareX = undefined;
   state.dragPrepareY = undefined;
@@ -588,18 +617,22 @@ export async function handleMouseUp(e) {
     if (isPhysicsActive() && state.isDragging && state.selectedSticker) {
       const now = Date.now();
       const deltaTime = now - lastDragTime;
-      
+
       // 速度を計算（deltaTimeが短すぎる場合は最小値を設定）
       if (deltaTime > 0 && deltaTime < 100) {
         const vx = ((e.clientX - lastDragX) / deltaTime) * 16; // 60FPS想定で調整
         const vy = ((e.clientY - lastDragY) / deltaTime) * 16;
-        
+
         // 速度を制限（投げすぎないように）
         const maxVelocity = 20;
         const velocityMagnitude = Math.sqrt(vx * vx + vy * vy);
         if (velocityMagnitude > maxVelocity) {
           const scale = maxVelocity / velocityMagnitude;
-          applyStickerVelocity(state.selectedSticker.id, vx * scale, vy * scale);
+          applyStickerVelocity(
+            state.selectedSticker.id,
+            vx * scale,
+            vy * scale,
+          );
         } else {
           applyStickerVelocity(state.selectedSticker.id, vx, vy);
         }
@@ -608,7 +641,7 @@ export async function handleMouseUp(e) {
 
     // 通常の終了処理
     await finishInteraction();
-    
+
     // ドラッグ終了時にゴミ箱の状態をリセット
     setTrashDragOver(false);
     setOverlayDeleteMode(false);
@@ -640,7 +673,10 @@ export async function handleWheel(e, id) {
   if (!sticker) return;
 
   // 固定されたステッカーは拡大縮小不可
-  if (sticker.isPinned || (state.selectedSticker && state.selectedSticker.isPinned)) {
+  if (
+    sticker.isPinned ||
+    (state.selectedSticker && state.selectedSticker.isPinned)
+  ) {
     return;
   }
 
@@ -706,7 +742,7 @@ export async function handleCanvasWheel(e) {
 export async function handleStickerTouchStart(e, id) {
   e.preventDefault();
   e.stopPropagation();
-  
+
   // レイアウトアニメーション中なら停止
   stopAutoLayout();
 
@@ -723,22 +759,22 @@ export async function handleStickerTouchStart(e, id) {
       return;
     }
     state.selectedSticker = sticker; // 内部的には必要だがUI的には選択しない
-    
+
     // 最前面に移動
     await bringToFront(sticker);
-    
+
     state.isDragging = true;
     const coords = absoluteToHybrid(touches[0].clientX, touches[0].clientY);
     state.dragStartX = coords.x - sticker.x;
     state.dragStartYPercent = coords.yPercent - sticker.yPercent;
-    
+
     // 速度追跡の初期化
     lastDragX = touches[0].clientX;
     lastDragY = touches[0].clientY;
     lastDragTime = Date.now();
     return;
   }
-  
+
   // 固定されているステッカーは選択のみ可能（通常モードのみ）
   if (sticker.isPinned) {
     await handlePinnedStickerInteraction(sticker, id, true);
@@ -891,7 +927,7 @@ export function handleTouchMove(e) {
       const isOver = isOverTrashBtn(touches[0].clientX, touches[0].clientY);
       setTrashDragOver(isOver);
       setOverlayDeleteMode(isOver);
-      
+
       // ゴミ箱に重なっていない時だけ位置を更新
       if (!isOver) {
         const coords = absoluteToHybrid(touches[0].clientX, touches[0].clientY);
@@ -905,15 +941,19 @@ export function handleTouchMove(e) {
       const newX = coords.x - state.dragStartX;
       const newYPercent = coords.yPercent - state.dragStartYPercent;
       updateStickerPosition(state.selectedSticker, newX, newYPercent);
-      
+
       // 物理ボディも更新（速度は保持して重力を維持）
       const now = Date.now();
       const rect = state.selectedSticker.element.getBoundingClientRect();
       const physicsX = rect.left + rect.width / 2;
       const physicsY = rect.top + rect.height / 2;
-      
-      updateStickerPhysicsPositionDuringDrag(state.selectedSticker.id, physicsX, physicsY);
-      
+
+      updateStickerPhysicsPositionDuringDrag(
+        state.selectedSticker.id,
+        physicsX,
+        physicsY,
+      );
+
       // 速度を追跡（投げる動作用）
       lastDragX = touches[0].clientX;
       lastDragY = touches[0].clientY;
@@ -942,25 +982,28 @@ export function handleTouchMove(e) {
     if (!state.selectedSticker) return;
 
     // リサイズ中クラスを追加（CSSトランジション無効化用）
-    state.selectedSticker.element.classList.add('resizing');
-    state.selectedSticker.element.classList.add('rotating');
+    state.selectedSticker.element.classList.add("resizing");
+    state.selectedSticker.element.classList.add("rotating");
 
     // 拡大縮小：前フレームからの相対的な変化を計算
     const dx = touch2.clientX - touch1.clientX;
     const dy = touch2.clientY - touch1.clientY;
     const currentDistance = Math.sqrt(dx * dx + dy * dy);
-    
+
     // 前フレームからのスケール変化を現在のサイズに適用
     const deltaScale = currentDistance / state.lastPinchDistance;
     const newWidth = state.selectedSticker.width * deltaScale;
     updateStickerSize(state.selectedSticker, newWidth);
-    
+
     // 次のフレームのために距離を更新
     state.updatePinchDistance(currentDistance);
 
     // 回転
     const angle =
-      Math.atan2(touch2.clientY - touch1.clientY, touch2.clientX - touch1.clientX) *
+      Math.atan2(
+        touch2.clientY - touch1.clientY,
+        touch2.clientX - touch1.clientX,
+      ) *
       (180 / Math.PI);
     const rotation = angle - state.startAngle;
     updateStickerRotation(state.selectedSticker, rotation);
@@ -975,10 +1018,14 @@ export async function handleTouchEnd(e) {
   // 空白エリアタップ判定：選択解除またはUI表示
   if (state.canvasTapPending) {
     const duration = Date.now() - (state.canvasTapStartTime || 0);
-    if (duration < INTERACTION_CONFIG.TAP_MAX_DURATION_MS && !state.isDragging && !state.isRotating) {
+    if (
+      duration < INTERACTION_CONFIG.TAP_MAX_DURATION_MS &&
+      !state.isDragging &&
+      !state.isRotating
+    ) {
       // タッチイベントを処理した時刻を記録（マウスイベント重複防止用）
       lastTouchTime = Date.now();
-      
+
       if (state.selectedSticker) {
         // ステッカー選択中の場合は選択解除してUIを表示
         state.deselectAll();
@@ -995,7 +1042,7 @@ export async function handleTouchEnd(e) {
         // ペーストエリアにフォーカス（ペースト可能にするため）
         elements.pasteArea.focus();
       }
-      
+
       state.canvasTapPending = false;
       state.canvasTapX = undefined;
       state.canvasTapY = undefined;
@@ -1029,23 +1076,27 @@ export async function handleTouchEnd(e) {
         state.endInteraction();
         return;
       }
-      
+
       // 物理モードの場合、リリース時に速度を加える（投げる動作）
       if (isPhysicsActive() && state.isDragging && state.selectedSticker) {
         const now = Date.now();
         const deltaTime = now - lastDragTime;
-        
+
         // 速度を計算（deltaTimeが短すぎる場合は最小値を設定）
         if (deltaTime > 0 && deltaTime < 100) {
           const vx = ((touch.clientX - lastDragX) / deltaTime) * 16; // 60FPS想定で調整
           const vy = ((touch.clientY - lastDragY) / deltaTime) * 16;
-          
+
           // 速度を制限（投げすぎないように）
           const maxVelocity = 20;
           const velocityMagnitude = Math.sqrt(vx * vx + vy * vy);
           if (velocityMagnitude > maxVelocity) {
             const scale = maxVelocity / velocityMagnitude;
-            applyStickerVelocity(state.selectedSticker.id, vx * scale, vy * scale);
+            applyStickerVelocity(
+              state.selectedSticker.id,
+              vx * scale,
+              vy * scale,
+            );
           } else {
             applyStickerVelocity(state.selectedSticker.id, vx, vy);
           }
@@ -1055,7 +1106,7 @@ export async function handleTouchEnd(e) {
 
     // 通常の終了処理
     await finishInteraction();
-    
+
     setTrashDragOver(false);
     setOverlayDeleteMode(false);
     resetStickerTransformOrigin();

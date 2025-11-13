@@ -649,7 +649,8 @@ body.has-background-image .background-btn .background-icon-remove {
     max-height: 75vh;
     overflow-y: auto;
     position: relative;
-    /* box-shadowはJavaScriptで動的に設定される */
+    /* ドロップシャドウを適用 */
+    filter: var(--shadow-sticker);
     /* iOS最適化：スクロールのスムーズさ */
     -webkit-overflow-scrolling: touch;
 }
@@ -915,10 +916,7 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
     -webkit-user-drag: none;
 }
 
-/* ヘルプステッカーの縁取りなし */
-.sticker.help-sticker.no-border .help-sticker-content {
-    box-shadow: var(--shadow-md);
-}
+/* ヘルプステッカーの縁取りなし時のシャドウはJavaScriptで設定される */
 
 /* 選択時・削除ドラッグ時のシャドウは不要（オーバーレイで表現） */
 

@@ -20,8 +20,9 @@ export function updateHelpStickerBorder(sticker) {
     return;
   }
 
+  const helpWrapper = sticker.element.querySelector('.help-sticker-wrapper');
   const helpContent = sticker.element.querySelector('.help-sticker-content');
-  if (!helpContent) {
+  if (!helpWrapper || !helpContent) {
     return;
   }
 
@@ -32,15 +33,15 @@ export function updateHelpStickerBorder(sticker) {
     Math.round(HELP_STICKER_CONFIG.BASE_WIDTH * HELP_STICKER_OUTLINE_CONFIG.RATIO)
   );
 
-  // borderとbox-shadowを設定
+  // borderを設定（シャドウはCSSで常に適用される）
   if (sticker.hasBorder) {
-    // 縁取りあり：白いborder + ドロップシャドウ
+    // 縁取りあり：help-sticker-contentに白いborder
     helpContent.style.border = `${baseBorderWidth}px solid ${HELP_STICKER_OUTLINE_CONFIG.COLOR}`;
-    helpContent.style.boxShadow = 'var(--shadow-md)';
+    helpWrapper.style.padding = '';
   } else {
-    // 縁取りなし：ドロップシャドウのみ
+    // 縁取りなし：borderを削除してhelp-sticker-wrapperにpaddingを追加
     helpContent.style.border = 'none';
-    helpContent.style.boxShadow = 'var(--shadow-md)';
+    helpWrapper.style.padding = `${baseBorderWidth}px`;
   }
 }
 
