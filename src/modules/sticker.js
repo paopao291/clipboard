@@ -10,6 +10,85 @@ import { attachStickerEventListeners } from "./events.js";
 import { isPhysicsActive, addPhysicsBody, removePhysicsBody } from "./physics.js";
 
 /**
+ * SVGフィルターを適用した画像を生成（8方向drop-shadow方式：高速・確実）
+ * @param {Blob} blob - 元の画像blob
+ * @returns {Promise<Blob>} 縁取りが焼き込まれたblob
+ */
+async function applyOutlineFilter(blob) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        // 縁取りの太さ
+        const borderWidth = 12;
+        const padding = borderWidth + 2; // 余白
+        
+        // 縁取り用のCanvas（余白を含む）
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width + padding * 2;
+        canvas.height = img.height + padding * 2;
+        const ctx = canvas.getContext('2d');
+        
+        // 背景を透明にする
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // 8方向に白い影を描画して縁取りを作成
+        // 各方向に影を重ねることで均一な縁取りを実現
+        ctx.shadowColor = '#ffffff';
+        ctx.shadowBlur = borderWidth;
+        
+        // 8方向に影を描画
+        const offsets = [
+          { x: -borderWidth, y: 0 },      // 左
+          { x: borderWidth, y: 0 },       // 右
+          { x: 0, y: -borderWidth },      // 上
+          { x: 0, y: borderWidth },       // 下
+          { x: -borderWidth, y: -borderWidth }, // 左上
+          { x: borderWidth, y: -borderWidth },   // 右上
+          { x: -borderWidth, y: borderWidth },   // 左下
+          { x: borderWidth, y: borderWidth },    // 右下
+        ];
+        
+        // 各方向に影を描画
+        for (const offset of offsets) {
+          ctx.shadowOffsetX = offset.x;
+          ctx.shadowOffsetY = offset.y;
+          ctx.drawImage(img, padding, padding);
+        }
+        
+        // 元の画像を上に描画（影なし）
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.drawImage(img, padding, padding);
+        
+        // PNGとして保存（透過を保持）
+        // ドロップシャドウはCSSで適用されるため、画像には焼き込まない
+        canvas.toBlob((filteredBlob) => {
+          if (filteredBlob) {
+            resolve(filteredBlob);
+          } else {
+            console.warn('縁取り画像生成失敗、元の画像を使用');
+            resolve(blob);
+          }
+        }, 'image/png');
+      } catch (error) {
+        console.warn('縁取り画像生成エラー:', error);
+        resolve(blob);
+      }
+    };
+    
+    img.onerror = () => {
+      console.warn('画像読み込み失敗、元の画像を使用');
+      resolve(blob);
+    };
+    
+    img.src = URL.createObjectURL(blob);
+  });
+}
+
+/**
  * Blobを適切なサイズにリサイズ（Safari最適化）
  * @param {Blob} blob - 元の画像blob
  * @param {number} maxSize - 長辺の最大サイズ（px）
@@ -74,6 +153,25 @@ async function resizeImageBlob(blob, maxSize = 1200) {
     
     img.src = URL.createObjectURL(blob);
   });
+}
+
+/**
+ * 画像をリサイズし、縁取りあり版も生成
+ * @param {Blob} blob - 元の画像blob
+ * @param {number} maxSize - 長辺の最大サイズ（px）
+ * @returns {Promise<{blob: Blob, blobWithBorder: Blob}>} 縁取りなし版と縁取りあり版
+ */
+async function resizeImageBlobWithBorder(blob, maxSize = 1200) {
+  // まずリサイズ
+  const resizedBlob = await resizeImageBlob(blob, maxSize);
+  
+  // 縁取りあり版を生成
+  const blobWithBorder = await applyOutlineFilter(resizedBlob);
+  
+  return {
+    blob: resizedBlob,
+    blobWithBorder: blobWithBorder
+  };
 }
 
 /**
@@ -152,15 +250,21 @@ export async function addStickerFromBlob(
   zIndex = null,
   hasBorder = STICKER_DEFAULTS.HAS_BORDER,
 ) {
-  // Safari最適化：画像をリサイズ（長辺1200pxまで）
+  // まずリサイズだけ実行（高速）
   const resizedBlob = await resizeImageBlob(blob, 1200);
   
   const stickerId = id || Date.now();
-  const url = URL.createObjectURL(resizedBlob);
+  
+  // まず縁取りなし版で表示（即座に表示）
+  const blobUrl = URL.createObjectURL(resizedBlob);
+  const url = hasBorder ? blobUrl : blobUrl; // 一時的に縁取りなし版を使用
+  let blobWithBorderUrl = blobUrl; // 一時的に同じURLを使用
 
-  // DOMに追加
+  // DOMに追加（即座に表示）
   const actualZIndex = addStickerToDOM(
     url,
+    blobUrl,
+    blobWithBorderUrl,
     x,
     yPercent,
     width,
@@ -171,7 +275,42 @@ export async function addStickerFromBlob(
     hasBorder,
   );
 
-  // IndexedDBに保存（リサイズ済みのblobを保存）
+  // 縁取り版をバックグラウンドで生成（非同期）
+  applyOutlineFilter(resizedBlob).then((blobWithBorder) => {
+    // 縁取り版が生成されたらURLを更新
+    const newBlobWithBorderUrl = URL.createObjectURL(blobWithBorder);
+    const addedSticker = state.getStickerById(stickerId);
+    
+    if (addedSticker) {
+      // URLを更新
+      addedSticker.blobWithBorderUrl = newBlobWithBorderUrl;
+      
+      // 縁取りがONの場合は画像を切り替え
+      if (addedSticker.hasBorder && addedSticker.img) {
+        addedSticker.img.src = newBlobWithBorderUrl;
+        addedSticker.url = newBlobWithBorderUrl;
+      }
+      
+      // DBに保存
+      saveStickerToDB({
+        id: stickerId,
+        blob: resizedBlob,
+        blobWithBorder: blobWithBorder,
+        x: addedSticker.x,
+        yPercent: addedSticker.yPercent,
+        width: addedSticker.width,
+        rotation: addedSticker.rotation,
+        zIndex: addedSticker.zIndex,
+        isPinned: addedSticker.isPinned,
+        hasBorder: addedSticker.hasBorder,
+        timestamp: Date.now(),
+      }).catch(err => console.warn('縁取り版の保存エラー:', err));
+    }
+  }).catch(err => {
+    console.warn('縁取り版の生成エラー:', err);
+  });
+
+  // IndexedDBに保存（まず縁取りなし版のみ）
   await saveStickerToDB({
     id: stickerId,
     blob: resizedBlob,
@@ -195,7 +334,9 @@ export async function addStickerFromBlob(
 
 /**
  * シール（画像）をDOMに追加
- * @param {string} url - 画像URL
+ * @param {string} url - 現在表示する画像URL
+ * @param {string} blobUrl - 縁取りなし版のURL
+ * @param {string} blobWithBorderUrl - 縁取りあり版のURL
  * @param {number} x - 画面中央からのX座標オフセット（px）
  * @param {number} yPercent - 画面高さに対するY座標の割合（0-100）
  * @param {number} width - 幅（px）
@@ -208,6 +349,8 @@ export async function addStickerFromBlob(
  */
 export function addStickerToDOM(
   url,
+  blobUrl,
+  blobWithBorderUrl,
   x,
   yPercent,
   width = STICKER_DEFAULTS.WIDTH,
@@ -269,6 +412,8 @@ export function addStickerToDOM(
   const stickerObject = {
     id: stickerId,
     url: url,
+    blobUrl: blobUrl,
+    blobWithBorderUrl: blobWithBorderUrl,
     x: x,
     yPercent: yPercent,
     width: width,
@@ -276,6 +421,7 @@ export function addStickerToDOM(
     zIndex: actualZIndex,
     element: stickerDiv,
     imgWrapper: imgWrapper,
+    img: img,
     isPinned: isPinned,
     hasBorder: hasBorder,
   };
@@ -342,6 +488,9 @@ export async function removeSticker(id) {
     const stickerData = {
       id: sticker.id,
       url: sticker.url,
+      blobUrl: sticker.blobUrl,
+      blobWithBorderUrl: sticker.blobWithBorderUrl,
+      img: sticker.img,
       x: sticker.x,
       yPercent: sticker.yPercent,
       width: sticker.width,
@@ -513,6 +662,12 @@ export function updateStickerSize(sticker, width) {
  * @param {Object} sticker - シールオブジェクト
  */
 export async function saveStickerChanges(sticker) {
+  // nullチェック
+  if (!sticker) {
+    console.warn('saveStickerChanges: sticker is null');
+    return;
+  }
+  
   // ヘルプステッカーはlocalStorageに保存
   if (sticker.isHelpSticker) {
     updateHelpStickerState(sticker);
@@ -585,6 +740,12 @@ export async function toggleStickerPin(sticker) {
  */
 export async function toggleStickerBorder(sticker) {
   sticker.hasBorder = !sticker.hasBorder;
+  
+  // 画像URLを切り替え
+  if (sticker.img && sticker.blobUrl && sticker.blobWithBorderUrl) {
+    sticker.img.src = sticker.hasBorder ? sticker.blobWithBorderUrl : sticker.blobUrl;
+    sticker.url = sticker.hasBorder ? sticker.blobWithBorderUrl : sticker.blobUrl;
+  }
   
   // DOMクラスを更新
   if (!sticker.hasBorder) {

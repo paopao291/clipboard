@@ -155,7 +155,15 @@ async function loadStickersFromDB() {
   const screenHeight = window.innerHeight;
 
   for (const stickerData of stickers) {
-    const url = URL.createObjectURL(stickerData.blob);
+    // blobWithBorderがない既存データの場合、blobを使用（互換性維持）
+    const blobUrl = URL.createObjectURL(stickerData.blob);
+    const blobWithBorderUrl = stickerData.blobWithBorder 
+      ? URL.createObjectURL(stickerData.blobWithBorder)
+      : blobUrl; // 既存データの場合はblobを使用
+    
+    // hasBorderに応じて適切なURLを使用
+    const hasBorder = stickerData.hasBorder !== undefined ? stickerData.hasBorder : STICKER_DEFAULTS.HAS_BORDER;
+    const url = hasBorder ? blobWithBorderUrl : blobUrl;
     
     let x, yPercent, width;
     
@@ -230,6 +238,8 @@ async function loadStickersFromDB() {
     
     addStickerToDOM(
       url,
+      blobUrl,
+      blobWithBorderUrl,
       x,
       yPercent,
       width,
@@ -237,7 +247,7 @@ async function loadStickersFromDB() {
       stickerData.id,
       stickerData.zIndex,
       stickerData.isPinned || false,
-      stickerData.hasBorder !== undefined ? stickerData.hasBorder : STICKER_DEFAULTS.HAS_BORDER,
+      hasBorder,
     );
   }
   

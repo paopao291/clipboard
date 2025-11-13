@@ -904,9 +904,9 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
     height: 100%;
     display: block;
     pointer-events: none;
-    /* 常に軽い影でステッカー感を演出 */
-    filter: url(#outline-filter) var(--shadow-sticker);
-    transition: filter 0.3s var(--ease-out-expo);
+    /* SVGフィルターは画像に焼き込まれているため不要 */
+    /* ドロップシャドウを適用 */
+    filter: var(--shadow-sticker);
     /* GPU加速を強制 */
     transform: translateZ(0);
     backface-visibility: hidden;
@@ -916,11 +916,6 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
     /* 画像のスムーズレンダリング */
     image-rendering: auto;
     -webkit-user-drag: none;
-}
-
-/* 縁取りなしの場合 */
-.sticker.no-border img {
-    filter: var(--shadow-sticker);
 }
 
 /* ヘルプステッカーの縁取りなし */

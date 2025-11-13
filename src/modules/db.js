@@ -64,6 +64,14 @@ export async function saveStickerToDB(stickerData) {
             delete dataToSave.blob; // 元のBlobプロパティを削除
         }
         
+        // blobWithBorderも同様に処理
+        if (stickerData.blobWithBorder instanceof Blob) {
+            const arrayBuffer = await stickerData.blobWithBorder.arrayBuffer();
+            dataToSave.blobWithBorderData = arrayBuffer;
+            dataToSave.blobWithBorderType = stickerData.blobWithBorder.type;
+            delete dataToSave.blobWithBorder; // 元のBlobプロパティを削除
+        }
+        
         const transaction = db.transaction([DB_CONFIG.STORE_NAME], 'readwrite');
         const objectStore = transaction.objectStore(DB_CONFIG.STORE_NAME);
         const request = objectStore.put(dataToSave);
@@ -124,6 +132,13 @@ export async function loadAllStickersFromDB() {
                 sticker.blob = new Blob([sticker.blobData], { type: sticker.blobType });
                 delete sticker.blobData;
                 delete sticker.blobType;
+            }
+            
+            // blobWithBorderも同様に処理（既存データとの互換性を維持）
+            if (sticker.blobWithBorderData && sticker.blobWithBorderType) {
+                sticker.blobWithBorder = new Blob([sticker.blobWithBorderData], { type: sticker.blobWithBorderType });
+                delete sticker.blobWithBorderData;
+                delete sticker.blobWithBorderType;
             }
         }
         
