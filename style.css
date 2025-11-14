@@ -320,28 +320,7 @@ body.has-background-image .background-btn .background-icon-remove {
 
 /* 縁取りボタン：アイコンの切り替え（モード別） */
 /* デフォルトでは全てのアイコンを非表示 */
-.border-btn .border-icon-mode-0,
-.border-btn .border-icon-mode-1,
-.border-btn .border-icon-mode-2 {
-    display: none;
-}
-
-/* 縁取りなし（mode-0） */
-.border-btn.border-mode-0 .border-icon-mode-0,
-.selection-btn.no-border .border-icon-mode-0 {
-    display: block;
-}
-
-/* 縁取り細め（mode-1）2.5% */
-.border-btn.border-mode-1 .border-icon-mode-1 {
-    display: block;
-}
-
-/* 縁取り標準（mode-2）5% - デフォルト */
-.border-btn.border-mode-2 .border-icon-mode-2,
-.border-btn:not(.border-mode-0):not(.border-mode-1) .border-icon-mode-2 {
-    display: block;
-}
+/* 縁取りボタンのアイコンは共通アイコンのみになりました */
 
 /* ステッカーのクラスベースの縁取り設定 */
 .sticker.border-mode-0 {
