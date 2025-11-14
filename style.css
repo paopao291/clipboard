@@ -637,6 +637,12 @@ body.has-background-image .background-btn .background-icon-remove {
     pointer-events: none;
 }
 
+/* ヘルプステッカーではコピーボタンと背景除去ボタンを非表示 */
+.sticker.help-sticker.selected ~ .selection-buttons .copy-btn,
+.sticker.help-sticker.selected ~ .selection-buttons .bg-removal-btn {
+    display: none !important;
+}
+
 /* ヘルプステッカーのラッパー（回転とスケール用） */
 .help-sticker-wrapper {
     width: 100%;
@@ -759,6 +765,8 @@ body.has-background-image .background-btn .background-icon-remove {
     /* z-indexはJavaScriptで動的に設定されます */
     /* ステッカー外枠はクリック不可（imgWrapperのみクリック可能） */
     pointer-events: none;
+    /* ドロップシャドウを適用 */
+    filter: var(--shadow-sticker);
 }
 
 /* 物理モード中のステッカー：will-changeを動的に適用（GPU最適化） */
@@ -952,8 +960,6 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
     display: block;
     pointer-events: none;
     /* SVGフィルターは画像に焼き込まれているため不要 */
-    /* ドロップシャドウを適用 */
-    filter: var(--shadow-sticker);
     /* GPU加速を強制 */
     transform: translateZ(0);
     backface-visibility: hidden;
