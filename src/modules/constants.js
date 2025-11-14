@@ -5,6 +5,9 @@ export const DB_CONFIG = {
   STORE_NAME: "stickers",
 };
 
+// 縁取りの幅設定（順に: なし, 細め(2.5%), 標準(5%)）
+export const BORDER_WIDTHS = [0, 0.025, 0.05];
+
 // シールのデフォルト設定
 export const STICKER_DEFAULTS = {
   BASE_WIDTH: 200, // 基準幅（固定、scaleで拡大縮小）
@@ -15,6 +18,7 @@ export const STICKER_DEFAULTS = {
   ROTATION: 0,
   Z_INDEX_START: 10,
   HAS_BORDER: true, // 縁取りのデフォルト状態
+  BORDER_MODE: 2,    // 縁取りモード（0:なし, 1:4px, 2:8px）
 };
 
 // サイズ変更の設定

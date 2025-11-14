@@ -26,7 +26,7 @@ import {
   handleCanvasWheel,
   setAddButtonTriggered,
 } from "./modules/events.js";
-import { addStickerToDOM, toggleStickerPin, toggleStickerBorder, sendToBack } from "./modules/sticker.js";
+import { addStickerToDOM, toggleStickerPin, toggleStickerBorder, sendToBack } from "./modules/sticker.js"; // toggleStickerBgRemoval は一時的に無効化
 import { initPhysicsEngine, enablePhysics, disablePhysics, isPhysicsActive } from "./modules/physics.js";
 import { startAutoLayout, isLayoutRunning } from "./modules/layout.js";
 import { setBackgroundImage, removeBackgroundImage, restoreBackgroundImage, hasBackgroundImage, initBackgroundDB } from "./modules/background.js";
@@ -81,6 +81,8 @@ async function init() {
   
   // 縁取りボタンイベント
   elements.borderBtn.addEventListener("click", handleBorderButton);
+  
+  // 背景除去機能は一時的に無効化
   
   // 物理モードボタンイベント
   elements.physicsBtn.addEventListener("click", togglePhysicsMode);
@@ -157,30 +159,93 @@ async function loadStickersFromDB() {
   const screenHeight = window.innerHeight;
 
   for (const stickerData of stickers) {
-    // borderWidthを計算
-    const borderWidth = await new Promise((resolve) => {
-      const img = new Image();
-      img.onload = async () => {
-        const { calculateBorderWidth } = await import('./modules/sticker.js');
-        const bw = calculateBorderWidth(img.width, img.height);
-        resolve(bw);
-      };
-      img.onerror = () => resolve(8);
+    // 画像情報を取得
+    const img = new Image();
+    const imgLoadPromise = new Promise((resolve) => {
+      img.onload = () => resolve();
+      img.onerror = () => resolve();
       img.src = URL.createObjectURL(stickerData.blob);
     });
+    await imgLoadPromise;
     
-    // padding付き版を生成（縁取りなし版と同じサイズにする）
-    const { addPaddingToImage } = await import('./modules/sticker.js');
-    const paddedBlob = await addPaddingToImage(stickerData.blob, borderWidth);
-    const blobUrl = URL.createObjectURL(paddedBlob);
+    // モードを確認
+    const borderMode = stickerData.borderMode !== undefined ? stickerData.borderMode : STICKER_DEFAULTS.BORDER_MODE;
+    console.log(`ステッカー${stickerData.id}のリロード: モード${borderMode}の処理を実行`);
     
-    const blobWithBorderUrl = stickerData.blobWithBorder 
-      ? URL.createObjectURL(stickerData.blobWithBorder)
-      : blobUrl; // 既存データの場合はblobを使用
+    // オリジナル画像のURL（元画像を保持）
+    const originalBlobUrl = URL.createObjectURL(stickerData.originalBlob || stickerData.blob);
+    const originalBlob = stickerData.originalBlob || stickerData.blob;
     
-    // hasBorderに応じて適切なURLを使用
+    // モジュールをインポート
+    const { calculateBorderWidth, addPaddingToImage, applyOutlineFilter } = await import('./modules/sticker.js');
+    
+    // 5%相当の幅を計算（モード2）
+    const maxBorderWidth = calculateBorderWidth(img.width, img.height, 2);
+    
+    // 現在のモードの縁取り幅を計算
+    const borderWidth = calculateBorderWidth(img.width, img.height, borderMode);
+    
+    // モードに応じてパディング付き画像と縁取り画像を生成（常に新規生成）
+    let paddedBlob, borderBlob, blobUrl, blobWithBorderUrl;
+    
+    // パディング付き画像を生成（すべてのモードで5%パディング）
+    paddedBlob = await addPaddingToImage(originalBlob, maxBorderWidth);
+    blobUrl = URL.createObjectURL(paddedBlob);
+    
+    if (borderMode === 0) {
+      // モード0: 縁取りなし（blobWithBorderUrlはnull）
+      blobWithBorderUrl = null;
+    } else if (borderMode === 1) {
+      // モード1: 2.5%縁取り + 残りパディング
+      const { blob: borderResult } = await applyOutlineFilter(originalBlob, 1);
+      // 残りのパディング幅を計算
+      const remainingPadding = maxBorderWidth - borderWidth;
+      console.log(`モード1: 残りのパディング幅 = ${remainingPadding}px`);
+      const paddedBorderBlob = await addPaddingToImage(borderResult, remainingPadding);
+      blobWithBorderUrl = URL.createObjectURL(paddedBorderBlob);
+    } else {
+      // モード2: 5%縁取り
+      const { blob: borderResult } = await applyOutlineFilter(originalBlob, 2);
+      blobWithBorderUrl = URL.createObjectURL(borderResult);
+    }
+    
+    // 背景除去版のURL作成
+    const removedBgBlobUrl = stickerData.removedBgBlob 
+      ? URL.createObjectURL(stickerData.removedBgBlob)
+      : null;
+    const removedBgBlobWithBorderUrl = stickerData.removedBgBlobWithBorder 
+      ? URL.createObjectURL(stickerData.removedBgBlobWithBorder)
+      : null;
+    
+    // 状態フラグ（背景除去版が存在しない場合はリセット）
     const hasBorder = stickerData.hasBorder !== undefined ? stickerData.hasBorder : STICKER_DEFAULTS.HAS_BORDER;
-    const url = hasBorder ? blobWithBorderUrl : blobUrl;
+    let hasBgRemoved = stickerData.hasBgRemoved || false;
+    let bgRemovalProcessed = stickerData.bgRemovalProcessed || false;
+    
+    // 背景除去版のBlobが存在しない場合は状態をリセット
+    if (hasBgRemoved && (!removedBgBlobUrl || !removedBgBlobWithBorderUrl)) {
+      console.warn(`ステッカー${stickerData.id}: 背景除去版のBlobが存在しないため状態をリセット`);
+      hasBgRemoved = false;
+      bgRemovalProcessed = false;
+    }
+    
+    // 現在の表示URLを決定（背景除去状態と縁取り状態の両方を考慮）
+    let url;
+    if (hasBgRemoved && removedBgBlobUrl && removedBgBlobWithBorderUrl) {
+      url = hasBorder ? removedBgBlobWithBorderUrl : removedBgBlobUrl;
+    } else {
+      // モードに応じた表示URLを決定
+      const borderMode = stickerData.borderMode !== undefined ? stickerData.borderMode : STICKER_DEFAULTS.BORDER_MODE;
+      console.log(`ステッカー${stickerData.id}のリロード: borderMode=${borderMode}, hasBorder=${hasBorder}`);
+      
+      if (borderMode === 0 || !hasBorder) {
+        // モード0または縁取りOFF: パディング付き画像
+        url = blobUrl;
+      } else {
+        // モード1,2で縁取りON: 縁取り付き画像
+        url = blobWithBorderUrl;
+      }
+    }
     
     let x, yPercent, width;
     
@@ -265,6 +330,9 @@ async function loadStickersFromDB() {
       stickerData.zIndex,
       stickerData.isPinned || false,
       hasBorder,
+      borderWidth,
+      stickerData.borderMode,
+      originalBlobUrl, // オリジナル画像URL
     );
   }
   
@@ -671,6 +739,32 @@ async function handleBorderButton() {
   // 縁取りボタンの状態を更新
   updateInfoButtonVisibility();
 }
+
+/**
+ * 背景除去ボタンハンドラ
+ */
+/* 背景除去機能は一時的に無効化
+async function handleBgRemovalButton() {
+  if (!state.selectedSticker) return;
+  
+  // ステッカーの参照を保持
+  const targetSticker = state.selectedSticker;
+  
+  // 初回処理（重い）の場合のみ選択を解除
+  if (!targetSticker.bgRemovalProcessed) {
+    // 選択を解除（選択UIが消える）
+    state.deselectAll();
+    
+    // 背景除去処理を実行
+    await toggleStickerBgRemoval(targetSticker);
+  } else {
+    // 2回目以降（トグルのみ）は選択を維持
+    await toggleStickerBgRemoval(targetSticker);
+    // ボタンの状態を更新
+    updateInfoButtonVisibility();
+  }
+}
+*/
 
 /**
  * 自動レイアウトボタンハンドラ

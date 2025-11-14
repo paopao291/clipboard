@@ -61,6 +61,7 @@ export const elements = {
   sendToBackBtn: null,
   pinBtn: null,
   borderBtn: null,
+  bgRemovalBtn: null, // 背景除去ボタン
   trashBtn: null,
   addBtn: null,
   footerButtons: null,
@@ -92,6 +93,7 @@ export function initElements() {
   elements.sendToBackBtn = document.getElementById("sendToBackBtn");
   elements.pinBtn = document.getElementById("pinBtn");
   elements.borderBtn = document.getElementById("borderBtn");
+  elements.bgRemovalBtn = document.getElementById("bgRemovalBtn");
   elements.trashBtn = document.getElementById(DOM_IDS.TRASH_BTN);
   elements.addBtn = document.getElementById(DOM_IDS.ADD_BTN);
   elements.footerButtons = document.querySelector(".footer-buttons");
@@ -395,6 +397,7 @@ export function restoreHelpSticker() {
     isHelpSticker: true,
     isPinned: savedState.isPinned || false,
     hasBorder: savedState.hasBorder !== undefined ? savedState.hasBorder : true,
+    borderMode: savedState.borderMode !== undefined ? savedState.borderMode : 2, // デフォルトは8px
   };
   state.addSticker(helpSticker);
   
@@ -438,6 +441,9 @@ export function updateHelpStickerState(sticker) {
     return;
   }
 
+  // STICKER_DEFAULTSをインポートしていないので直接値を指定
+  const defaultBorderMode = 2; // STICKER_DEFAULTS.BORDER_MODE
+
   saveHelpStickerState({
     exists: true,
     x: sticker.x,
@@ -447,6 +453,7 @@ export function updateHelpStickerState(sticker) {
     zIndex: sticker.zIndex,
     isPinned: sticker.isPinned || false,
     hasBorder: sticker.hasBorder !== undefined ? sticker.hasBorder : true,
+    borderMode: sticker.borderMode !== undefined ? sticker.borderMode : defaultBorderMode,
   });
 }
 
@@ -501,12 +508,22 @@ export function updateInfoButtonVisibility() {
       elements.pinBtn.classList.remove('pinned');
     }
     
-    // 縁取りボタンの状態を更新
+    // 縁取りボタンの状態を更新（hasBorderとborderMode）
     if (state.selectedSticker.hasBorder === false) {
       elements.borderBtn.classList.add('no-border');
     } else {
       elements.borderBtn.classList.remove('no-border');
     }
+    
+    // border-modeクラスをすべて削除
+    elements.borderBtn.classList.remove('border-mode-0', 'border-mode-1', 'border-mode-2');
+    
+    // 現在のborderModeクラスを追加
+    const borderMode = state.selectedSticker.borderMode !== undefined ? 
+      state.selectedSticker.borderMode : 
+      (state.selectedSticker.hasBorder ? 2 : 0); // デフォルト：hasBorder ? 8px : なし
+    
+    elements.borderBtn.classList.add(`border-mode-${borderMode}`);
   } else {
     elements.headerButtons.classList.toggle("hidden", !isUIVisible || isPhysicsMode);
     elements.selectionButtons.classList.add("hidden");

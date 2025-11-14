@@ -318,22 +318,60 @@ body.has-background-image .background-btn .background-icon-remove {
     display: block;
 }
 
-/* 縁取りボタン：アイコンの切り替え */
-.border-btn .border-icon-on {
+/* 縁取りボタン：アイコンの切り替え（モード別） */
+/* デフォルトでは全てのアイコンを非表示 */
+.border-btn .border-icon-mode-0,
+.border-btn .border-icon-mode-1,
+.border-btn .border-icon-mode-2 {
     display: none;
 }
 
-.border-btn .border-icon-off {
+/* 縁取りなし（mode-0） */
+.border-btn.border-mode-0 .border-icon-mode-0,
+.selection-btn.no-border .border-icon-mode-0 {
     display: block;
 }
 
-/* 縁取りボタン：縁取りなし状態のスタイル */
-.selection-btn.no-border .border-icon-on {
+/* 縁取り細め（mode-1）2.5% */
+.border-btn.border-mode-1 .border-icon-mode-1 {
     display: block;
 }
 
-.selection-btn.no-border .border-icon-off {
+/* 縁取り標準（mode-2）5% - デフォルト */
+.border-btn.border-mode-2 .border-icon-mode-2,
+.border-btn:not(.border-mode-0):not(.border-mode-1) .border-icon-mode-2 {
+    display: block;
+}
+
+/* ステッカーのクラスベースの縁取り設定 */
+.sticker.border-mode-0 {
+    /* 縁取りなし */
+}
+
+.sticker.border-mode-1 {
+    /* 縁取り細め (4px) */
+}
+
+.sticker.border-mode-2 {
+    /* 縁取り標準 (8px) */
+}
+
+/* 背景除去ボタン：アイコンの切り替え */
+.bg-removal-btn .bg-removal-icon-on {
+    display: block;
+}
+
+.bg-removal-btn .bg-removal-icon-off {
     display: none;
+}
+
+/* 背景除去ボタン：背景除去済み状態のスタイル */
+.selection-btn.bg-removed .bg-removal-icon-on {
+    display: none;
+}
+
+.selection-btn.bg-removed .bg-removal-icon-off {
+    display: block;
 }
 
 /* ゴミ箱ボタン */
@@ -871,6 +909,35 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
     transform: scale(0.4);
     opacity: 0.4;
     transition: all 0.25s var(--ease-out-expo);
+}
+
+/* 処理中のステッカー */
+.sticker.processing {
+    pointer-events: none;
+    z-index: 1001;
+}
+
+.sticker.processing::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-top-color: rgba(0, 0, 0, 0.6);
+    border-radius: 50%;
+    animation: spinner-rotate 0.8s linear infinite;
+    z-index: 2;
+}
+
+@keyframes spinner-rotate {
+    0% {
+        transform: translate(-50%, -50%) rotate(0deg);
+    }
+    100% {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
 }
 
 /* 画像ラッパー：回転用コンテナ */

@@ -71,14 +71,31 @@
                 <div class="selection-buttons hidden">
                     <!-- 縁取りトグルボタン -->
                     <button id="borderBtn" class="selection-btn border-btn" title="縁取り">
-                        <!-- 縁取り追加アイコン（縁取りなし状態で表示） -->
-                        <svg class="border-icon-on" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <!-- 縁取りなし（mode-0）アイコン -->
+                        <svg class="border-icon-mode-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
                             <path d="M5 21C4.45 21 3.97917 20.8042 3.5875 20.4125C3.19583 20.0208 3 19.55 3 19V5C3 4.45 3.19583 3.97917 3.5875 3.5875C3.97917 3.19583 4.45 3 5 3H19C19.55 3 20.0208 3.19583 20.4125 3.5875C20.8042 3.97917 21 4.45 21 5V19C21 19.55 20.8042 20.0208 20.4125 20.4125C20.0208 20.8042 19.55 21 19 21H5ZM5 19H19V5H5V19Z" fill="currentColor"/>
-                            <path d="M7 17V7H17V17H7ZM9 15H15V9H9V15Z" fill="currentColor"/>
+                            <path d="M8 16V8H16V16H8ZM10 14H14V10H10V14Z" fill="currentColor"/>
                         </svg>
-                        <!-- 縁取り削除アイコン（縁取りあり状態で表示） -->
-                        <svg class="border-icon-off" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <!-- 縁取り細め（mode-1）2.5% アイコン -->
+                        <svg class="border-icon-mode-1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M5 21C4.45 21 3.97917 20.8042 3.5875 20.4125C3.19583 20.0208 3 19.55 3 19V5C3 4.45 3.19583 3.97917 3.5875 3.5875C3.97917 3.19583 4.45 3 5 3H19C19.55 3 20.0208 3.19583 20.4125 3.5875C20.8042 3.97917 21 4.45 21 5V19C21 19.55 20.8042 20.0208 20.4125 20.4125C20.0208 20.8042 19.55 21 19 21H5ZM5 19H19V5H5V19Z" fill="currentColor"/>
+                            <path d="M9 15V9H15V15H9Z" fill="currentColor"/>
+                        </svg>
+                        <!-- 縁取り標準（mode-2）5% アイコン -->
+                        <svg class="border-icon-mode-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
                             <path d="M7 17V7H17V17H7ZM5 19V21C4.45 21 3.97917 20.8042 3.5875 20.4125C3.19583 20.0208 3 19.55 3 19H5ZM3 17V15H5V17H3ZM3 13V11H5V13H3ZM3 9V7H5V9H3ZM5 5H3C3 4.45 3.19583 3.97917 3.5875 3.5875C3.97917 3.19583 4.45 3 5 3V5ZM7 21V19H9V21H7ZM7 5V3H9V5H7ZM11 21V19H13V21H11ZM11 5V3H13V5H11ZM15 21V19H17V21H15ZM15 5V3H17V5H15ZM19 21V19H21C21 19.55 20.8042 20.0208 20.4125 20.4125C20.0208 20.8042 19.55 21 19 21ZM19 17V15H21V17H19ZM19 13V11H21V13H19ZM19 9V7H21V9H19ZM19 5V3C19.55 3 20.0208 3.19583 20.4125 3.5875C20.8042 3.97917 21 4.45 21 5H19Z" fill="currentColor"/>
+                        </svg>
+                    </button>
+                    
+                    <!-- 背景除去ボタン（一時的に無効化） -->
+                    <button id="bgRemovalBtn" class="selection-btn bg-removal-btn" style="display: none;" title="背景除去">
+                        <!-- 背景除去適用アイコン（未処理時） -->
+                        <svg class="bg-removal-icon-on" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
+                            <path d="M120-574v-85l181-181h85L120-574Zm0-196v-70h70l-70 70Zm527 67q-10-11-21.5-21.5T602-743l97-97h85L647-703ZM220-361l77-77q7 11 14.5 20t16.5 17q-28 7-56.5 17.5T220-361Zm480-197v-2q0-19-3-37t-9-35l152-152v86L700-558ZM436-776l65-64h85l-64 64q-11-2-21-3t-21-1q-11 0-22 1t-22 3ZM120-375v-85l144-144q-2 11-3 22t-1 22q0 11 1 21t3 20L120-375Zm709 83q-8-12-18.5-23T788-335l52-52v85l-11 10Zm-116-82q-7-3-14-5.5t-14-4.5q-9-3-17.5-6t-17.5-5l190-191v86L713-374Zm-233-26q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47Zm0-80q33 0 56.5-23.5T560-560q0-33-23.5-56.5T480-640q-33 0-56.5 23.5T400-560q0 33 23.5 56.5T480-480ZM160-120v-71q0-34 17-63t47-44q51-26 115.5-44T480-360q76 0 140.5 18T736-298q30 15 47 44t17 63v71H160Zm81-80h478q-2-9-7-15.5T699-226q-36-18-91.5-36T480-280q-72 0-127.5 18T261-226q-8 4-13 11t-7 15Zm239 0Zm0-360Z"/>
+                        </svg>
+                        <!-- 元に戻すアイコン（処理済み時） -->
+                        <svg class="bg-removal-icon-off" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
+                            <path d="M480-360v-60q0-25 17.5-42.5T540-480h60L480-360Zm0 161v-85l196-196h85L480-199Zm2 75 353-354q16 4 27.5 15.5T878-435L524-82q-16-5-26.5-15.5T482-124Zm117 44 281-281v85L684-80h-85Zm161 0 120-120v60q0 25-17.5 42.5T820-80h-60Zm71-480h-83q-26-88-99-144t-169-56q-117 0-198.5 81.5T200-480q0 72 32.5 132t87.5 98v-110h80v240H160v-80h94q-62-50-98-122.5T120-480q0-75 28.5-140.5t77-114q48.5-48.5 114-77T480-840q129 0 226.5 79.5T831-560Z"/>
                         </svg>
                     </button>
                     
@@ -221,6 +238,11 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
         <!-- html2canvas（画像保存用） -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+        <!-- Background Removal（背景除去用） -->
+        <script type="module">
+            import removeBackground from 'https://esm.sh/@imgly/background-removal@1.4.5';
+            window.removeBackground = removeBackground;
+        </script>
         <script type="module" src="src/main.js"></script>
     </body>
 </html>
