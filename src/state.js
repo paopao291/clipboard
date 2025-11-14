@@ -15,6 +15,8 @@ class AppState {
     this.startAngle = 0;
     this.lastTouchX = null;
     this.lastTouchY = null;
+    this.lastMouseX = null;
+    this.lastMouseY = null;
     this.zIndexCounter = STICKER_DEFAULTS.Z_INDEX_START;
     this.initialPinchDistance = 0;
     this.initialWidth = 0;
@@ -33,6 +35,13 @@ class AppState {
     this.isPhysicsMode = false;
     // UI表示状態（重力・斥力・追加ボタン）
     this.isUIVisible = true;
+    // コピーしたステッカーデータ
+    this.copiedStickerData = null;
+    // コピーした識別子（形式：sticker:123456）
+    this.copiedStickerId = null;
+    
+    // LocalStorageからコピーデータの復元を試行
+    this.restoreCopiedStickerData();
   }
 
   /**
@@ -187,6 +196,16 @@ class AppState {
     this.lastTouchX = x;
     this.lastTouchY = y;
   }
+  
+  /**
+   * マウス位置を記録
+   * @param {number} x - X座標
+   * @param {number} y - Y座標
+   */
+  setLastMousePosition(x, y) {
+    this.lastMouseX = x;
+    this.lastMouseY = y;
+  }
 
   /**
    * 操作を終了
@@ -261,6 +280,94 @@ class AppState {
    */
   isUIVisibleState() {
     return this.isUIVisible;
+  }
+
+  /**
+   * ステッカーのコピーデータを保存
+   * @param {Object} stickerData - コピーするステッカーデータ
+   * @returns {string} コピー識別子
+   */
+  copySticker(stickerData) {
+    // 現在の時刻からユニークなIDを生成
+    const uniqueId = Date.now().toString();
+    
+    // コピーするデータから必要な情報だけ取り出す
+    const copiedData = {
+      // 画像データ（originalBlobUrlを優先して使用）
+      originalBlobUrl: stickerData.originalBlobUrl, // 元画像URL（優先使用）
+      blobUrl: stickerData.blobUrl,
+      blobWithBorderUrl: stickerData.blobWithBorderUrl,
+      // サイズと表示に関する属性
+      width: stickerData.width,
+      rotation: stickerData.rotation,
+      hasBorder: stickerData.hasBorder,
+      borderWidth: stickerData.borderWidth,
+      borderMode: stickerData.borderMode,
+      // その他の状態
+      isPinned: stickerData.isPinned,
+      hasBgRemoved: stickerData.hasBgRemoved,
+      bgRemovalProcessed: stickerData.bgRemovalProcessed,
+    };
+    
+    this.copiedStickerData = copiedData;
+    this.copiedStickerId = `sticker:${uniqueId}`;
+    
+    // LocalStorageに保存
+    this.saveCopiedStickerData();
+    
+    return this.copiedStickerId;
+  }
+  
+  /**
+   * コピーしたステッカーデータをLocalStorageに保存
+   */
+  saveCopiedStickerData() {
+    try {
+      if (this.copiedStickerData && this.copiedStickerId) {
+        localStorage.setItem('clipboardAppCopiedStickerId', this.copiedStickerId);
+        localStorage.setItem('clipboardAppCopiedStickerData', JSON.stringify(this.copiedStickerData));
+      }
+    } catch (err) {
+      console.warn('コピーデータのLocalStorage保存に失敗:', err);
+    }
+  }
+  
+  /**
+   * LocalStorageからコピーしたステッカーデータを復元
+   */
+  restoreCopiedStickerData() {
+    try {
+      const stickerId = localStorage.getItem('clipboardAppCopiedStickerId');
+      const stickerDataStr = localStorage.getItem('clipboardAppCopiedStickerData');
+      
+      if (stickerId && stickerDataStr) {
+        this.copiedStickerId = stickerId;
+        this.copiedStickerData = JSON.parse(stickerDataStr);
+      }
+    } catch (err) {
+      console.warn('コピーデータのLocalStorage復元に失敗:', err);
+      // 失敗した場合はクリア
+      this.copiedStickerData = null;
+      this.copiedStickerId = null;
+    }
+  }
+  
+  /**
+   * コピーされたステッカーデータを取得
+   * @returns {Object|null} コピーされたステッカーデータ
+   */
+  getCopiedStickerData() {
+    return this.copiedStickerData;
+  }
+  
+  /**
+   * 文字列がコピーしたステッカー識別子かどうかを確認
+   * @param {string} text - 確認するテキスト
+   * @returns {boolean} ステッカー識別子の場合はtrue
+   */
+  isStickerIdentifier(text) {
+    // "sticker:"で始まる文字列かどうかをチェック
+    return text && typeof text === 'string' && text.startsWith('sticker:');
   }
 }
 

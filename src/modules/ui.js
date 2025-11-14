@@ -94,6 +94,7 @@ export function initElements() {
   elements.pinBtn = document.getElementById("pinBtn");
   elements.borderBtn = document.getElementById("borderBtn");
   elements.bgRemovalBtn = document.getElementById("bgRemovalBtn");
+  elements.copyBtn = document.getElementById("copyBtn");
   elements.trashBtn = document.getElementById(DOM_IDS.TRASH_BTN);
   elements.addBtn = document.getElementById(DOM_IDS.ADD_BTN);
   elements.footerButtons = document.querySelector(".footer-buttons");

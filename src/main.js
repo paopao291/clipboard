@@ -24,9 +24,10 @@ import {
   handlePasteAreaInput,
   handlePasteAreaKeydown,
   handleCanvasWheel,
+  handleKeyboardShortcut,
   setAddButtonTriggered,
 } from "./modules/events.js";
-import { addStickerToDOM, toggleStickerPin, toggleStickerBorder, toggleStickerBgRemoval, sendToBack } from "./modules/sticker.js";
+import { addStickerToDOM, toggleStickerPin, toggleStickerBorder, toggleStickerBgRemoval, sendToBack, copySticker } from "./modules/sticker.js";
 import { initPhysicsEngine, enablePhysics, disablePhysics, isPhysicsActive } from "./modules/physics.js";
 import { startAutoLayout, isLayoutRunning } from "./modules/layout.js";
 import { setBackgroundImage, removeBackgroundImage, restoreBackgroundImage, hasBackgroundImage, initBackgroundDB } from "./modules/background.js";
@@ -59,6 +60,15 @@ async function init() {
   elements.pasteArea.addEventListener("blur", handlePasteAreaBlur);
   elements.pasteArea.addEventListener("input", handlePasteAreaInput);
   elements.pasteArea.addEventListener("keydown", handlePasteAreaKeydown);
+  
+  // モバイルでの長押しペーストを最適化するための設定
+  // iOS Safariでの長押しメニュー表示を有効化
+  elements.pasteArea.style.webkitUserSelect = "text";
+  elements.pasteArea.style.userSelect = "text";
+  elements.pasteArea.style.webkitTouchCallout = "default";
+  
+  // グローバルなキーボードショートカット（コピー＆ペースト）
+  document.addEventListener("keydown", handleKeyboardShortcut);
 
   // ボタンイベント
   elements.backgroundBtn.addEventListener("click", handleBackgroundButton);
@@ -84,6 +94,9 @@ async function init() {
   
   // 背景除去ボタンイベント
   elements.bgRemovalBtn.addEventListener("click", handleBgRemovalButton);
+  
+  // コピーボタンイベント
+  elements.copyBtn.addEventListener("click", handleCopyButton);
   
   // 物理モードボタンイベント
   elements.physicsBtn.addEventListener("click", togglePhysicsMode);
@@ -777,6 +790,15 @@ async function handleBgRemovalButton() {
   
   // ボタンの表示状態を再更新
   updateInfoButtonVisibility();
+}
+
+/**
+ * コピーボタンハンドラ
+ */
+async function handleCopyButton() {
+  if (!state.selectedSticker) return;
+  
+  await copySticker(state.selectedSticker);
 }
 
 /**

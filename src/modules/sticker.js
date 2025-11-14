@@ -1837,3 +1837,79 @@ async function getImageDimensions(blob) {
     img.src = URL.createObjectURL(blob);
   });
 }
+
+/**
+ * ステッカーをコピー（UI操作用）
+ * @param {Object} sticker - コピーするステッカー
+ * @returns {Promise<boolean>} 成功した場合はtrue
+ */
+export async function copySticker(sticker) {
+  if (!sticker) {
+    console.warn("コピーするステッカーが指定されていません");
+    return false;
+  }
+  
+  try {
+    // state.jsのcopySticker関数を使ってステッカー情報をメモリに保存
+    const identifier = state.copySticker(sticker);
+    
+    // システムクリップボードに特殊識別子をコピー
+    await navigator.clipboard.writeText(identifier);
+    
+    // コピー成功を通知
+    showToast("コピーしました");
+    return true;
+  } catch (err) {
+    console.warn("ステッカーのコピーに失敗しました:", err);
+    showToast("コピーに失敗しました");
+    return false;
+  }
+}
+
+/**
+ * コピーしたステッカーをペーストする
+ * @param {number} x - 画面中央からのX座標オフセット（px）
+ * @param {number} yPercent - 画面高さに対するY座標の割合（0-100）
+ * @returns {Promise<boolean>} 成功した場合はtrue
+ */
+export async function pasteSticker(x, yPercent) {
+  // メモリからコピーデータを取得
+  const copiedData = state.getCopiedStickerData();
+  
+  if (!copiedData) {
+    console.warn("コピーされたステッカーがありません");
+    return false;
+  }
+  
+  try {
+    // 座標の調整
+    const adjustedYPercent = typeof yPercent === 'number' ? yPercent : 50;
+    const xOffset = typeof x === 'number' ? x : 0;
+    
+    // オリジナル画像のURLを使用（元画像をコピー）
+    const url = copiedData.originalBlobUrl || copiedData.blobUrl;
+    
+    // URLからBlobを取得
+    const blobResponse = await fetch(url);
+    const blob = await blobResponse.blob();
+    
+    // 新しいステッカーとして追加
+    await addStickerFromBlob(
+      blob,
+      xOffset,
+      adjustedYPercent,
+      copiedData.width,
+      copiedData.rotation,
+      null, // 新しいIDが自動生成される
+      null, // 新しいz-indexが自動生成される
+      copiedData.hasBorder,
+      copiedData.borderMode
+    );
+    
+    return true;
+  } catch (err) {
+    console.warn("ステッカーのペーストに失敗しました:", err);
+    showToast("ペーストに失敗しました");
+    return false;
+  }
+}

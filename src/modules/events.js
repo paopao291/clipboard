@@ -12,6 +12,8 @@ import {
   updateStickerSize,
   saveStickerChanges,
   removeSticker,
+  pasteSticker,
+  copySticker,
 } from "./sticker.js";
 import {
   elements,
@@ -252,6 +254,34 @@ async function handlePinnedStickerInteraction(sticker, id, isTouch = false) {
 export async function handlePaste(e) {
   e.preventDefault();
 
+  // クリップボードからテキストを取得してステッカー識別子かどうか確認
+  let clipboardText = '';
+  try {
+    clipboardText = e.clipboardData.getData('text/plain');
+  } catch (err) {
+    console.warn('クリップボードテキスト取得エラー:', err);
+  }
+
+  // 座標の取得（最後のマウス位置→タッチ位置→中央の優先順位）
+  let coords;
+  if (state.lastMouseX && state.lastMouseY) {
+    coords = absoluteToHybrid(state.lastMouseX, state.lastMouseY);
+  } else if (state.lastTouchX && state.lastTouchY) {
+    coords = absoluteToHybrid(state.lastTouchX, state.lastTouchY);
+  } else {
+    coords = getCenterCoordinates();
+  }
+
+  // ステッカー識別子の場合は、ペースト関数を実行
+  if (clipboardText && state.isStickerIdentifier(clipboardText)) {
+    const success = await pasteSticker(coords.x, coords.yPercent);
+    if (success) {
+      elements.pasteArea.blur();
+      return;
+    }
+  }
+
+  // 通常の画像ペースト処理
   const items = e.clipboardData.items;
   let hasImage = false;
 
@@ -264,19 +294,13 @@ export async function handlePaste(e) {
     if (item.type.indexOf("image") !== -1) {
       hasImage = true;
       const blob = item.getAsFile();
-
-      const coords =
-        state.lastTouchX && state.lastTouchY
-          ? absoluteToHybrid(state.lastTouchX, state.lastTouchY)
-          : getCenterCoordinates();
-
       await addStickerFromBlob(blob, coords.x, coords.yPercent);
       elements.pasteArea.blur();
       break;
     }
   }
 
-  if (!hasImage) {
+  if (!hasImage && !state.isStickerIdentifier(clipboardText)) {
     showConfirmDialog("クリップボードに画像がありません", "写真を選択", () => {
       elements.galleryInput.click();
     });
@@ -515,6 +539,9 @@ export async function handleStickerMouseDown(e, id) {
  * @param {MouseEvent} e
  */
 export function handleMouseMove(e) {
+  // マウス位置を記録
+  state.setLastMousePosition(e.clientX, e.clientY);
+  
   if (!state.selectedSticker) return;
 
   // ドラッグ準備状態からドラッグ開始
@@ -1153,6 +1180,44 @@ export function handlePasteAreaKeydown(e) {
     return;
   }
   e.preventDefault();
+}
+
+/**
+ * キーボードイベントハンドラ（コピー＆ペースト用）
+ * @param {KeyboardEvent} e - キーボードイベント
+ */
+export async function handleKeyboardShortcut(e) {
+  // コマンドキーとの組み合わせのみ処理
+  const isCmdKey = e.metaKey || e.ctrlKey;
+  if (!isCmdKey) return;
+
+  // Cmd+C または Ctrl+C
+  if (e.key === 'c' || e.key === 'C') {
+    if (state.selectedSticker) {
+      e.preventDefault();
+      await copySticker(state.selectedSticker);
+    }
+  }
+
+  // Cmd+V または Ctrl+V
+  if (e.key === 'v' || e.key === 'V') {
+    // 編集可能要素にフォーカスがある場合は、デフォルト動作（テキスト編集）を優先
+    if (document.activeElement instanceof HTMLInputElement ||
+        document.activeElement instanceof HTMLTextAreaElement) {
+      return;
+    }
+    
+    // ペーストエリアにペーストする場合は何もしない（handlePasteが処理する）
+    if (document.activeElement === elements.pasteArea) {
+      return;
+    }
+    
+    // クリップボードから直接データを取得できない場合があるので、
+    // ペーストエリアを介してペーストイベントを発生させる
+    if (elements.pasteArea) {
+      elements.pasteArea.focus();
+    }
+  }
 }
 
 /**
