@@ -638,8 +638,8 @@ body.has-background-image .background-btn .background-icon-remove {
 }
 
 /* ヘルプステッカーではコピーボタンと背景除去ボタンを非表示 */
-.sticker.help-sticker.selected ~ .selection-buttons .copy-btn,
-.sticker.help-sticker.selected ~ .selection-buttons .bg-removal-btn {
+.selection-buttons .copy-btn[data-for-help-sticker="true"],
+.selection-buttons .bg-removal-btn[data-for-help-sticker="true"] {
     display: none !important;
 }
 
