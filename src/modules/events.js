@@ -419,6 +419,11 @@ export async function handleStickerMouseDown(e, id) {
 
   const sticker = state.getStickerById(id);
   if (!sticker) return;
+  
+  // 処理中のステッカーは選択できない
+  if (sticker.element && sticker.element.classList.contains('processing')) {
+    return;
+  }
 
   // 物理モード中は選択せずに直接ドラッグ開始
   if (isPhysicsActive()) {
@@ -742,6 +747,11 @@ export async function handleStickerTouchStart(e, id) {
 
   const sticker = state.getStickerById(id);
   if (!sticker) return;
+  
+  // 処理中のステッカーは選択できない
+  if (sticker.element && sticker.element.classList.contains('processing')) {
+    return;
+  }
 
   const touches = e.touches;
 

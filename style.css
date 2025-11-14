@@ -19,7 +19,7 @@
     --color-white-translucent: rgba(255, 255, 255, 0.95);
     --color-white-overlay: rgba(255, 255, 255, 0.15);
     --color-white-overlay-hover: rgba(255, 255, 255, 0.25);
-    --color-overlay-dark: rgba(0, 0, 0, 0.3);
+    --color-overlay-dark: rgba(0, 0, 0, 0.35);
     --color-overlay-darker: rgba(0, 0, 0, 0.4);
     --color-physics: rgb(0, 80, 58);        /* 重力ボタン：深い緑 */
     --color-layout: rgb(240, 90, 36);       /* 斥力ボタン：オレンジ */
@@ -912,32 +912,35 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
 }
 
 /* 処理中のステッカー */
-.sticker.processing {
+.sticker.processing .sticker-img-wrapper {
     pointer-events: none;
     z-index: 1001;
+    position: relative;
+    overflow: hidden;
 }
 
-.sticker.processing::after {
+.sticker.processing .sticker-img-wrapper::before {
     content: '';
     position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 40px;
-    height: 40px;
-    border: 4px solid rgba(0, 0, 0, 0.1);
-    border-top-color: rgba(0, 0, 0, 0.6);
-    border-radius: 50%;
-    animation: spinner-rotate 0.8s linear infinite;
+    top: -10%;
+    left: -10%;
+    width: 120%;
+    height: 120%;
+    background-image: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(200, 200, 200, 0.5) 50%, rgba(255, 255, 255, 0) 100%);
+    background-position: 0% 0%;
+    background-size: 3000px 100%;
+    animation: Grad 2.5s linear infinite;
+    animation-delay:0.5s;
     z-index: 2;
 }
 
-@keyframes spinner-rotate {
-    0% {
-        transform: translate(-50%, -50%) rotate(0deg);
-    }
-    100% {
-        transform: translate(-50%, -50%) rotate(360deg);
-    }
+@keyframes Grad {
+	0% {
+		background-position: 0 0%;
+	}
+	100% {
+		background-position: 3000px 0%;
+	}
 }
 
 /* 画像ラッパー：回転用コンテナ */

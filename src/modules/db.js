@@ -72,6 +72,22 @@ export async function saveStickerToDB(stickerData) {
             delete dataToSave.blobWithBorder; // 元のBlobプロパティを削除
         }
         
+        // 背景除去版も同様に処理
+        if (stickerData.removedBgBlob instanceof Blob) {
+            const arrayBuffer = await stickerData.removedBgBlob.arrayBuffer();
+            dataToSave.removedBgBlobData = arrayBuffer;
+            dataToSave.removedBgBlobType = stickerData.removedBgBlob.type;
+            delete dataToSave.removedBgBlob;
+        }
+        
+        // 背景除去+縁取り版も同様に処理
+        if (stickerData.removedBgBlobWithBorder instanceof Blob) {
+            const arrayBuffer = await stickerData.removedBgBlobWithBorder.arrayBuffer();
+            dataToSave.removedBgBlobWithBorderData = arrayBuffer;
+            dataToSave.removedBgBlobWithBorderType = stickerData.removedBgBlobWithBorder.type;
+            delete dataToSave.removedBgBlobWithBorder;
+        }
+        
         const transaction = db.transaction([DB_CONFIG.STORE_NAME], 'readwrite');
         const objectStore = transaction.objectStore(DB_CONFIG.STORE_NAME);
         const request = objectStore.put(dataToSave);
@@ -139,6 +155,20 @@ export async function loadAllStickersFromDB() {
                 sticker.blobWithBorder = new Blob([sticker.blobWithBorderData], { type: sticker.blobWithBorderType });
                 delete sticker.blobWithBorderData;
                 delete sticker.blobWithBorderType;
+            }
+            
+            // 背景除去版も同様に処理
+            if (sticker.removedBgBlobData && sticker.removedBgBlobType) {
+                sticker.removedBgBlob = new Blob([sticker.removedBgBlobData], { type: sticker.removedBgBlobType });
+                delete sticker.removedBgBlobData;
+                delete sticker.removedBgBlobType;
+            }
+            
+            // 背景除去+縁取り版も同様に処理
+            if (sticker.removedBgBlobWithBorderData && sticker.removedBgBlobWithBorderType) {
+                sticker.removedBgBlobWithBorder = new Blob([sticker.removedBgBlobWithBorderData], { type: sticker.removedBgBlobWithBorderType });
+                delete sticker.removedBgBlobWithBorderData;
+                delete sticker.removedBgBlobWithBorderType;
             }
         }
         

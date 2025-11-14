@@ -790,6 +790,12 @@ export function addStickerToDOM(
   borderWidth = 0,
   borderMode = STICKER_DEFAULTS.BORDER_MODE,
   originalBlobUrl = null, // リサイズ済み・パディング/縁取り前の元画像URL
+  removedBgBlobUrl = null,
+  removedBgBlobWithBorderUrl = null,
+  hasBgRemoved = false,
+  bgRemovalProcessed = false,
+  removedBgBlob = null,
+  removedBgBlobWithBorder = null,
 ) {
   const stickerId = id || Date.now();
 
@@ -852,6 +858,12 @@ export function addStickerToDOM(
     rotation: rotation,
     zIndex: actualZIndex,
     element: stickerDiv,
+    removedBgBlobUrl: removedBgBlobUrl,
+    removedBgBlobWithBorderUrl: removedBgBlobWithBorderUrl,
+    removedBgBlob: removedBgBlob,
+    removedBgBlobWithBorder: removedBgBlobWithBorder,
+    hasBgRemoved: hasBgRemoved,
+    bgRemovalProcessed: bgRemovalProcessed,
     imgWrapper: imgWrapper,
     img: img,
     isPinned: isPinned,
@@ -1178,84 +1190,6 @@ export async function toggleStickerPin(sticker) {
 }
 
 
-/**
- * ステッカーの背景除去をトグル
- * @param {Object} sticker - シールオブジェクト
- */
-export async function toggleStickerBgRemoval(sticker) {
-  try {
-    // 背景除去が未処理の場合
-    if (!sticker.bgRemovalProcessed) {
-      // 縁取りを一時的に非表示
-      const hasBorderBackup = sticker.hasBorder;
-      sticker.hasBorder = false;
-      sticker.element.classList.add("no-border");
-      
-      // 背景除去処理中の表示
-      sticker.element.classList.add("processing-bg-removal");
-      console.log("背景除去処理を開始...");
-      
-      if (sticker.img && sticker.blobUrl) {
-        const originalBlob = await getBlobFromURL(sticker.blobUrl);
-        if (originalBlob && window.removeBackground) {
-          try {
-            // 背景除去処理を実行（window.removeBackground関数を使用）
-            const processedBlob = await window.removeBackground(originalBlob);
-            
-            // 処理後の画像を設定
-            const newUrl = URL.createObjectURL(processedBlob);
-            sticker.img.src = newUrl;
-            sticker.url = newUrl;
-            
-            // 処理済みフラグと画像を保存
-            sticker.bgRemovalProcessed = true;
-            sticker.bgRemovedUrl = newUrl;
-            
-            // DBに保存
-            if (!sticker.isHelpSticker) {
-              await updateStickerInDB(sticker.id, {
-                bgRemovalProcessed: true,
-                bgRemovedBlob: processedBlob
-              });
-            }
-            
-            console.log("背景除去処理完了");
-          } catch (error) {
-            console.error("背景除去処理に失敗:", error);
-            // エラー時は元の画像に戻す
-            showToast("背景除去に失敗しました");
-          }
-        }
-      }
-      
-      // 元の縁取り状態に戻す
-      sticker.hasBorder = hasBorderBackup;
-      if (hasBorderBackup) {
-        sticker.element.classList.remove("no-border");
-      }
-    } 
-    // 既に処理済みの場合は表示切替（トグル）
-    else {
-      if (sticker.img) {
-        if (sticker.img.src === sticker.bgRemovedUrl) {
-          // 背景除去なしの表示に戻す
-          sticker.img.src = sticker.hasBorder ? sticker.blobWithBorderUrl : sticker.blobUrl;
-          sticker.element.classList.remove("bg-removed");
-        } else {
-          // 背景除去ありの表示に切り替え
-          sticker.img.src = sticker.bgRemovedUrl;
-          sticker.element.classList.add("bg-removed");
-        }
-      }
-    }
-    
-    // 処理中表示を解除
-    sticker.element.classList.remove("processing-bg-removal");
-  } catch (error) {
-    console.error("背景除去処理エラー:", error);
-    sticker.element.classList.remove("processing-bg-removal");
-  }
-}
 
 /**
  * 指定されたモードに基づいて画像の縁取りとパディングを処理する共通関数
@@ -1405,15 +1339,8 @@ export async function toggleStickerBorder(sticker) {
         
         // モード0: 常にパディング付き画像
         // モード1,2: 縁取りONなら縁取り画像、OFFならパディング付き画像
-        if (nextBorderMode === 0 || !sticker.hasBorder) {
-          console.log("パディング付き画像を表示");
-          sticker.img.src = paddedBlobUrl;
-          sticker.url = paddedBlobUrl;
-        } else {
-          console.log("縁取り付き画像を表示");
-          sticker.img.src = newURL;
-          sticker.url = newURL;
-        }
+        // 背景除去状態も考慮して表示画像を決定
+        updateStickerImageUrl(sticker);
       }
     }
   }
@@ -1443,6 +1370,438 @@ export async function toggleStickerBorder(sticker) {
   
   // ボタンの表示状態を更新
   updateInfoButtonVisibility();
+}
+
+/**
+ * 背景除去処理（@imgly/background-removalを使用）
+ * @param {Blob} blob - 元の画像Blob
+ * @returns {Promise<Blob>} 背景除去済みのBlob
+ */
+async function removeBgFromBlob(blob) {
+  try {
+    // window.removeBackgroundはindex.htmlで定義されている
+    if (!window.removeBackground) {
+      throw new Error('背景除去ライブラリが読み込まれていません');
+    }
+    
+    // Blobをbase64に変換
+    const imageUrl = URL.createObjectURL(blob);
+    const img = new Image();
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = imageUrl;
+    });
+    
+    // 背景除去を実行
+    const resultBlob = await window.removeBackground(imageUrl);
+    
+    // クリーンアップ
+    URL.revokeObjectURL(imageUrl);
+    
+    // アルファチャンネルに閾値処理を適用（エッジをはっきりさせる）
+    const solidifiedBlob = await solidifyAlphaChannel(resultBlob);
+    
+    // 透明ピクセルの比率を確認
+    const isMostlyTransparent = await checkTransparencyRatio(solidifiedBlob, 0.9);
+    if (isMostlyTransparent) {
+      throw new Error('対象物が見つかりませんでした');
+    }
+    
+    // 透明部分をトリミングして実際のコンテンツサイズにする
+    const trimResult = await trimTransparentEdges(solidifiedBlob);
+    
+    // trimTransparentEdges関数が{blob, isValid}を返すように変更されている場合の対応
+    if (trimResult && typeof trimResult === 'object' && trimResult.hasOwnProperty('blob')) {
+      if (!trimResult.isValid) {
+        throw new Error('対象物が見つかりませんでした');
+      }
+      return trimResult.blob;
+    }
+    
+    return solidifiedBlob; // トリミングできなかった場合はsolidifiedBlobを返す
+  } catch (error) {
+    // エラーをそのまま上位に投げる（ログは上位で出力）
+    throw error;
+  }
+}
+
+/**
+ * アルファチャンネルに閾値処理を適用してエッジをはっきりさせる
+ * @param {Blob} blob - 背景除去済みの画像Blob
+ * @param {number} threshold - 閾値（0-255、デフォルト128）
+ * @returns {Promise<Blob>} 処理後のBlob
+ */
+async function solidifyAlphaChannel(blob, threshold = 128) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      
+      // 画像を描画
+      ctx.drawImage(img, 0, 0);
+      
+      // ピクセルデータを取得
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      
+      // アルファチャンネルに閾値処理を適用
+      for (let i = 3; i < data.length; i += 4) {
+        const alpha = data[i];
+        // 閾値以上なら完全に不透明、以下なら完全に透明
+        data[i] = alpha >= threshold ? 255 : 0;
+      }
+      
+      // 処理後のデータを描画
+      ctx.putImageData(imageData, 0, 0);
+      
+      // Blobに変換
+      canvas.toBlob((resultBlob) => {
+        if (resultBlob) {
+          resolve(resultBlob);
+        } else {
+          reject(new Error('Blob変換に失敗しました'));
+        }
+      }, 'image/png');
+    };
+    img.onerror = reject;
+    img.src = URL.createObjectURL(blob);
+  });
+}
+
+/**
+ * 透明部分をトリミングして実際のコンテンツサイズにする
+ * また、画像が大部分透明になっていないかチェックする
+ * @param {Blob} blob - 処理する画像Blob
+ * @returns {Promise<{blob: Blob, isValid: boolean}>} トリミング後のBlobと有効性フラグ
+ */
+async function trimTransparentEdges(blob) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      
+      // 画像を描画
+      ctx.drawImage(img, 0, 0);
+      
+      // ピクセルデータを取得
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      const width = imageData.width;
+      const height = imageData.height;
+      
+      // 不透明なピクセルをカウント
+      let opaquePixels = 0;
+      const totalPixels = width * height;
+      
+      // 不透明なピクセルの境界を見つける
+      let minX = width;
+      let minY = height;
+      let maxX = 0;
+      let maxY = 0;
+      
+      // 境界を探索と不透明ピクセル数のカウント
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const alphaIndex = (y * width + x) * 4 + 3;
+          if (data[alphaIndex] > 0) {
+            opaquePixels++;
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+          }
+        }
+      }
+      
+      // 不透明ピクセルの割合を計算（0.0〜1.0）
+      const opaqueRatio = opaquePixels / totalPixels;
+      console.log(`背景除去結果: 不透明ピクセル ${opaquePixels}/${totalPixels} (${(opaqueRatio * 100).toFixed(2)}%)`);
+      
+      // 不透明ピクセルが極端に少ない場合（例: 1%未満）は無効とする
+      if (opaqueRatio < 0.01) {
+        console.warn('背景除去後、対象物がほとんど見つかりませんでした。元の画像を使用します。');
+        resolve({ blob: blob, isValid: false });
+        return;
+      }
+      
+      // 安全マージン（px）
+      const margin = 10;
+      minX = Math.max(0, minX - margin);
+      minY = Math.max(0, minY - margin);
+      maxX = Math.min(width - 1, maxX + margin);
+      maxY = Math.min(height - 1, maxY + margin);
+      
+      // トリミング範囲が有効か確認（内容がない場合）
+      if (minX >= maxX || minY >= maxY) {
+        console.warn('トリミング範囲が無効です。元の画像を返します。');
+        resolve({ blob: blob, isValid: false });
+        return;
+      }
+      
+      // トリミング後のサイズを計算
+      const trimWidth = maxX - minX + 1;
+      const trimHeight = maxY - minY + 1;
+      
+      // トリミングした画像を新しいキャンバスに描画
+      const trimmedCanvas = document.createElement('canvas');
+      trimmedCanvas.width = trimWidth;
+      trimmedCanvas.height = trimHeight;
+      const trimmedCtx = trimmedCanvas.getContext('2d');
+      
+      trimmedCtx.drawImage(
+        canvas,
+        minX, minY, trimWidth, trimHeight,
+        0, 0, trimWidth, trimHeight
+      );
+      
+      // Blobに変換
+      trimmedCanvas.toBlob((resultBlob) => {
+        if (resultBlob) {
+          resolve({ blob: resultBlob, isValid: true });
+        } else {
+          reject(new Error('トリミング後のBlob変換に失敗しました'));
+        }
+      }, 'image/png');
+    };
+    img.onerror = reject;
+    img.src = URL.createObjectURL(blob);
+  });
+}
+
+// この関数は不要になったので削除（`toggleStickerBgRemoval`内で直接処理するようにリファクタリング）
+
+/**
+ * 画像の透明度を分析してほとんどが透明かどうかをチェック
+ * @param {Blob} blob - チェックする画像のBlob
+ * @param {number} threshold - 透明率の閾値（0.0〜1.0）
+ * @returns {Promise<boolean>} ほとんどが透明ならtrue
+ */
+async function checkTransparencyRatio(blob, threshold = 0.9) {
+  // blobが有効かチェック
+  if (!blob || !(blob instanceof Blob)) {
+    console.warn('無効なBlobが渡されました');
+    return false;
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    const blobUrl = URL.createObjectURL(blob);
+
+    img.onload = () => {
+      // 使用後にURLを解放
+      URL.revokeObjectURL(blobUrl);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      
+      // 画像を描画
+      ctx.drawImage(img, 0, 0);
+      
+      try {
+        // ピクセルデータを取得
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        const totalPixels = canvas.width * canvas.height;
+        let transparentPixels = 0;
+        
+        // 透明なピクセル（アルファ値が10未満）をカウント
+        for (let i = 3; i < data.length; i += 4) {
+          if (data[i] < 10) { // アルファ値がほぼ0
+            transparentPixels++;
+          }
+        }
+        
+        const transparentRatio = transparentPixels / totalPixels;
+        console.log(`透明ピクセル: ${transparentPixels}/${totalPixels} (${(transparentRatio * 100).toFixed(2)}%)`);
+        
+        // 閾値以上の透明度ならtrue
+        resolve(transparentRatio >= threshold);
+      } catch (e) {
+        console.warn('透明度チェックエラー:', e);
+        resolve(false); // エラーの場合は透明でないと判断
+      }
+    };
+    
+    img.onerror = () => {
+      // エラー時にもURLを解放
+      URL.revokeObjectURL(blobUrl);
+      console.warn('画像読み込みエラー');
+      resolve(false);
+    };
+    
+    img.src = blobUrl;
+  });
+}
+
+/**
+ * ステッカーの背景を除去する（一方通行の処理）
+ * @param {Object} sticker - ステッカーオブジェクト
+ */
+export async function toggleStickerBgRemoval(sticker) {
+  try {
+    // 既に処理済みなら何もしない
+    if (sticker.bgRemovalProcessed) {
+      console.log('既に背景除去済みです');
+      return;
+    }
+
+    // 前処理
+    if (!sticker.blobUrl) {
+      throw new Error('ステッカーのblobUrlが存在しません');
+    }
+    sticker.element.classList.add('processing'); // 処理中アニメーション表示
+    
+    // 背景除去開始のトースト表示
+    showToast('背景除去を開始しています...');
+    
+    // ステップ1: 背景除去処理
+    const originalBlob = await fetchBlobFromUrl(sticker.blobUrl);
+    const removedBgBlob = await removeBgFromBlob(originalBlob);
+    
+    // ステップ2: 元画像の更新
+    releaseOldUrls(sticker);
+    updateStickerBaseImage(sticker, removedBgBlob);
+    
+    // ステップ3: 現在のモードに応じた縁取り・パディング適用
+    await applyBorderAndPadding(sticker);
+    
+    // ステップ4: 完了処理
+    finalizeBgRemoval(sticker, removedBgBlob);
+    
+  } catch (error) {
+    console.error('背景除去エラー:', error);
+    sticker.element.classList.remove('processing');
+    showToast(error.message || '背景除去に失敗しました');
+  }
+}
+
+/**
+ * URLからBlobを取得する
+ * @param {string} url - 取得対象URL
+ * @returns {Promise<Blob>} - 取得したBlob
+ */
+async function fetchBlobFromUrl(url) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`画像の取得に失敗しました: ${response.status}`);
+  }
+  return await response.blob();
+}
+
+/**
+ * 古いURL参照を解放する
+ * @param {Object} sticker - ステッカーオブジェクト
+ */
+function releaseOldUrls(sticker) {
+  if (sticker.originalBlobUrl) URL.revokeObjectURL(sticker.originalBlobUrl);
+  if (sticker.blobUrl) URL.revokeObjectURL(sticker.blobUrl);
+  if (sticker.blobWithBorderUrl) URL.revokeObjectURL(sticker.blobWithBorderUrl);
+}
+
+/**
+ * ステッカーの基本画像を更新する
+ * @param {Object} sticker - ステッカーオブジェクト
+ * @param {Blob} newBlob - 新しい画像Blob
+ */
+function updateStickerBaseImage(sticker, newBlob) {
+  // 背景除去版を新しい「元画像」として扱う
+  sticker.originalBlob = newBlob;  // 元画像を背景除去版に置き換え
+  sticker.blob = newBlob;          // 表示用画像も背景除去版に
+  
+  // 新しいURLを設定
+  const newBlobUrl = URL.createObjectURL(newBlob);
+  sticker.originalBlobUrl = newBlobUrl;
+  sticker.blobUrl = newBlobUrl;
+}
+
+/**
+ * 縁取りとパディングを適用する
+ * @param {Object} sticker - ステッカーオブジェクト
+ */
+async function applyBorderAndPadding(sticker) {
+  // 現在の設定を取得
+  const hasBorder = sticker.hasBorder;
+  const borderMode = sticker.borderMode !== undefined ? 
+                     sticker.borderMode : STICKER_DEFAULTS.BORDER_MODE;
+  
+  // 画像サイズを取得
+  const imageDimensions = await getImageDimensions(sticker.originalBlob);
+  
+  // 縁取り/パディング処理
+  const result = await processBorderAndPadding(
+    sticker.originalBlob, 
+    borderMode, 
+    imageDimensions.width, 
+    imageDimensions.height
+  );
+  
+  // モードに応じて画像を設定
+  if (borderMode === 0 || !hasBorder) {
+    // 縁取りなしの場合はパディング付き画像を使用
+    sticker.blob = result.resultBlob;
+    sticker.blobUrl = URL.createObjectURL(result.resultBlob);
+    sticker.blobWithBorder = null;
+    sticker.blobWithBorderUrl = null;
+  } else {
+    // 縁取りありの場合は縁取り画像を設定
+    sticker.blobWithBorder = result.borderBlob || result.resultBlob;
+    sticker.blobWithBorderUrl = URL.createObjectURL(sticker.blobWithBorder);
+    sticker.borderWidth = result.borderWidth;
+  }
+}
+
+/**
+ * 背景除去処理の完了処理
+ * @param {Object} sticker - ステッカーオブジェクト
+ * @param {Blob} removedBgBlob - 背景除去後の画像Blob
+ */
+async function finalizeBgRemoval(sticker, removedBgBlob) {
+  sticker.bgRemovalProcessed = true;
+  sticker.element.classList.remove('processing');
+  
+  // 画像URLを更新（縁取り状態に応じて）
+  updateStickerImageUrl(sticker);
+  
+  // DBに保存
+  await updateStickerInDB(sticker.id, {
+    originalBlob: removedBgBlob,  // 元画像を更新
+    blob: sticker.blob,          // 表示用画像（パディングあり/なし）
+    blobWithBorder: sticker.blobWithBorder,  // 縁取り版
+    bgRemovalProcessed: true
+  });
+  
+  // UI更新
+  updateInfoButtonVisibility();
+  showToast('背景除去を適用しました');
+}
+
+/**
+ * ステッカーの画像URLを更新（縁取り状態に応じて）
+ * @param {Object} sticker - シールオブジェクト
+ */
+function updateStickerImageUrl(sticker) {
+  if (!sticker.img) return;
+  
+  let newUrl;
+  
+  // 縁取りの状態のみを考慮（背景除去後は元画像が背景除去版になっている）
+  newUrl = sticker.hasBorder
+    ? sticker.blobWithBorderUrl
+    : sticker.blobUrl;
+  
+  if (newUrl) {
+    sticker.img.src = newUrl;
+    sticker.url = newUrl;
+  }
 }
 
 /**

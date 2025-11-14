@@ -524,6 +524,15 @@ export function updateInfoButtonVisibility() {
       (state.selectedSticker.hasBorder ? 2 : 0); // デフォルト：hasBorder ? 8px : なし
     
     elements.borderBtn.classList.add(`border-mode-${borderMode}`);
+    
+    // 背景除去ボタンの表示・非表示を更新
+    if (state.selectedSticker.bgRemovalProcessed) {
+      // 背景除去済みの場合は背景除去ボタンを非表示
+      elements.bgRemovalBtn.style.display = 'none';
+    } else {
+      // まだ背景除去していない場合のみ表示
+      elements.bgRemovalBtn.style.display = '';
+    }
   } else {
     elements.headerButtons.classList.toggle("hidden", !isUIVisible || isPhysicsMode);
     elements.selectionButtons.classList.add("hidden");

@@ -26,7 +26,7 @@ import {
   handleCanvasWheel,
   setAddButtonTriggered,
 } from "./modules/events.js";
-import { addStickerToDOM, toggleStickerPin, toggleStickerBorder, sendToBack } from "./modules/sticker.js"; // toggleStickerBgRemoval は一時的に無効化
+import { addStickerToDOM, toggleStickerPin, toggleStickerBorder, toggleStickerBgRemoval, sendToBack } from "./modules/sticker.js";
 import { initPhysicsEngine, enablePhysics, disablePhysics, isPhysicsActive } from "./modules/physics.js";
 import { startAutoLayout, isLayoutRunning } from "./modules/layout.js";
 import { setBackgroundImage, removeBackgroundImage, restoreBackgroundImage, hasBackgroundImage, initBackgroundDB } from "./modules/background.js";
@@ -82,7 +82,8 @@ async function init() {
   // 縁取りボタンイベント
   elements.borderBtn.addEventListener("click", handleBorderButton);
   
-  // 背景除去機能は一時的に無効化
+  // 背景除去ボタンイベント
+  elements.bgRemovalBtn.addEventListener("click", handleBgRemovalButton);
   
   // 物理モードボタンイベント
   elements.physicsBtn.addEventListener("click", togglePhysicsMode);
@@ -333,6 +334,12 @@ async function loadStickersFromDB() {
       borderWidth,
       stickerData.borderMode,
       originalBlobUrl, // オリジナル画像URL
+      removedBgBlobUrl,
+      removedBgBlobWithBorderUrl,
+      hasBgRemoved,
+      bgRemovalProcessed, // この値が背景除去ボタンの表示/非表示を決定する
+      stickerData.removedBgBlob,
+      stickerData.removedBgBlobWithBorder
     );
   }
   
@@ -743,28 +750,34 @@ async function handleBorderButton() {
 /**
  * 背景除去ボタンハンドラ
  */
-/* 背景除去機能は一時的に無効化
 async function handleBgRemovalButton() {
   if (!state.selectedSticker) return;
   
   // ステッカーの参照を保持
   const targetSticker = state.selectedSticker;
   
-  // 初回処理（重い）の場合のみ選択を解除
-  if (!targetSticker.bgRemovalProcessed) {
-    // 選択を解除（選択UIが消える）
-    state.deselectAll();
-    
-    // 背景除去処理を実行
-    await toggleStickerBgRemoval(targetSticker);
-  } else {
-    // 2回目以降（トグルのみ）は選択を維持
-    await toggleStickerBgRemoval(targetSticker);
-    // ボタンの状態を更新
-    updateInfoButtonVisibility();
-  }
+  // 選択状態を解除（ステッカーのselectedクラスを削除）
+  targetSticker.element.classList.remove("selected");
+  state.selectedSticker = null;
+  
+  // 選択オーバーレイを非表示に
+  elements.selectionOverlay.classList.remove("visible");
+  
+  // 選択時のUIのみを非表示に
+  elements.selectionButtons.classList.add("hidden");
+  elements.trashBtn.classList.add("hidden");
+  
+  // 通常のUIを表示（右上、左下、右下のボタンなど）
+  elements.headerButtons.classList.remove("hidden");
+  elements.footerButtons.classList.remove("hidden");
+  elements.addBtn.classList.remove("hidden");
+  
+  // 背景除去処理を実行（一方通行の処理）
+  await toggleStickerBgRemoval(targetSticker);
+  
+  // ボタンの表示状態を再更新
+  updateInfoButtonVisibility();
 }
-*/
 
 /**
  * 自動レイアウトボタンハンドラ
