@@ -1194,6 +1194,12 @@ export async function handleKeyboardShortcut(e) {
   // Cmd+C または Ctrl+C
   if (e.key === 'c' || e.key === 'C') {
     if (state.selectedSticker) {
+      // ヘルプステッカーの場合はコピー機能を無効化
+      const isHelpSticker = state.selectedSticker.element.classList.contains('help-sticker');
+      if (isHelpSticker) {
+        return; // コピー処理をスキップ
+      }
+      
       e.preventDefault();
       await copySticker(state.selectedSticker);
     }

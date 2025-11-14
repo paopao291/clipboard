@@ -502,6 +502,11 @@ export function updateInfoButtonVisibility() {
     }
     elements.footerButtons.classList.add("hidden");
     
+    // ヘルプステッカーが選択されている場合、コピーボタンと背景除去ボタンに属性を追加
+    const isHelpSticker = state.selectedSticker.element.classList.contains('help-sticker');
+    elements.copyBtn.setAttribute('data-for-help-sticker', isHelpSticker);
+    elements.bgRemovalBtn.setAttribute('data-for-help-sticker', isHelpSticker);
+    
     // 固定ボタンの状態を更新（pinBtnはselectionButtons内にあるので個別制御不要）
     if (state.selectedSticker.isPinned) {
       elements.pinBtn.classList.add('pinned');
