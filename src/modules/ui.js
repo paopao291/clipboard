@@ -26,22 +26,56 @@ export function updateHelpStickerBorder(sticker) {
     return;
   }
 
-  // 初期ボーダー幅を計算（BASE_WIDTHの5%、最小8px）
-  // 拡大縮小時はtransform: scale()でスケールされるため、初期値のみ設定
-  const baseBorderWidth = Math.max(
-    HELP_STICKER_OUTLINE_CONFIG.MIN_WIDTH,
-    Math.round(HELP_STICKER_CONFIG.BASE_WIDTH * HELP_STICKER_OUTLINE_CONFIG.RATIO)
-  );
+  // 現在のborderModeを取得（未設定の場合はデフォルト値）
+  const borderMode = sticker.borderMode !== undefined ? sticker.borderMode : (sticker.hasBorder ? 2 : 0);
 
+  // borderModeに基づいて縁取り幅を計算（0:なし、1:2.5%、2:5%）
+  // ステッカーの基本幅に対するパーセンテージとして計算
+  let baseBorderWidth;
+  
+  if (borderMode === 0) {
+    baseBorderWidth = 0;
+  } else {
+    // 最大縁取り幅（5%）
+    const maxBorderWidth = Math.max(
+      HELP_STICKER_OUTLINE_CONFIG.MIN_WIDTH,
+      Math.round(HELP_STICKER_CONFIG.BASE_WIDTH * HELP_STICKER_OUTLINE_CONFIG.RATIO)
+    );
+    
+    // borderMode 1（2.5%）の場合は半分の幅
+    baseBorderWidth = borderMode === 1 ? Math.round(maxBorderWidth / 2) : maxBorderWidth;
+  }
+
+  // ステッカーの縁取りクラスを更新
+  sticker.element.classList.remove('border-mode-0', 'border-mode-1', 'border-mode-2');
+  sticker.element.classList.add(`border-mode-${borderMode}`);
+  
   // borderを設定（シャドウはCSSで常に適用される）
-  if (sticker.hasBorder) {
+  if (borderMode > 0) {
     // 縁取りあり：help-sticker-contentに白いborder
     helpContent.style.border = `${baseBorderWidth}px solid ${HELP_STICKER_OUTLINE_CONFIG.COLOR}`;
-    helpWrapper.style.padding = '';
+    
+    // モード1（2.5%）の場合は残りの2.5%をpaddingとして追加
+    if (borderMode === 1) {
+      const maxBorderWidth = Math.max(
+        HELP_STICKER_OUTLINE_CONFIG.MIN_WIDTH,
+        Math.round(HELP_STICKER_CONFIG.BASE_WIDTH * HELP_STICKER_OUTLINE_CONFIG.RATIO)
+      );
+      const paddingWidth = maxBorderWidth - baseBorderWidth;
+      helpWrapper.style.padding = `${paddingWidth}px`;
+    } else {
+      helpWrapper.style.padding = '';
+    }
   } else {
     // 縁取りなし：borderを削除してhelp-sticker-wrapperにpaddingを追加
     helpContent.style.border = 'none';
-    helpWrapper.style.padding = `${baseBorderWidth}px`;
+    
+    // 5%相当のpaddingを追加
+    const maxBorderWidth = Math.max(
+      HELP_STICKER_OUTLINE_CONFIG.MIN_WIDTH,
+      Math.round(HELP_STICKER_CONFIG.BASE_WIDTH * HELP_STICKER_OUTLINE_CONFIG.RATIO)
+    );
+    helpWrapper.style.padding = `${maxBorderWidth}px`;
   }
 }
 
@@ -246,6 +280,9 @@ export function showHelp() {
   stickerDiv.style.top = `50%`;
   stickerDiv.style.width = `${HELP_STICKER_CONFIG.BASE_WIDTH}px`; // 固定幅
   stickerDiv.style.transform = `translate(-50%, -50%)`;
+  
+  // デフォルトのborder-modeクラスを追加（5%）
+  stickerDiv.classList.add('border-mode-2');
 
   // z-indexを設定
   const zIndex = state.incrementZIndex();
@@ -276,6 +313,7 @@ export function showHelp() {
     isHelpSticker: true, // ヘルプステッカーであることを示すフラグ
     isPinned: false,
     hasBorder: true, // ヘルプステッカーもデフォルトで縁取りあり
+    borderMode: 2, // デフォルトで5%の縁取り
   };
   state.addSticker(helpSticker);
 
@@ -296,6 +334,7 @@ export function showHelp() {
     rotation: HELP_STICKER_CONFIG.INITIAL_ROTATION,
     zIndex: zIndex,
     hasBorder: true,
+    borderMode: 2, // デフォルトで5%の縁取り
   });
 }
 
@@ -411,6 +450,10 @@ export function restoreHelpSticker() {
   if (!helpSticker.hasBorder) {
     stickerDiv.classList.add('no-border');
   }
+  
+  // borderModeクラスを反映
+  const borderMode = helpSticker.borderMode !== undefined ? helpSticker.borderMode : 2;
+  stickerDiv.classList.add(`border-mode-${borderMode}`);
 
   // 縁取りを設定
   updateHelpStickerBorder(helpSticker);
