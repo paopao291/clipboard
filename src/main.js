@@ -49,6 +49,9 @@ async function init() {
   // 物理エンジンを初期化
   initPhysicsEngine();
 
+  // コピーしたステッカーデータを明示的に復元（リロード後のペースト対応）
+  await state.restoreCopiedStickerData();
+
   // ペーストイベント（pasteAreaのみにバインド）
   elements.pasteArea.addEventListener("paste", handlePaste);
 

@@ -1850,8 +1850,8 @@ export async function copySticker(sticker) {
   }
   
   try {
-    // state.jsのcopySticker関数を使ってステッカー情報をメモリに保存
-    const identifier = state.copySticker(sticker);
+    // state.jsのcopySticker関数を使ってステッカー情報をメモリに保存（非同期対応）
+    const identifier = await state.copySticker(sticker);
     
     // システムクリップボードに特殊識別子をコピー
     await navigator.clipboard.writeText(identifier);
@@ -1886,12 +1886,29 @@ export async function pasteSticker(x, yPercent) {
     const adjustedYPercent = typeof yPercent === 'number' ? yPercent : 50;
     const xOffset = typeof x === 'number' ? x : 0;
     
-    // オリジナル画像のURLを使用（元画像をコピー）
-    const url = copiedData.originalBlobUrl || copiedData.blobUrl;
+    let blob = null;
     
-    // URLからBlobを取得
-    const blobResponse = await fetch(url);
-    const blob = await blobResponse.blob();
+    // 優先順位：1. Blobデータ 2. URL
+    if (copiedData.originalBlob) {
+      // IndexedDBから復元したBlobデータを直接使用
+      blob = copiedData.originalBlob;
+    } else if (copiedData.originalBlobUrl || copiedData.blobUrl) {
+      // 後方互換性のために残す：URLがある場合はfetchしてみる
+      try {
+        const url = copiedData.originalBlobUrl || copiedData.blobUrl;
+        const blobResponse = await fetch(url);
+        blob = await blobResponse.blob();
+      } catch (fetchErr) {
+        console.warn("URLからのBlob取得に失敗:", fetchErr);
+        throw new Error("コピーしたステッカーデータを取得できません");
+      }
+    } else {
+      throw new Error("コピーしたステッカーデータが無効です");
+    }
+    
+    if (!blob) {
+      throw new Error("有効な画像データがありません");
+    }
     
     // 新しいステッカーとして追加
     await addStickerFromBlob(

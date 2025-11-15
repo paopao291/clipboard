@@ -1201,7 +1201,12 @@ export async function handleKeyboardShortcut(e) {
       }
       
       e.preventDefault();
-      await copySticker(state.selectedSticker);
+      try {
+        // 処理中にUIを操作させないためにローディング表示も検討
+        await copySticker(state.selectedSticker);
+      } catch (err) {
+        console.warn('キーボードショートカットによるコピー処理に失敗:', err);
+      }
     }
   }
 
