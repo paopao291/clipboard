@@ -237,7 +237,7 @@ a, button {
 
     /* トーストのスマホ対応 */
     .toast {
-        top: var(--spacing-sm);
+        bottom: calc(var(--spacing-sm) * 2 + var(--size-button-mobile-lg));
         font-size: var(--font-sm);
         padding: 10px 16px;
         max-width: 85%;
@@ -316,23 +316,6 @@ body.has-background-image .background-btn .background-icon-remove {
 
 .selection-btn.pinned .pin-icon-fill {
     display: block;
-}
-
-/* 縁取りボタン：アイコンの切り替え（モード別） */
-/* デフォルトでは全てのアイコンを非表示 */
-/* 縁取りボタンのアイコンは共通アイコンのみになりました */
-
-/* ステッカーのクラスベースの縁取り設定 */
-.sticker.border-mode-0 {
-    /* 縁取りなし */
-}
-
-.sticker.border-mode-1 {
-    /* 縁取り細め (4px) */
-}
-
-.sticker.border-mode-2 {
-    /* 縁取り標準 (8px) */
 }
 
 /* 背景除去ボタン：アイコンの切り替え */
@@ -1073,7 +1056,7 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
 /* トースト：シンプルな通知 */
 .toast {
     position: fixed;
-    top: var(--spacing-sm);
+    bottom: calc(var(--spacing-base) * 2 + var(--size-button-md));
     left: 50%;
     transform: translateX(-50%);
     background: var(--color-black);

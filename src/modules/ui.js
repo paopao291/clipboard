@@ -174,7 +174,7 @@ export function showToast(message, options = {}) {
       clearTimeout(existingToast._hideTimeout);
     }
     existingToast.style.opacity = "0";
-    existingToast.style.transform = "translateX(-50%) translateY(-10px)";
+    existingToast.style.transform = "translateX(-50%) translateY(10px)";
     setTimeout(() => existingToast.remove(), TOAST_CONFIG.FADE_OUT_DELAY_MS);
   }
 
@@ -200,7 +200,7 @@ export function showToast(message, options = {}) {
   }
 
   toast.style.opacity = "0";
-  toast.style.transform = "translateX(-50%) translateY(-10px)";
+  toast.style.transform = "translateX(-50%) translateY(10px)";
   document.body.appendChild(toast);
 
   // スライドイン + フェードイン
@@ -230,7 +230,7 @@ function hideToast(toast) {
     clearTimeout(toast._hideTimeout);
   }
   toast.style.opacity = "0";
-  toast.style.transform = "translateX(-50%) translateY(-10px)";
+  toast.style.transform = "translateX(-50%) translateY(10px)";
   setTimeout(() => toast.remove(), TOAST_CONFIG.FADE_OUT_DELAY_MS);
 }
 
