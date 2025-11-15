@@ -389,7 +389,7 @@ body.has-background-image .background-btn .background-icon-remove {
     width: var(--size-button-md);
     height: var(--size-button-md);
     background: var(--color-black);
-    border: unset;
+    border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 50%;
     cursor: pointer;
     display: flex;
@@ -459,7 +459,6 @@ body.has-background-image .background-btn .background-icon-remove {
 .has-background-image .header-btn,
 .has-background-image .selection-btn {
     border: 1px solid rgba(255, 255, 255, 0.3);
-    mix-blend-mode: difference;
 }
 
 /* header-buttons内のボタン：グレー背景 */
