@@ -11,6 +11,7 @@ import {
   elements,
   showToast,
 } from "./modules/ui.js";
+import { showConfirmDialog } from "./modules/dialog.js";
 import {
   handlePaste,
   handleFileSelect,
@@ -768,28 +769,35 @@ async function handleBgRemovalButton() {
   
   // ステッカーの参照を保持
   const targetSticker = state.selectedSticker;
-  
-  // 選択状態を解除（ステッカーのselectedクラスを削除）
-  targetSticker.element.classList.remove("selected");
-  state.selectedSticker = null;
-  
-  // 選択オーバーレイを非表示に
-  elements.selectionOverlay.classList.remove("visible");
-  
-  // 選択時のUIのみを非表示に
-  elements.selectionButtons.classList.add("hidden");
-  elements.trashBtn.classList.add("hidden");
-  
-  // 通常のUIを表示（右上、左下、右下のボタンなど）
-  elements.headerButtons.classList.remove("hidden");
-  elements.footerButtons.classList.remove("hidden");
-  elements.addBtn.classList.remove("hidden");
-  
-  // 背景除去処理を実行（一方通行の処理）
-  await toggleStickerBgRemoval(targetSticker);
-  
-  // ボタンの表示状態を再更新
-  updateInfoButtonVisibility();
+
+  // 確認ダイアログを表示
+  showConfirmDialog(
+    '背景除去処理を行いますか？<br>この操作は元に戻せません。',
+    '実行',
+    async () => {
+      // 選択状態を解除（ステッカーのselectedクラスを削除）
+      targetSticker.element.classList.remove("selected");
+      state.selectedSticker = null;
+      
+      // 選択オーバーレイを非表示に
+      elements.selectionOverlay.classList.remove("visible");
+      
+      // 選択時のUIのみを非表示に
+      elements.selectionButtons.classList.add("hidden");
+      elements.trashBtn.classList.add("hidden");
+      
+      // 通常のUIを表示（右上、左下、右下のボタンなど）
+      elements.headerButtons.classList.remove("hidden");
+      elements.footerButtons.classList.remove("hidden");
+      elements.addBtn.classList.remove("hidden");
+      
+      // 背景除去処理を実行（一方通行の処理）
+      await toggleStickerBgRemoval(targetSticker);
+      
+      // ボタンの表示状態を再更新
+      updateInfoButtonVisibility();
+    }
+  );
 }
 
 /**
