@@ -1069,13 +1069,14 @@ export async function sendToBack(sticker) {
 /**
  * シールの位置を更新
  * @param {Object} sticker - シールオブジェクト
- * @param {number} x - 画面中央からのX座標オフセット（px）
- * @param {number} yPercent - 画面高さに対するY座標の割合（0-100）
+ * @param {number} x - キャンバス中央からのX座標オフセット（px）
+ * @param {number} yPercent - キャンバス高さに対するY座標の割合（0-100）
  */
 export function updateStickerPosition(sticker, x, yPercent) {
   sticker.x = x;
   sticker.yPercent = yPercent;
   sticker.element.style.left = `calc(50% + ${x}px)`;
+  // yPercentはキャンバスの高さに対する割合なので、そのまま使用
   sticker.element.style.top = `${yPercent}%`;
 }
 

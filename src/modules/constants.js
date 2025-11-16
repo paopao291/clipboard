@@ -1,7 +1,7 @@
 // IndexedDB設定
 export const DB_CONFIG = {
   NAME: "StickerDB",
-  VERSION: 2,
+  VERSION: 3, // キャンバスサイズ用ストア追加のためバージョンアップ
   STORE_NAME: "stickers",
 };
 

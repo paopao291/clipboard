@@ -1,5 +1,6 @@
 import { STICKER_DEFAULTS } from "./modules/constants.js";
 import { showOverlay, hideOverlay } from "./modules/ui.js";
+import { absoluteToHybrid } from "./modules/coordinate-utils.js";
 
 /**
  * アプリケーションの状態管理
@@ -150,13 +151,26 @@ class AppState {
    */
   startDragging(clientX, clientY) {
     this.isDragging = true;
-    // 絶対座標をハイブリッド座標に変換
-    const centerX = window.innerWidth / 2;
-    const offsetX = clientX - centerX;
-    const yPercent = (clientY / window.innerHeight) * 100;
+    
+    // ドラッグ開始時に、実際のDOM位置から正しいyPercentを計算
+    // これにより、画面高さ基準で保存されていたyPercentをキャンバス高さ基準に修正
+    const canvas = document.getElementById('canvas');
+    if (canvas && this.selectedSticker && this.selectedSticker.element) {
+      const rect = this.selectedSticker.element.getBoundingClientRect();
+      const canvasRect = canvas.getBoundingClientRect();
+      const relativeY = rect.top + rect.height / 2 - canvasRect.top;
+      const canvasHeight = canvasRect.height;
+      const actualYPercent = (relativeY / canvasHeight) * 100;
+      
+      // sticker.yPercentを実際の位置に合わせて更新
+      this.selectedSticker.yPercent = actualYPercent;
+    }
+    
+    // 絶対座標をハイブリッド座標に変換（coordinate-utilsを使用）
+    const coords = absoluteToHybrid(clientX, clientY);
     // ステッカーの中心からマウス位置までのオフセットを保存
-    this.dragStartX = offsetX - this.selectedSticker.x;
-    this.dragStartYPercent = yPercent - this.selectedSticker.yPercent;
+    this.dragStartX = coords.x - this.selectedSticker.x;
+    this.dragStartYPercent = coords.yPercent - this.selectedSticker.yPercent;
   }
 
   /**

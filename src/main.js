@@ -1,6 +1,11 @@
 import { initDB, loadAllStickersFromDB, updateStickerInDB } from "./modules/db.js";
 import { PASTE_AREA_CONFIG, STICKER_DEFAULTS, HELP_STICKER_CONFIG } from "./modules/constants.js";
 import { state } from "./state.js";
+
+// グローバルにstateを公開（canvas-size.jsからアクセスするため）
+if (typeof window !== 'undefined') {
+  window.appState = state;
+}
 import {
   initElements,
   showHelp,
@@ -32,6 +37,8 @@ import { addStickerToDOM, toggleStickerPin, toggleStickerBorder, toggleStickerBg
 import { initPhysicsEngine, enablePhysics, disablePhysics, isPhysicsActive } from "./modules/physics.js";
 import { startAutoLayout, isLayoutRunning } from "./modules/layout.js";
 import { setBackgroundImage, removeBackgroundImage, restoreBackgroundImage, hasBackgroundImage, initBackgroundDB } from "./modules/background.js";
+import { initCanvasSizeDB, restoreAspectRatio, initCanvasSizeListener } from "./modules/canvas-size.js";
+import { showCanvasModal } from "./modules/canvas-modal.js";
 
 /**
  * アプリケーションの初期化
@@ -45,6 +52,9 @@ async function init() {
   
   // 背景画像用のDBを初期化
   initBackgroundDB(database);
+  
+  // キャンバスサイズ用のDBを初期化
+  initCanvasSizeDB(database);
 
   // 物理エンジンを初期化
   initPhysicsEngine();
@@ -75,6 +85,12 @@ async function init() {
   document.addEventListener("keydown", handleKeyboardShortcut);
 
   // ボタンイベント
+  const canvasBtn = document.getElementById("canvasBtn");
+  if (canvasBtn) {
+    canvasBtn.addEventListener("click", () => {
+      showCanvasModal();
+    });
+  }
   elements.backgroundBtn.addEventListener("click", handleBackgroundButton);
   elements.saveBtn.addEventListener("click", handleSaveButton);
   elements.infoBtn.addEventListener("click", showHelp);
@@ -152,9 +168,18 @@ async function init() {
   
   // 背景画像を復元
   await restoreBackgroundImage();
+  
+  // キャンバスサイズを復元
+  await restoreAspectRatio();
+  
+  // キャンバスサイズリスナーを初期化
+  initCanvasSizeListener();
 
   // インフォボタンの初期表示状態を設定
   updateInfoButtonVisibility();
+  
+  // handleSaveButtonをグローバルに公開（モーダルから呼び出すため）
+  window.handleSaveButton = handleSaveButton;
 
   // 初回訪問時のみヘルプを表示
   showInitialHelp();
@@ -475,7 +500,12 @@ function hideUIElementsInClone(clonedDoc) {
  * @returns {Promise<void>}
  */
 async function drawBackgroundImage(ctx, canvas) {
-  const bgImageUrl = document.body.style.backgroundImage.match(/url\(['"]?([^'"]+)['"]?\)/);
+  const canvasElement = document.getElementById('canvas');
+  if (!canvasElement || !canvasElement.style.backgroundImage) {
+    return;
+  }
+  
+  const bgImageUrl = canvasElement.style.backgroundImage.match(/url\(['"]?([^'"]+)['"]?\)/);
   if (!bgImageUrl || !bgImageUrl[1]) {
     return;
   }

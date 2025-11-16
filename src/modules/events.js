@@ -62,22 +62,27 @@ async function checkAndFixOutOfBounds(sticker) {
     return false;
   }
   const rect = sticker.element.getBoundingClientRect();
+  
+  // キャンバスのサイズを取得
+  const canvas = document.getElementById('canvas');
+  if (!canvas) return false;
+  const canvasRect = canvas.getBoundingClientRect();
 
-  // 完全に画面外に出たかチェック（回転していても確実に判定）
+  // 完全にキャンバス外に出たかチェック（回転していても確実に判定）
   const isCompletelyOutside =
-    rect.right <= 0 ||
-    rect.left >= window.innerWidth ||
-    rect.bottom <= 0 ||
-    rect.top >= window.innerHeight;
+    rect.right <= canvasRect.left ||
+    rect.left >= canvasRect.right ||
+    rect.bottom <= canvasRect.top ||
+    rect.top >= canvasRect.bottom;
 
   if (isCompletelyOutside) {
-    // 完全に画面外に出た場合は中央に戻す
+    // 完全にキャンバス外に出た場合は中央に戻す
     updateStickerPosition(sticker, 0, 50);
 
     // 物理モード中は物理ボディの位置も更新
     if (isPhysicsActive()) {
-      const centerX = window.innerWidth / 2;
-      const centerY = window.innerHeight / 2;
+      const centerX = canvasRect.left + canvasRect.width / 2;
+      const centerY = canvasRect.top + canvasRect.height / 2;
       setStickerPhysicsPosition(sticker.id, centerX, centerY);
     }
 
@@ -86,11 +91,11 @@ async function checkAndFixOutOfBounds(sticker) {
     return true;
   }
 
-  // 画面内に見えている部分の幅と高さを計算
+  // キャンバス内に見えている部分の幅と高さを計算
   const visibleWidth =
-    Math.min(rect.right, window.innerWidth) - Math.max(rect.left, 0);
+    Math.min(rect.right, canvasRect.right) - Math.max(rect.left, canvasRect.left);
   const visibleHeight =
-    Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
+    Math.min(rect.bottom, canvasRect.bottom) - Math.max(rect.top, canvasRect.top);
 
   // ステッカーの実際のサイズ
   const stickerWidth = rect.width;
@@ -114,9 +119,13 @@ async function checkAndFixOutOfBounds(sticker) {
 
     // 物理モード中は物理ボディの位置も更新
     if (isPhysicsActive()) {
-      const centerX = window.innerWidth / 2;
-      const centerY = window.innerHeight / 2;
-      setStickerPhysicsPosition(sticker.id, centerX, centerY);
+      const canvas = document.getElementById('canvas');
+      if (canvas) {
+        const canvasRect = canvas.getBoundingClientRect();
+        const centerX = canvasRect.left + canvasRect.width / 2;
+        const centerY = canvasRect.top + canvasRect.height / 2;
+        setStickerPhysicsPosition(sticker.id, centerX, centerY);
+      }
     }
 
     await saveStickerChanges(sticker);
@@ -327,9 +336,12 @@ export async function handleFileSelect(e) {
       let coords;
       // 右下の追加ボタンから：常に画面中央
       // ペースト失敗のダイアログから：最後のタッチ位置（あれば）、なければ中央
+      const canvas = document.getElementById('canvas');
+      const canvasHeight = canvas ? canvas.getBoundingClientRect().height : window.innerHeight;
+      
       if (addButtonTriggered) {
         const center = getCenterCoordinates();
-        const offsetYPercent = (offsetYPx / window.innerHeight) * 100;
+        const offsetYPercent = (offsetYPx / canvasHeight) * 100;
         coords = { x: offsetXPx, yPercent: center.yPercent + offsetYPercent };
       } else if (state.lastTouchX && state.lastTouchY) {
         coords = absoluteToHybrid(
@@ -338,7 +350,7 @@ export async function handleFileSelect(e) {
         );
       } else {
         const center = getCenterCoordinates();
-        const offsetYPercent = (offsetYPx / window.innerHeight) * 100;
+        const offsetYPercent = (offsetYPx / canvasHeight) * 100;
         coords = { x: offsetXPx, yPercent: center.yPercent + offsetYPercent };
       }
 
@@ -463,6 +475,21 @@ export async function handleStickerMouseDown(e, id) {
 
     state.isDragging = true;
     const coords = absoluteToHybrid(e.clientX, e.clientY);
+    
+    // ドラッグ開始時に、実際のDOM位置から正しいyPercentを計算
+    // これにより、画面高さ基準で保存されていたyPercentをキャンバス高さ基準に修正
+    const canvas = document.getElementById('canvas');
+    if (canvas) {
+      const rect = sticker.element.getBoundingClientRect();
+      const canvasRect = canvas.getBoundingClientRect();
+      const relativeY = rect.top + rect.height / 2 - canvasRect.top;
+      const canvasHeight = canvasRect.height;
+      const actualYPercent = (relativeY / canvasHeight) * 100;
+      
+      // sticker.yPercentを実際の位置に合わせて更新
+      sticker.yPercent = actualYPercent;
+    }
+    
     state.dragStartX = coords.x - sticker.x;
     state.dragStartYPercent = coords.yPercent - sticker.yPercent;
 
@@ -796,6 +823,21 @@ export async function handleStickerTouchStart(e, id) {
 
     state.isDragging = true;
     const coords = absoluteToHybrid(touches[0].clientX, touches[0].clientY);
+    
+    // ドラッグ開始時に、実際のDOM位置から正しいyPercentを計算
+    // これにより、画面高さ基準で保存されていたyPercentをキャンバス高さ基準に修正
+    const canvas = document.getElementById('canvas');
+    if (canvas) {
+      const rect = sticker.element.getBoundingClientRect();
+      const canvasRect = canvas.getBoundingClientRect();
+      const relativeY = rect.top + rect.height / 2 - canvasRect.top;
+      const canvasHeight = canvasRect.height;
+      const actualYPercent = (relativeY / canvasHeight) * 100;
+      
+      // sticker.yPercentを実際の位置に合わせて更新
+      sticker.yPercent = actualYPercent;
+    }
+    
     state.dragStartX = coords.x - sticker.x;
     state.dragStartYPercent = coords.yPercent - sticker.yPercent;
 

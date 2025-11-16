@@ -26,8 +26,15 @@ export async function setBackgroundImage(file) {
   
   const url = URL.createObjectURL(file);
   
-  // bodyの背景画像を設定
-  document.body.style.backgroundImage = `url(${url})`;
+  // canvas要素の背景画像を設定
+  const canvasElement = document.getElementById('canvas');
+  if (canvasElement) {
+    // 画像のみを背景として設定（ドットパターンは「背景なし」のときのみに使用）
+    canvasElement.style.backgroundImage = `url(${url})`;
+    canvasElement.style.backgroundSize = 'cover';
+    canvasElement.style.backgroundPosition = 'center';
+    canvasElement.style.backgroundRepeat = 'no-repeat';
+  }
   document.body.classList.add('has-background-image');
   
   // IndexedDBに保存（Safari対策：BlobをArrayBufferに変換）
@@ -54,8 +61,14 @@ export async function setBackgroundImage(file) {
  * 背景画像を削除
  */
 export async function removeBackgroundImage() {
-  // 背景画像をクリア
-  document.body.style.backgroundImage = '';
+  // 背景画像をクリア（ドットパターンに戻す）
+  const canvasElement = document.getElementById('canvas');
+  if (canvasElement) {
+    canvasElement.style.backgroundImage = '';
+    canvasElement.style.backgroundSize = 'var(--spacing-base) var(--spacing-base)';
+    canvasElement.style.backgroundPosition = '0 0';
+    canvasElement.style.backgroundRepeat = 'repeat';
+  }
   document.body.classList.remove('has-background-image');
   
   // IndexedDBから削除
@@ -98,7 +111,14 @@ export async function restoreBackgroundImage() {
       
       if (blob) {
         const url = URL.createObjectURL(blob);
-        document.body.style.backgroundImage = `url(${url})`;
+        const canvasElement = document.getElementById('canvas');
+        if (canvasElement) {
+          // 画像のみを背景として設定（ドットパターンは「背景なし」のときのみに使用）
+          canvasElement.style.backgroundImage = `url(${url})`;
+          canvasElement.style.backgroundSize = 'cover';
+          canvasElement.style.backgroundPosition = 'center';
+          canvasElement.style.backgroundRepeat = 'no-repeat';
+        }
         document.body.classList.add('has-background-image');
       }
     }
@@ -113,5 +133,18 @@ export async function restoreBackgroundImage() {
  */
 export function hasBackgroundImage() {
   return document.body.classList.contains('has-background-image');
+}
+
+/**
+ * 背景画像のURLを取得（保存時に使用）
+ * @returns {string|null}
+ */
+export function getBackgroundImageUrl() {
+  const canvasElement = document.getElementById('canvas');
+  if (canvasElement && canvasElement.style.backgroundImage) {
+    const match = canvasElement.style.backgroundImage.match(/url\(['"]?([^'"]+)['"]?\)/);
+    return match ? match[1] : null;
+  }
+  return null;
 }
 

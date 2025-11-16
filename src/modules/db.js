@@ -34,7 +34,9 @@ export function initDB() {
 
         request.onupgradeneeded = (event) => {
             const db = event.target.result;
+            const oldVersion = event.oldVersion;
 
+            // ステッカー用のオブジェクトストア
             if (!db.objectStoreNames.contains(DB_CONFIG.STORE_NAME)) {
                 const objectStore = db.createObjectStore(DB_CONFIG.STORE_NAME, { keyPath: 'id' });
                 objectStore.createIndex('timestamp', 'timestamp', { unique: false });
@@ -43,6 +45,11 @@ export function initDB() {
             // 背景画像用のオブジェクトストアを作成
             if (!db.objectStoreNames.contains('background')) {
                 db.createObjectStore('background', { keyPath: 'id' });
+            }
+            
+            // バージョン3以降：キャンバスサイズ用のオブジェクトストアを作成
+            if (oldVersion < 3 && !db.objectStoreNames.contains('canvasSize')) {
+                db.createObjectStore('canvasSize', { keyPath: 'id' });
             }
         };
     });

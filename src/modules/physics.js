@@ -84,18 +84,41 @@ export function initPhysicsEngine() {
 }
 
 /**
- * 画面端に壁を作成
+ * 画面端に壁を作成（キャンバスのサイズを基準に）
  */
 function createWalls() {
-  const { innerWidth: width, innerHeight: height } = window;
+  const canvas = document.getElementById('canvas');
+  if (!canvas) {
+    // フォールバック：画面サイズを使用
+    const { innerWidth: width, innerHeight: height } = window;
+    const { WALL_THICKNESS: thickness } = PHYSICS_CONFIG;
+    walls = [
+      Bodies.rectangle(width / 2, -thickness / 2, width, thickness, { isStatic: true }),
+      Bodies.rectangle(width / 2, height + thickness / 2, width, thickness, { isStatic: true }),
+      Bodies.rectangle(-thickness / 2, height / 2, thickness, height, { isStatic: true }),
+      Bodies.rectangle(width + thickness / 2, height / 2, thickness, height, { isStatic: true }),
+    ];
+    World.add(world, walls);
+    return;
+  }
+  
+  const canvasRect = canvas.getBoundingClientRect();
   const { WALL_THICKNESS: thickness } = PHYSICS_CONFIG;
   
-  // 上下左右の壁
+  // キャンバスのサイズと位置を基準に壁を作成
+  const canvasWidth = canvasRect.width;
+  const canvasHeight = canvasRect.height;
+  const canvasLeft = canvasRect.left;
+  const canvasTop = canvasRect.top;
+  const canvasCenterX = canvasLeft + canvasWidth / 2;
+  const canvasCenterY = canvasTop + canvasHeight / 2;
+  
+  // 上下左右の壁（キャンバスの境界に配置）
   walls = [
-    Bodies.rectangle(width / 2, -thickness / 2, width, thickness, { isStatic: true }), // 上
-    Bodies.rectangle(width / 2, height + thickness / 2, width, thickness, { isStatic: true }), // 下
-    Bodies.rectangle(-thickness / 2, height / 2, thickness, height, { isStatic: true }), // 左
-    Bodies.rectangle(width + thickness / 2, height / 2, thickness, height, { isStatic: true }), // 右
+    Bodies.rectangle(canvasCenterX, canvasTop - thickness / 2, canvasWidth, thickness, { isStatic: true }), // 上
+    Bodies.rectangle(canvasCenterX, canvasTop + canvasHeight + thickness / 2, canvasWidth, thickness, { isStatic: true }), // 下
+    Bodies.rectangle(canvasLeft - thickness / 2, canvasCenterY, thickness, canvasHeight, { isStatic: true }), // 左
+    Bodies.rectangle(canvasLeft + canvasWidth + thickness / 2, canvasCenterY, thickness, canvasHeight, { isStatic: true }), // 右
   ];
   
   World.add(world, walls);
@@ -129,9 +152,28 @@ export function enablePhysics() {
   engine.gravity.scale = SCALE;
   isGyroActive = false; // 初期はジャイロ無効（PC想定）
   
+  // 壁を再作成（キャンバスサイズが確定している状態で）
+  World.remove(world, walls);
+  createWalls();
+  
   // 固定されていないシールに物理ボディを追加
+  // 物理モード開始時に、ステッカーの位置を実際のDOM位置から再計算
   state.stickers.forEach(sticker => {
-    if (!sticker.isPinned) {
+    if (!sticker.isPinned && sticker.element) {
+      // 実際のDOM位置から正しいyPercentを計算
+      const canvas = document.getElementById('canvas');
+      if (canvas) {
+        const rect = sticker.element.getBoundingClientRect();
+        const canvasRect = canvas.getBoundingClientRect();
+        const relativeY = rect.top + rect.height / 2 - canvasRect.top;
+        const canvasHeight = canvasRect.height;
+        const actualYPercent = (relativeY / canvasHeight) * 100;
+        
+        // sticker.yPercentを実際の位置に合わせて更新
+        sticker.yPercent = actualYPercent;
+        sticker.element.style.top = `${actualYPercent}%`;
+      }
+      
       addPhysicsBody(sticker);
     }
   });
@@ -566,14 +608,30 @@ function syncStickerFromPhysicsInterpolated(sticker, physicsX, physicsY, angle) 
 }
 
 /**
- * 物理座標をハイブリッド座標系に変換
- * @param {Object} position - 物理ボディの位置 {x, y}
+ * 物理座標をハイブリッド座標系に変換（キャンバスのサイズを基準に）
+ * @param {Object} position - 物理ボディの位置 {x, y}（画面絶対座標）
  * @returns {Object} ハイブリッド座標 {x, yPercent}
  */
 function convertPhysicsToHybridCoords(position) {
-  const centerX = window.innerWidth / 2;
-  const x = position.x - centerX;
-  const yPercent = (position.y / window.innerHeight) * 100;
+  const canvas = document.getElementById('canvas');
+  if (!canvas) {
+    // フォールバック：画面サイズを使用
+    const centerX = window.innerWidth / 2;
+    const x = position.x - centerX;
+    const yPercent = (position.y / window.innerHeight) * 100;
+    return { x, yPercent };
+  }
+  
+  const canvasRect = canvas.getBoundingClientRect();
+  const canvasCenterX = canvasRect.left + canvasRect.width / 2;
+  const canvasHeight = canvasRect.height;
+  
+  // キャンバス中央からのX座標オフセット
+  const x = position.x - canvasCenterX;
+  
+  // キャンバス内の相対Y座標を計算
+  const relativeY = position.y - canvasRect.top;
+  const yPercent = (relativeY / canvasHeight) * 100;
   
   return { x, yPercent };
 }

@@ -1,6 +1,7 @@
 import { DOM_IDS, TOAST_CONFIG, HELP_CONFIG, HELP_STICKER_CONFIG } from "./constants.js";
 import { state } from "../state.js";
 import { attachStickerEventListeners } from "./events.js";
+import { absoluteToHybrid } from "./coordinate-utils.js";
 
 /**
  * ヘルプステッカーの縁取り設定
@@ -646,11 +647,14 @@ export function setTrashDragOver(isOver) {
   // ドラッグ中のステッカーに吸い込みアニメーション
   if (state.selectedSticker && state.selectedSticker.element) {
     if (isOver) {
-      // キャッシュされたゴミ箱の中心座標を使用
-      if (trashCenterX !== null && trashCenterY !== null) {
+      // ゴミ箱ボタンの現在位置から中心座標を計算（キャンバス比率変更後も常に最新の値を使う）
+      if (elements.trashBtn) {
+        const trashRect = elements.trashBtn.getBoundingClientRect();
+        const centerX = trashRect.left + trashRect.width / 2;
+        const centerY = trashRect.top + trashRect.height / 2;
         const stickerRect = state.selectedSticker.element.getBoundingClientRect();
-        const originX = ((trashCenterX - stickerRect.left) / stickerRect.width) * 100;
-        const originY = ((trashCenterY - stickerRect.top) / stickerRect.height) * 100;
+        const originX = ((centerX - stickerRect.left) / stickerRect.width) * 100;
+        const originY = ((centerY - stickerRect.top) / stickerRect.height) * 100;
         
         // 通常のステッカー
         const img = state.selectedSticker.element.querySelector('img');
@@ -664,14 +668,19 @@ export function setTrashDragOver(isOver) {
           helpContent.style.transformOrigin = `${originX}% ${originY}%`;
         }
         
-        // ステッカーをゴミ箱の中心に移動
+        // ステッカーをゴミ箱の中心に移動（ハイブリッド座標系に変換）
         // 元の位置を保存（x, yPercentベース）
-        state.selectedSticker.element.dataset.originalX = state.selectedSticker.x;
-        state.selectedSticker.element.dataset.originalYPercent = state.selectedSticker.yPercent;
-        
-        // ゴミ箱の中心に移動（絶対座標）
-        state.selectedSticker.element.style.left = `${trashCenterX}px`;
-        state.selectedSticker.element.style.top = `${trashCenterY}px`;
+        if (state.selectedSticker.element.dataset.originalX === undefined) {
+          state.selectedSticker.element.dataset.originalX = state.selectedSticker.x;
+          state.selectedSticker.element.dataset.originalYPercent = state.selectedSticker.yPercent;
+        }
+
+        // 画面座標 → キャンバス基準のハイブリッド座標に変換
+        const { x, yPercent } = absoluteToHybrid(centerX, centerY);
+
+        // CSSをハイブリッド座標系に合わせて設定
+        state.selectedSticker.element.style.left = `calc(50% + ${x}px)`;
+        state.selectedSticker.element.style.top = `${yPercent}%`;
       }
       
       state.selectedSticker.element.classList.add("being-deleted");
