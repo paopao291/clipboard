@@ -1877,8 +1877,21 @@ export async function pasteSticker(x, yPercent) {
   const copiedData = state.getCopiedStickerData();
   
   if (!copiedData) {
-    console.warn("コピーされたステッカーがありません");
-    return false;
+    // リロード直後など復元が未完了の可能性があるため、復元を試みる
+    try {
+      if (typeof state.restoreCopiedStickerData === 'function') {
+        await state.restoreCopiedStickerData();
+      }
+    } catch (e) {
+      // 復元失敗は後続のnullチェックで処理
+    }
+    const retried = state.getCopiedStickerData();
+    if (!retried) {
+      console.warn("コピーされたステッカーがありません");
+      return false;
+    }
+    // 復元できた場合は以降の処理で使用
+    return await pasteSticker(x, yPercent);
   }
   
   try {

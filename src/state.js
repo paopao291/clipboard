@@ -350,21 +350,26 @@ class AppState {
 
       // BlobデータはIndexedDBに保存
       const db = await this.openCopyDB();
-      const tx = db.transaction('copiedStickers', 'readwrite');
-      const store = tx.objectStore('copiedStickers');
-
-      // 既存のデータを全て削除（最新のコピーデータのみ保持）
-      await store.clear();
-
-      // 新しいデータを保存
-      await store.add({
-        id: 'copiedSticker',
-        stickerId: this.copiedStickerId,
-        data: this.copiedStickerData,
-        timestamp: Date.now()
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction('copiedStickers', 'readwrite');
+        const store = tx.objectStore('copiedStickers');
+        const clearReq = store.clear();
+        clearReq.onerror = () => reject(clearReq.error);
+        clearReq.onsuccess = () => {
+          const addReq = store.add({
+            id: 'copiedSticker',
+            stickerId: this.copiedStickerId,
+            data: this.copiedStickerData,
+            timestamp: Date.now(),
+          });
+          addReq.onerror = () => reject(addReq.error);
+          addReq.onsuccess = () => {
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+            tx.onabort = () => reject(tx.error || new Error('IndexedDB transaction aborted'));
+          };
+        };
       });
-
-      await tx.complete;
       db.close();
     } catch (err) {
       console.warn('コピーデータのIndexedDB保存に失敗:', err);
@@ -382,11 +387,15 @@ class AppState {
 
       // IndexedDBからBlobデータを取得
       const db = await this.openCopyDB();
-      const tx = db.transaction('copiedStickers', 'readonly');
-      const store = tx.objectStore('copiedStickers');
-
-      const result = await store.get('copiedSticker');
-      await tx.complete;
+      const result = await new Promise((resolve, reject) => {
+        const tx = db.transaction('copiedStickers', 'readonly');
+        const store = tx.objectStore('copiedStickers');
+        const getReq = store.get('copiedSticker');
+        getReq.onerror = () => reject(getReq.error);
+        getReq.onsuccess = () => resolve(getReq.result);
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error || new Error('IndexedDB transaction aborted'));
+      });
       db.close();
 
       if (result && result.stickerId === stickerId && result.data) {
