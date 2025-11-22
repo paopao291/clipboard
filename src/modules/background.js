@@ -8,6 +8,7 @@ const BACKGROUND_STORE_NAME = 'background';
 const BACKGROUND_KEY = 'current';
 
 let db = null;
+let currentBackgroundUrl = null; // 現在の背景画像のblob URLを追跡
 
 /**
  * 背景画像用のDBを初期化
@@ -24,7 +25,14 @@ export function initBackgroundDB(database) {
 export async function setBackgroundImage(file) {
   if (file.type.indexOf("image") === -1) return;
   
+  // 古いblob URLを解放
+  if (currentBackgroundUrl) {
+    URL.revokeObjectURL(currentBackgroundUrl);
+    currentBackgroundUrl = null;
+  }
+  
   const url = URL.createObjectURL(file);
+  currentBackgroundUrl = url;
   
   // bodyの背景画像を設定
   document.body.style.backgroundImage = `url(${url})`;
@@ -54,6 +62,12 @@ export async function setBackgroundImage(file) {
  * 背景画像を削除
  */
 export async function removeBackgroundImage() {
+  // 古いblob URLを解放
+  if (currentBackgroundUrl) {
+    URL.revokeObjectURL(currentBackgroundUrl);
+    currentBackgroundUrl = null;
+  }
+  
   // 背景画像をクリア
   document.body.style.backgroundImage = '';
   document.body.classList.remove('has-background-image');
@@ -97,7 +111,14 @@ export async function restoreBackgroundImage() {
       }
       
       if (blob) {
+        // 古いblob URLを解放
+        if (currentBackgroundUrl) {
+          URL.revokeObjectURL(currentBackgroundUrl);
+          currentBackgroundUrl = null;
+        }
+        
         const url = URL.createObjectURL(blob);
+        currentBackgroundUrl = url;
         document.body.style.backgroundImage = `url(${url})`;
         document.body.classList.add('has-background-image');
       }

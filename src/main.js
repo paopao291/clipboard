@@ -179,10 +179,17 @@ async function loadStickersFromDB() {
   for (const stickerData of stickers) {
     // 画像情報を取得
     const img = new Image();
+    const tempBlobUrl = URL.createObjectURL(stickerData.blob);
     const imgLoadPromise = new Promise((resolve) => {
-      img.onload = () => resolve();
-      img.onerror = () => resolve();
-      img.src = URL.createObjectURL(stickerData.blob);
+      img.onload = () => {
+        URL.revokeObjectURL(tempBlobUrl);
+        resolve();
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(tempBlobUrl);
+        resolve();
+      };
+      img.src = tempBlobUrl;
     });
     await imgLoadPromise;
     

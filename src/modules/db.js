@@ -88,6 +88,14 @@ export async function saveStickerToDB(stickerData) {
             delete dataToSave.removedBgBlobWithBorder;
         }
         
+        // originalBlobも同様に処理
+        if (stickerData.originalBlob instanceof Blob) {
+            const arrayBuffer = await stickerData.originalBlob.arrayBuffer();
+            dataToSave.originalBlobData = arrayBuffer;
+            dataToSave.originalBlobType = stickerData.originalBlob.type;
+            delete dataToSave.originalBlob;
+        }
+        
         const transaction = db.transaction([DB_CONFIG.STORE_NAME], 'readwrite');
         const objectStore = transaction.objectStore(DB_CONFIG.STORE_NAME);
         const request = objectStore.put(dataToSave);
@@ -111,7 +119,67 @@ export async function updateStickerInDB(id, updates) {
         const data = await promisifyRequest(objectStore.get(id));
         
         if (data) {
-            Object.assign(data, updates);
+            // Safari対策：既存のdataからBlobプロパティを削除（念のため）
+            if (data.blob instanceof Blob) {
+                delete data.blob;
+            }
+            if (data.blobWithBorder instanceof Blob) {
+                delete data.blobWithBorder;
+            }
+            if (data.removedBgBlob instanceof Blob) {
+                delete data.removedBgBlob;
+            }
+            if (data.removedBgBlobWithBorder instanceof Blob) {
+                delete data.removedBgBlobWithBorder;
+            }
+            if (data.originalBlob instanceof Blob) {
+                delete data.originalBlob;
+            }
+            
+            // Safari対策：BlobをArrayBufferに変換
+            const updatesToApply = { ...updates };
+            
+            // blobを処理
+            if (updates.blob instanceof Blob) {
+                const arrayBuffer = await updates.blob.arrayBuffer();
+                updatesToApply.blobData = arrayBuffer;
+                updatesToApply.blobType = updates.blob.type;
+                delete updatesToApply.blob;
+            }
+            
+            // blobWithBorderを処理
+            if (updates.blobWithBorder instanceof Blob) {
+                const arrayBuffer = await updates.blobWithBorder.arrayBuffer();
+                updatesToApply.blobWithBorderData = arrayBuffer;
+                updatesToApply.blobWithBorderType = updates.blobWithBorder.type;
+                delete updatesToApply.blobWithBorder;
+            }
+            
+            // removedBgBlobを処理
+            if (updates.removedBgBlob instanceof Blob) {
+                const arrayBuffer = await updates.removedBgBlob.arrayBuffer();
+                updatesToApply.removedBgBlobData = arrayBuffer;
+                updatesToApply.removedBgBlobType = updates.removedBgBlob.type;
+                delete updatesToApply.removedBgBlob;
+            }
+            
+            // removedBgBlobWithBorderを処理
+            if (updates.removedBgBlobWithBorder instanceof Blob) {
+                const arrayBuffer = await updates.removedBgBlobWithBorder.arrayBuffer();
+                updatesToApply.removedBgBlobWithBorderData = arrayBuffer;
+                updatesToApply.removedBgBlobWithBorderType = updates.removedBgBlobWithBorder.type;
+                delete updatesToApply.removedBgBlobWithBorder;
+            }
+            
+            // originalBlobを処理
+            if (updates.originalBlob instanceof Blob) {
+                const arrayBuffer = await updates.originalBlob.arrayBuffer();
+                updatesToApply.originalBlobData = arrayBuffer;
+                updatesToApply.originalBlobType = updates.originalBlob.type;
+                delete updatesToApply.originalBlob;
+            }
+            
+            Object.assign(data, updatesToApply);
             await promisifyRequest(objectStore.put(data));
         }
     } catch (e) {
@@ -169,6 +237,13 @@ export async function loadAllStickersFromDB() {
                 sticker.removedBgBlobWithBorder = new Blob([sticker.removedBgBlobWithBorderData], { type: sticker.removedBgBlobWithBorderType });
                 delete sticker.removedBgBlobWithBorderData;
                 delete sticker.removedBgBlobWithBorderType;
+            }
+            
+            // originalBlobも同様に処理
+            if (sticker.originalBlobData && sticker.originalBlobType) {
+                sticker.originalBlob = new Blob([sticker.originalBlobData], { type: sticker.originalBlobType });
+                delete sticker.originalBlobData;
+                delete sticker.originalBlobType;
             }
         }
         
