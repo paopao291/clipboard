@@ -2011,8 +2011,14 @@ export async function copySticker(sticker) {
     // state.jsのcopySticker関数を使ってステッカー情報をメモリに保存（非同期対応）
     const identifier = await state.copySticker(sticker);
     
-    // システムクリップボードに特殊識別子をコピー
-    await navigator.clipboard.writeText(identifier);
+    // システムクリップボードに特殊識別子をコピー（Safari対応）
+    try {
+      await navigator.clipboard.writeText(identifier);
+    } catch (clipboardErr) {
+      // SafariでクリップボードAPIが失敗する場合、メモリ保存のみで続行
+      console.warn("クリップボードへの書き込みに失敗しました（メモリ保存は成功）:", clipboardErr);
+      // メモリ保存は成功しているので、コピーは成功とみなす
+    }
     
     // コピー成功を通知
     showToast("コピーしました");

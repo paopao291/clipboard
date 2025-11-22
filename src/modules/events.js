@@ -1223,6 +1223,29 @@ export async function handleKeyboardShortcut(e) {
       return;
     }
     
+    // メモリ内にコピーデータがある場合は直接ペースト
+    const copiedData = state.getCopiedStickerData();
+    if (copiedData) {
+      e.preventDefault();
+      // 座標の取得
+      let coords;
+      if (state.lastMouseX && state.lastMouseY) {
+        coords = absoluteToHybrid(state.lastMouseX, state.lastMouseY);
+      } else if (state.lastTouchX && state.lastTouchY) {
+        coords = absoluteToHybrid(state.lastTouchX, state.lastTouchY);
+      } else {
+        coords = getCenterCoordinates();
+      }
+      
+      try {
+        const { pasteSticker } = await import('./sticker.js');
+        await pasteSticker(coords.x, coords.yPercent);
+      } catch (err) {
+        console.warn('キーボードショートカットによるペースト処理に失敗:', err);
+      }
+      return;
+    }
+    
     // クリップボードから直接データを取得できない場合があるので、
     // ペーストエリアを介してペーストイベントを発生させる
     if (elements.pasteArea) {

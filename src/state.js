@@ -330,25 +330,50 @@ class AppState {
     this.copiedStickerData = copiedData;
     this.copiedStickerId = `sticker:${uniqueId}`;
     
-    // IndexedDBに保存
-    await this.saveCopiedStickerData();
+    // IndexedDBに保存（リロード後の復元用、エラーが発生しても続行）
+    try {
+      await this.saveCopiedStickerData();
+    } catch (err) {
+      // IndexedDBへの保存が失敗しても、メモリ内のデータは有効なので続行
+      console.warn('IndexedDBへの保存に失敗しました（メモリ内のデータは有効）:', err);
+    }
     
     return this.copiedStickerId;
   }
   
   /**
-   * コピーしたステッカーデータをIndexedDBに保存
+   * コピーしたステッカーデータをIndexedDBに保存（リロード後の復元用）
+   * メモリ内のデータがメインで、これはオプション機能
    */
   async saveCopiedStickerData() {
+    if (!this.copiedStickerData || !this.copiedStickerId) {
+      return;
+    }
+
+    // IDだけはLocalStorageに保存（簡易チェック用）
+    localStorage.setItem('clipboardAppCopiedStickerId', this.copiedStickerId);
+
+    // IndexedDBへの保存はオプション（リロード後の復元用）
+    // SafariではBlobを直接保存できないため、配列に変換して保存
     try {
-      if (!this.copiedStickerData || !this.copiedStickerId) {
-        return;
+      const dataToSave = {};
+      
+      // 通常のプロパティをコピー（Blob以外）
+      for (const key in this.copiedStickerData) {
+        if (key !== 'originalBlob' && !(this.copiedStickerData[key] instanceof Blob)) {
+          dataToSave[key] = this.copiedStickerData[key];
+        }
+      }
+      
+      // Blobを配列に変換
+      if (this.copiedStickerData.originalBlob instanceof Blob) {
+        const arrayBuffer = await this.copiedStickerData.originalBlob.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        dataToSave.originalBlobData = Array.from(uint8Array); // ArrayBufferを配列に変換
+        dataToSave.originalBlobType = this.copiedStickerData.originalBlob.type;
       }
 
-      // IDだけはLocalStorageに保存（簡易チェック用）
-      localStorage.setItem('clipboardAppCopiedStickerId', this.copiedStickerId);
-
-      // BlobデータはIndexedDBに保存
+      // IndexedDBに保存
       const db = await this.openCopyDB();
       await new Promise((resolve, reject) => {
         const tx = db.transaction('copiedStickers', 'readwrite');
@@ -359,7 +384,7 @@ class AppState {
           const addReq = store.add({
             id: 'copiedSticker',
             stickerId: this.copiedStickerId,
-            data: this.copiedStickerData,
+            data: dataToSave,
             timestamp: Date.now(),
           });
           addReq.onerror = () => reject(addReq.error);
@@ -372,7 +397,9 @@ class AppState {
       });
       db.close();
     } catch (err) {
-      console.warn('コピーデータのIndexedDB保存に失敗:', err);
+      // IndexedDBへの保存が失敗しても、メモリ内のデータは有効なのでエラーを投げない
+      console.warn('コピーデータのIndexedDB保存に失敗（メモリ内のデータは有効）:', err);
+      throw err; // 呼び出し元で処理
     }
   }
   
@@ -399,8 +426,26 @@ class AppState {
       db.close();
 
       if (result && result.stickerId === stickerId && result.data) {
+        // Safari対策：配列をArrayBufferに変換してからBlobに戻す
+        const restoredData = { ...result.data };
+        if (restoredData.originalBlobData && restoredData.originalBlobType) {
+          // 配列の場合はArrayBufferに変換
+          let arrayBuffer;
+          if (Array.isArray(restoredData.originalBlobData)) {
+            arrayBuffer = new Uint8Array(restoredData.originalBlobData).buffer;
+          } else if (restoredData.originalBlobData instanceof ArrayBuffer) {
+            arrayBuffer = restoredData.originalBlobData;
+          } else {
+            // 既にBlobの場合（後方互換性）
+            arrayBuffer = restoredData.originalBlobData;
+          }
+          restoredData.originalBlob = new Blob([arrayBuffer], { type: restoredData.originalBlobType });
+          delete restoredData.originalBlobData;
+          delete restoredData.originalBlobType;
+        }
+        
         this.copiedStickerId = stickerId;
-        this.copiedStickerData = result.data;
+        this.copiedStickerData = restoredData;
         console.log('コピーデータを復元しました:', stickerId);
       }
     } catch (err) {
