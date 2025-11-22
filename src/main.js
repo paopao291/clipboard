@@ -215,6 +215,7 @@ async function loadStickersFromDB() {
     
     // パディング付き画像を生成（すべてのモードで5%パディング）
     paddedBlob = await addPaddingToImage(originalBlob, maxBorderWidth);
+    // 注意: この時点ではimg要素がまだ作成されていないため、後でaddStickerToDOMで関連付ける
     blobUrl = URL.createObjectURL(paddedBlob);
     
     if (borderMode === 0) {
@@ -363,7 +364,8 @@ async function loadStickersFromDB() {
       hasBgRemoved,
       bgRemovalProcessed, // この値が背景除去ボタンの表示/非表示を決定する
       stickerData.removedBgBlob,
-      stickerData.removedBgBlobWithBorder
+      stickerData.removedBgBlobWithBorder,
+      originalBlob // オリジナル画像Blob（優先使用）
     );
   }
   

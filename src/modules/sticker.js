@@ -21,6 +21,255 @@ import {
 } from "./physics.js";
 
 /**
+ * Blob URL管理クラス
+ * blob URLの作成、追跡、安全な解放を一元管理
+ */
+class BlobURLManager {
+  constructor() {
+    // 使用中のblob URLを追跡（img要素とURLのマッピング）
+    this.activeUrls = new Map(); // img要素 -> Set<blobUrl>
+    // 一時的なblob URL（すぐに解放される）
+    this.tempUrls = new Set();
+  }
+
+  /**
+   * BlobからURLを作成
+   * @param {Blob} blob - Blobオブジェクト
+   * @param {HTMLImageElement|null} imgElement - このURLを使用するimg要素（オプション）
+   * @returns {string} blob URL
+   */
+  createURL(blob, imgElement = null) {
+    if (!blob || !(blob instanceof Blob)) {
+      throw new Error('Invalid blob provided');
+    }
+    const url = URL.createObjectURL(blob);
+    
+    if (imgElement) {
+      // img要素に関連付けて追跡
+      if (!this.activeUrls.has(imgElement)) {
+        this.activeUrls.set(imgElement, new Set());
+      }
+      this.activeUrls.get(imgElement).add(url);
+    } else {
+      // 一時的なURLとしてマーク
+      this.tempUrls.add(url);
+    }
+    
+    return url;
+  }
+
+  /**
+   * 使用中のURLかどうかを確認
+   * @param {string} url - 確認するURL
+   * @param {HTMLImageElement|null} imgElement - 確認するimg要素（オプション）
+   * @returns {boolean} 使用中の場合true
+   */
+  isActive(url, imgElement = null) {
+    if (imgElement) {
+      const urls = this.activeUrls.get(imgElement);
+      return urls && urls.has(url);
+    }
+    
+    // すべてのimg要素で使用中か確認
+    for (const urls of this.activeUrls.values()) {
+      if (urls.has(url)) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  /**
+   * URLを安全に解放
+   * @param {string} url - 解放するURL
+   * @param {HTMLImageElement|null} imgElement - このURLを使用しているimg要素（オプション）
+   * @returns {boolean} 解放に成功した場合true
+   */
+  revokeURL(url, imgElement = null) {
+    if (!url || !url.startsWith('blob:')) {
+      return false;
+    }
+
+    // 使用中でないことを確認
+    if (this.isActive(url, imgElement)) {
+      console.warn('Attempted to revoke active blob URL:', url);
+      return false;
+    }
+
+    try {
+      URL.revokeObjectURL(url);
+      
+      // 追跡から削除
+      if (imgElement && this.activeUrls.has(imgElement)) {
+        this.activeUrls.get(imgElement).delete(url);
+        if (this.activeUrls.get(imgElement).size === 0) {
+          this.activeUrls.delete(imgElement);
+        }
+      }
+      this.tempUrls.delete(url);
+      
+      return true;
+    } catch (error) {
+      console.warn('Failed to revoke blob URL:', error);
+      return false;
+    }
+  }
+
+  /**
+   * img要素に関連付けられたすべてのURLを解放
+   * @param {HTMLImageElement} imgElement - img要素
+   * @param {string} keepUrl - 保持するURL（オプション）
+   */
+  revokeAllForImage(imgElement, keepUrl = null) {
+    if (!imgElement) return;
+    
+    const urls = this.activeUrls.get(imgElement);
+    if (!urls) return;
+    
+    const urlsToRevoke = Array.from(urls).filter(url => url !== keepUrl);
+    urlsToRevoke.forEach(url => this.revokeURL(url, imgElement));
+    
+    if (keepUrl) {
+      // keepUrlのみを残す
+      this.activeUrls.set(imgElement, new Set([keepUrl]));
+    } else {
+      this.activeUrls.delete(imgElement);
+    }
+  }
+
+  /**
+   * 画像の読み込みを待つ
+   * @param {HTMLImageElement} img - 画像要素
+   * @param {string} url - 読み込むURL
+   * @param {number} timeout - タイムアウト（ミリ秒、デフォルト5000）
+   * @returns {Promise<void>}
+   */
+  async waitForImageLoad(img, url, timeout = 5000) {
+    return new Promise((resolve, reject) => {
+      if (!img) {
+        resolve();
+        return;
+      }
+
+      let isResolved = false;
+      
+      const cleanup = () => {
+        if (isResolved) return;
+        isResolved = true;
+        img.removeEventListener('load', onLoad);
+        img.removeEventListener('error', onError);
+      };
+
+      const onLoad = () => {
+        cleanup();
+        // 画像が確実に読み込まれたことを確認
+        if (img.naturalWidth > 0) {
+          resolve();
+        } else {
+          // naturalWidthが0の場合はエラー
+          reject(new Error('Image loaded but naturalWidth is 0'));
+        }
+      };
+
+      const onError = () => {
+        cleanup();
+        reject(new Error('Image load failed'));
+      };
+
+      img.addEventListener('load', onLoad);
+      img.addEventListener('error', onError);
+
+      // 既に読み込まれている場合
+      if (img.complete && img.naturalWidth > 0) {
+        setTimeout(onLoad, 10);
+      } else {
+        // タイムアウトを設定
+        setTimeout(() => {
+          if (!isResolved) {
+            cleanup();
+            reject(new Error('Image load timeout'));
+          }
+        }, timeout);
+      }
+
+      // URLを設定（既に設定されている場合はスキップ）
+      if (img.src !== url) {
+        img.src = url;
+      } else if (img.complete && img.naturalWidth > 0) {
+        // 同じURLで既に読み込まれている場合
+        setTimeout(onLoad, 10);
+      }
+    });
+  }
+
+  /**
+   * 画像URLを安全に更新（古いURLを解放してから新しいURLを設定）
+   * @param {HTMLImageElement} img - 画像要素
+   * @param {string} newUrl - 新しいURL
+   * @param {number} waitDelay - 古いURLを解放するまでの待機時間（ミリ秒、デフォルト100）
+   * @returns {Promise<void>}
+   */
+  async updateImageUrl(img, newUrl, waitDelay = 100) {
+    if (!img) return;
+    
+    const oldUrl = img.src;
+    
+    // 新しいURLが設定されるまで待つ
+    await this.waitForImageLoad(img, newUrl);
+    
+    // 少し待ってから古いURLを解放（確実に新しいURLが使用されていることを確認）
+    setTimeout(() => {
+      const currentSrc = img.src;
+      // 現在使用中のURLでない場合のみ解放
+      if (oldUrl && oldUrl !== newUrl && oldUrl !== currentSrc && oldUrl.startsWith('blob:')) {
+        this.revokeURL(oldUrl, img);
+      }
+    }, waitDelay);
+  }
+
+  /**
+   * すべての一時的なURLを解放
+   */
+  revokeAllTemp() {
+    this.tempUrls.forEach(url => {
+      try {
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.warn('Failed to revoke temp URL:', error);
+      }
+    });
+    this.tempUrls.clear();
+  }
+
+  /**
+   * ステッカーオブジェクトの古いURLを安全に解放
+   * @param {Object} sticker - ステッカーオブジェクト
+   * @param {string} keepUrl - 保持するURL（オプション）
+   */
+  revokeStickerUrls(sticker, keepUrl = null) {
+    if (!sticker || !sticker.img) return;
+    
+    const currentSrc = sticker.img.src;
+    const urlsToCheck = [
+      sticker.originalBlobUrl,
+      sticker.blobUrl,
+      sticker.blobWithBorderUrl,
+      sticker.paddedBlobUrl,
+      sticker.removedBgBlobUrl,
+      sticker.removedBgBlobWithBorderUrl,
+    ].filter(url => url && url !== keepUrl && url !== currentSrc);
+
+    urlsToCheck.forEach(url => {
+      this.revokeURL(url, sticker.img);
+    });
+  }
+}
+
+// グローバルなBlobURLManagerインスタンス
+const blobURLManager = new BlobURLManager();
+
+/**
  * 縁取りの設定
  */
 const OUTLINE_CONFIG = {
@@ -287,23 +536,23 @@ function canvasToBlob(canvas, fallbackBlob, errorMessage) {
 function loadImageAndProcess(blob, processImage, fallbackResult) {
   return new Promise((resolve) => {
     const img = new Image();
-    const blobUrl = URL.createObjectURL(blob);
+    const blobUrl = blobURLManager.createURL(blob); // 一時的なURLとして作成
 
     img.onload = () => {
       try {
         const result = processImage(img);
-        URL.revokeObjectURL(blobUrl);
+        blobURLManager.revokeURL(blobUrl);
         resolve(result);
       } catch (error) {
         console.warn("画像処理エラー:", error);
-        URL.revokeObjectURL(blobUrl);
+        blobURLManager.revokeURL(blobUrl);
         resolve(fallbackResult);
       }
     };
 
     img.onerror = () => {
       console.warn("画像読み込み失敗");
-      URL.revokeObjectURL(blobUrl);
+      blobURLManager.revokeURL(blobUrl);
       resolve(fallbackResult);
     };
 
@@ -427,7 +676,7 @@ export async function applyOutlineFilter(blob, borderMode = 2) {
 async function resizeImageBlob(blob, maxSize = 1200) {
   return new Promise((resolve) => {
     const img = new Image();
-    const blobUrl = URL.createObjectURL(blob);
+    const blobUrl = blobURLManager.createURL(blob); // 一時的なURL
     img.onload = () => {
       // 縦横比を維持してリサイズ
       let width = img.width;
@@ -435,7 +684,7 @@ async function resizeImageBlob(blob, maxSize = 1200) {
       
       // 既に小さい画像はそのまま返す
       if (width <= maxSize && height <= maxSize) {
-        URL.revokeObjectURL(blobUrl);
+        blobURLManager.revokeURL(blobUrl);
         resolve(blob);
         return;
       }
@@ -469,7 +718,7 @@ async function resizeImageBlob(blob, maxSize = 1200) {
       // Blobに変換（元のフォーマットを維持）
       canvas.toBlob(
         (resizedBlob) => {
-        URL.revokeObjectURL(blobUrl);
+        blobURLManager.revokeURL(blobUrl);
         if (resizedBlob) {
             console.log(
               `画像リサイズ: ${img.width}x${img.height} → ${width}x${height} (${mimeType})`,
@@ -486,7 +735,7 @@ async function resizeImageBlob(blob, maxSize = 1200) {
     };
     
     img.onerror = () => {
-      URL.revokeObjectURL(blobUrl);
+      blobURLManager.revokeURL(blobUrl);
       console.warn("画像読み込み失敗、元の画像を使用");
       resolve(blob);
     };
@@ -606,13 +855,13 @@ export async function addStickerFromBlob(
   // 画像サイズを取得して縁取り幅を計算
   const imageDimensions = await new Promise((resolve) => {
     const img = new Image();
-    const tempBlobUrl = URL.createObjectURL(resizedBlob);
+    const tempBlobUrl = blobURLManager.createURL(resizedBlob); // 一時的なURL
     img.onload = () => {
-      URL.revokeObjectURL(tempBlobUrl);
+      blobURLManager.revokeURL(tempBlobUrl);
       resolve({ width: img.width, height: img.height });
     };
     img.onerror = () => {
-      URL.revokeObjectURL(tempBlobUrl);
+      blobURLManager.revokeURL(tempBlobUrl);
       resolve({ width: 800, height: 800 }); // エラー時のフォールバック値
     };
     img.src = tempBlobUrl;
@@ -630,7 +879,8 @@ export async function addStickerFromBlob(
   
   // リサイズ済み画像をベース画像として保存（パディングや縁取りを適用する前の状態）
   // これが全ての処理の基準となる「元画像」
-  const originalBlobUrl = URL.createObjectURL(resizedBlob);
+  // 注意: この時点ではimg要素がまだ作成されていないため、後で関連付ける
+  const originalBlobUrl = blobURLManager.createURL(resizedBlob);
   
   // borderModeが未定義の場合はデフォルト値を使用
   if (borderMode === undefined) {
@@ -645,11 +895,12 @@ export async function addStickerFromBlob(
   blobUrl = originalBlobUrl;
   
   // アップロード時の処理をシンプルに
+  // 注意: この時点ではimg要素がまだ作成されていないため、後でaddStickerToDOMで関連付ける
   if (borderMode === 0) {
     // モード0（縁取りなし）: 5%パディングを追加
     console.log(`アップロード: モード0 - 5%パディングを追加`);
     const paddedBlob = await addPaddingToImage(resizedBlob, maxBorderWidth);
-    url = URL.createObjectURL(paddedBlob);
+    url = blobURLManager.createURL(paddedBlob);
     blobWithBorderUrl = null;
     paddedBlobUrl = url;
   } 
@@ -658,11 +909,11 @@ export async function addStickerFromBlob(
     console.log(`アップロード: モード1 - 2.5%縁取り + 残りパディング`);
     const { blob: borderBlob } = await applyOutlineFilter(resizedBlob, 1);
     const paddedBorderBlob = await addPaddingToImage(borderBlob, maxBorderWidth - borderWidth);
-    blobWithBorderUrl = URL.createObjectURL(paddedBorderBlob);
+    blobWithBorderUrl = blobURLManager.createURL(paddedBorderBlob);
     
     // パディング付き画像も生成（縁取りなし表示用）
     const paddedBlob = await addPaddingToImage(resizedBlob, maxBorderWidth);
-    paddedBlobUrl = URL.createObjectURL(paddedBlob);
+    paddedBlobUrl = blobURLManager.createURL(paddedBlob);
     
     url = hasBorder ? blobWithBorderUrl : paddedBlobUrl;
   }
@@ -670,11 +921,11 @@ export async function addStickerFromBlob(
     // モード2（5%縁取り）: 標準（パディングなし）
     console.log(`アップロード: モード2 - 5%縁取り（パディングなし）`);
     const { blob: borderBlob } = await applyOutlineFilter(resizedBlob, 2);
-    blobWithBorderUrl = URL.createObjectURL(borderBlob);
+    blobWithBorderUrl = blobURLManager.createURL(borderBlob);
     
     // パディング付き画像も生成（縁取りなし表示用）
     const paddedBlob = await addPaddingToImage(resizedBlob, maxBorderWidth);
-    paddedBlobUrl = URL.createObjectURL(paddedBlob);
+    paddedBlobUrl = blobURLManager.createURL(paddedBlob);
     
     url = hasBorder ? blobWithBorderUrl : paddedBlobUrl;
   }
@@ -695,6 +946,13 @@ export async function addStickerFromBlob(
     borderWidth, // borderWidthを渡す
     borderMode, // borderModeを渡す
     originalBlobUrl, // オリジナル画像URL
+    null, // removedBgBlobUrl
+    null, // removedBgBlobWithBorderUrl
+    false, // hasBgRemoved
+    false, // bgRemovalProcessed
+    null, // removedBgBlob
+    null, // removedBgBlobWithBorder
+    resizedBlob, // originalBlob（Blobオブジェクト）
   );
 
   // バックグラウンド処理は不要（既に生成済み）
@@ -808,6 +1066,7 @@ export function addStickerToDOM(
   bgRemovalProcessed = false,
   removedBgBlob = null,
   removedBgBlobWithBorder = null,
+  originalBlob = null, // リサイズ済み・パディング/縁取り前の元画像Blob（優先使用）
 ) {
   const stickerId = id || Date.now();
 
@@ -824,6 +1083,26 @@ export function addStickerToDOM(
   // 画像要素を作成
   const img = document.createElement("img");
   img.src = url;
+  
+  // すべてのblob URLをimg要素に関連付けて追跡
+  // 注意: paddedBlobUrlは後でstickerオブジェクトに追加される可能性があるため、ここでは追跡しない
+  const urlsToTrack = [
+    url,
+    blobUrl,
+    blobWithBorderUrl,
+    originalBlobUrl,
+    removedBgBlobUrl,
+    removedBgBlobWithBorderUrl,
+  ].filter(url => url && url.startsWith('blob:'));
+  
+  if (urlsToTrack.length > 0) {
+    if (!blobURLManager.activeUrls.has(img)) {
+      blobURLManager.activeUrls.set(img, new Set());
+    }
+    urlsToTrack.forEach(url => {
+      blobURLManager.activeUrls.get(img).add(url);
+    });
+  }
 
   // 画像ラッパー（回転とスケール用）
   const imgWrapper = document.createElement("div");
@@ -863,6 +1142,7 @@ export function addStickerToDOM(
     url: url,
     blobUrl: blobUrl,
     originalBlobUrl: originalBlobUrl, // 常に元の画像（処理前のオリジナル）のURLを保持
+    originalBlob: originalBlob, // リサイズ済み・パディング/縁取り前の元画像Blob（優先使用）
     blobWithBorderUrl: blobWithBorderUrl,
     x: x,
     yPercent: yPercent,
@@ -935,6 +1215,11 @@ export async function removeSticker(id) {
     // 物理モードが有効な場合は物理ボディも削除
     if (isPhysicsActive()) {
       removePhysicsBody(id);
+    }
+
+    // すべてのblob URLを解放
+    if (sticker.img) {
+      blobURLManager.revokeAllForImage(sticker.img);
     }
 
     // 削除時にUIを表示
@@ -1317,11 +1602,36 @@ export async function toggleStickerBorder(sticker) {
 
   // 画像URLを切り替え
   if (sticker.img && sticker.blobUrl) {
-    // 元のオリジナル画像を取得
-    const originalBlobUrl = sticker.originalBlobUrl || sticker.blobUrl;
-    console.log("縁取りモード変更: オリジナルBlobURL:", originalBlobUrl);
+    // 元のオリジナル画像を取得（優先順位：originalBlob > originalBlobUrl > blobUrl）
+    let originalBlob = null;
     
-    const originalBlob = await getBlobFromURL(originalBlobUrl);
+    // まず、Blobオブジェクトが直接利用可能か確認
+    if (sticker.originalBlob) {
+      originalBlob = sticker.originalBlob;
+      console.log("縁取りモード変更: originalBlobを直接使用");
+    } else {
+      // Blobオブジェクトがない場合は、URLから取得を試みる
+      const originalBlobUrl = sticker.originalBlobUrl || sticker.blobUrl;
+      console.log("縁取りモード変更: オリジナルBlobURLから取得:", originalBlobUrl);
+      
+      try {
+        originalBlob = await getBlobFromURL(originalBlobUrl);
+        if (!originalBlob) {
+          // URLからの取得に失敗した場合、blobプロパティを試す
+          if (sticker.blob) {
+            originalBlob = sticker.blob;
+            console.log("縁取りモード変更: URL取得失敗、sticker.blobを使用");
+          }
+        }
+      } catch (err) {
+        console.warn("縁取りモード変更: URLからの取得に失敗、sticker.blobを使用:", err);
+        // エラー時はsticker.blobを使用
+        if (sticker.blob) {
+          originalBlob = sticker.blob;
+        }
+      }
+    }
+    
     if (originalBlob) {
       // 元画像の実際のサイズを取得
       const imageDimensions = await getImageDimensions(originalBlob);
@@ -1343,7 +1653,7 @@ export async function toggleStickerBorder(sticker) {
       // 処理結果を保存
       if (nextBorderMode === 0) {
         // モード0（縁取りなし）: パディング付き画像のURLをセット
-        const newURL = URL.createObjectURL(result.resultBlob);
+        const newURL = blobURLManager.createURL(result.resultBlob, sticker.img);
         const oldCurrentUrl = sticker.img?.src; // 現在のURLを保存
         
         // blobUrlも更新（updateStickerImageUrlが参照するため）
@@ -1363,9 +1673,9 @@ export async function toggleStickerBorder(sticker) {
             img.removeEventListener('load', onLoad);
             img.removeEventListener('error', onError);
             // 古いURLを解放（現在使用中のURLは除外）
-            if (oldBlobUrl && oldBlobUrl !== newURL && oldBlobUrl !== oldCurrentUrl) URL.revokeObjectURL(oldBlobUrl);
-            if (oldBlobWithBorderUrl && oldBlobWithBorderUrl !== newURL && oldBlobWithBorderUrl !== oldCurrentUrl) URL.revokeObjectURL(oldBlobWithBorderUrl);
-            if (oldPaddedBlobUrl && oldPaddedBlobUrl !== newURL && oldPaddedBlobUrl !== oldCurrentUrl) URL.revokeObjectURL(oldPaddedBlobUrl);
+            if (oldBlobUrl && oldBlobUrl !== newURL && oldBlobUrl !== oldCurrentUrl) blobURLManager.revokeURL(oldBlobUrl, img);
+            if (oldBlobWithBorderUrl && oldBlobWithBorderUrl !== newURL && oldBlobWithBorderUrl !== oldCurrentUrl) blobURLManager.revokeURL(oldBlobWithBorderUrl, img);
+            if (oldPaddedBlobUrl && oldPaddedBlobUrl !== newURL && oldPaddedBlobUrl !== oldCurrentUrl) blobURLManager.revokeURL(oldPaddedBlobUrl, img);
             resolve();
           };
           const onError = () => {
@@ -1380,8 +1690,8 @@ export async function toggleStickerBorder(sticker) {
         });
       } else {
         // モード1,2（縁取りあり）: 縁取り+パディング付き画像のURLをセット
-        const newURL = URL.createObjectURL(result.resultBlob);
-        const paddedBlobUrl = URL.createObjectURL(result.paddedBlob);
+        const newURL = blobURLManager.createURL(result.resultBlob, sticker.img);
+        const paddedBlobUrl = blobURLManager.createURL(result.paddedBlob, sticker.img);
         
         sticker.borderWidth = result.borderWidth;
         sticker.blobWithBorderUrl = newURL;
@@ -1406,30 +1716,63 @@ export async function toggleStickerBorder(sticker) {
           const img = sticker.img;
           if (!img) {
             // imgがない場合は古いURLを解放して終了
-            if (oldBlobUrl && oldBlobUrl !== newCurrentUrl) URL.revokeObjectURL(oldBlobUrl);
-            if (oldBlobWithBorderUrl && oldBlobWithBorderUrl !== newCurrentUrl) URL.revokeObjectURL(oldBlobWithBorderUrl);
-            if (oldPaddedBlobUrl && oldPaddedBlobUrl !== newCurrentUrl) URL.revokeObjectURL(oldPaddedBlobUrl);
+            if (oldBlobUrl && oldBlobUrl !== newCurrentUrl) blobURLManager.revokeURL(oldBlobUrl);
+            if (oldBlobWithBorderUrl && oldBlobWithBorderUrl !== newCurrentUrl) blobURLManager.revokeURL(oldBlobWithBorderUrl);
+            if (oldPaddedBlobUrl && oldPaddedBlobUrl !== newCurrentUrl) blobURLManager.revokeURL(oldPaddedBlobUrl);
             resolve();
             return;
           }
+          
+          let isResolved = false;
+          
           const onLoad = () => {
+            if (isResolved) return;
+            isResolved = true;
             img.removeEventListener('load', onLoad);
             img.removeEventListener('error', onError);
-            // 古いURLを解放（現在使用中のURLは除外）
-            if (oldBlobUrl && oldBlobUrl !== newCurrentUrl) URL.revokeObjectURL(oldBlobUrl);
-            if (oldBlobWithBorderUrl && oldBlobWithBorderUrl !== newCurrentUrl) URL.revokeObjectURL(oldBlobWithBorderUrl);
-            if (oldPaddedBlobUrl && oldPaddedBlobUrl !== newCurrentUrl) URL.revokeObjectURL(oldPaddedBlobUrl);
+            
+            // 画像が確実に読み込まれたことを確認
+            if (img.naturalWidth > 0) {
+              // 少し待ってから古いURLを解放（確実に新しいURLが使用されていることを確認）
+              setTimeout(() => {
+                const currentSrc = img.src;
+                // 現在使用中のURLは除外
+                if (oldBlobUrl && oldBlobUrl !== newCurrentUrl && oldBlobUrl !== currentSrc) {
+                  blobURLManager.revokeURL(oldBlobUrl, img);
+                }
+                if (oldBlobWithBorderUrl && oldBlobWithBorderUrl !== newCurrentUrl && oldBlobWithBorderUrl !== currentSrc) {
+                  blobURLManager.revokeURL(oldBlobWithBorderUrl, img);
+                }
+                if (oldPaddedBlobUrl && oldPaddedBlobUrl !== newCurrentUrl && oldPaddedBlobUrl !== currentSrc) {
+                  blobURLManager.revokeURL(oldPaddedBlobUrl, img);
+                }
+              }, 100);
+            }
             resolve();
           };
+          
           const onError = () => {
+            if (isResolved) return;
+            isResolved = true;
             img.removeEventListener('load', onLoad);
             img.removeEventListener('error', onError);
             resolve();
           };
+          
           img.addEventListener('load', onLoad);
           img.addEventListener('error', onError);
-          if (img.complete) onLoad();
-          else setTimeout(resolve, 100); // タイムアウト
+          
+          // 既に読み込まれている場合でも、naturalWidthを確認
+          if (img.complete && img.naturalWidth > 0) {
+            setTimeout(onLoad, 10);
+          } else {
+            // タイムアウトを設定（5秒）
+            setTimeout(() => {
+              if (!isResolved) {
+                onLoad(); // タイムアウトでも続行
+              }
+            }, 5000);
+          }
         });
       }
     }
@@ -1475,7 +1818,7 @@ async function removeBgFromBlob(blob) {
     }
     
     // Blobをbase64に変換
-    const imageUrl = URL.createObjectURL(blob);
+    const imageUrl = blobURLManager.createURL(blob); // 一時的なURL
     const img = new Image();
     await new Promise((resolve, reject) => {
       img.onload = resolve;
@@ -1487,7 +1830,7 @@ async function removeBgFromBlob(blob) {
     const resultBlob = await window.removeBackground(imageUrl);
     
     // クリーンアップ
-    URL.revokeObjectURL(imageUrl);
+    blobURLManager.revokeURL(imageUrl);
     
     // アルファチャンネルに閾値処理を適用（エッジをはっきりさせる）
     const solidifiedBlob = await solidifyAlphaChannel(resultBlob);
@@ -1525,7 +1868,7 @@ async function removeBgFromBlob(blob) {
 async function solidifyAlphaChannel(blob, threshold = 128) {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    const blobUrl = URL.createObjectURL(blob);
+    const blobUrl = blobURLManager.createURL(blob); // 一時的なURL
     img.onload = () => {
       const canvas = document.createElement('canvas');
       canvas.width = img.width;
@@ -1551,7 +1894,7 @@ async function solidifyAlphaChannel(blob, threshold = 128) {
       
       // Blobに変換
       canvas.toBlob((resultBlob) => {
-        URL.revokeObjectURL(blobUrl);
+        blobURLManager.revokeURL(blobUrl);
         if (resultBlob) {
           resolve(resultBlob);
         } else {
@@ -1560,7 +1903,7 @@ async function solidifyAlphaChannel(blob, threshold = 128) {
       }, 'image/png');
     };
     img.onerror = () => {
-      URL.revokeObjectURL(blobUrl);
+      blobURLManager.revokeURL(blobUrl);
       reject(new Error('画像読み込み失敗'));
     };
     img.src = blobUrl;
@@ -1576,7 +1919,7 @@ async function solidifyAlphaChannel(blob, threshold = 128) {
 async function trimTransparentEdges(blob) {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    const blobUrl = URL.createObjectURL(blob);
+    const blobUrl = blobURLManager.createURL(blob); // 一時的なURL
     img.onload = () => {
       const canvas = document.createElement('canvas');
       canvas.width = img.width;
@@ -1622,7 +1965,7 @@ async function trimTransparentEdges(blob) {
       
       // 不透明ピクセルが極端に少ない場合（例: 1%未満）は無効とする
       if (opaqueRatio < 0.01) {
-        URL.revokeObjectURL(blobUrl);
+        blobURLManager.revokeURL(blobUrl);
         console.warn('背景除去後、対象物がほとんど見つかりませんでした。元の画像を使用します。');
         resolve({ blob: blob, isValid: false });
         return;
@@ -1637,7 +1980,7 @@ async function trimTransparentEdges(blob) {
       
       // トリミング範囲が有効か確認（内容がない場合）
       if (minX >= maxX || minY >= maxY) {
-        URL.revokeObjectURL(blobUrl);
+        blobURLManager.revokeURL(blobUrl);
         console.warn('トリミング範囲が無効です。元の画像を返します。');
         resolve({ blob: blob, isValid: false });
         return;
@@ -1661,7 +2004,7 @@ async function trimTransparentEdges(blob) {
       
       // Blobに変換
       trimmedCanvas.toBlob((resultBlob) => {
-        URL.revokeObjectURL(blobUrl);
+        blobURLManager.revokeURL(blobUrl);
         if (resultBlob) {
           resolve({ blob: resultBlob, isValid: true });
         } else {
@@ -1670,7 +2013,7 @@ async function trimTransparentEdges(blob) {
       }, 'image/png');
     };
     img.onerror = () => {
-      URL.revokeObjectURL(blobUrl);
+      blobURLManager.revokeURL(blobUrl);
       reject(new Error('画像読み込み失敗'));
     };
     img.src = blobUrl;
@@ -1694,11 +2037,11 @@ async function checkTransparencyRatio(blob, threshold = 0.9) {
 
   return new Promise((resolve) => {
     const img = new Image();
-    const blobUrl = URL.createObjectURL(blob);
+    const blobUrl = blobURLManager.createURL(blob); // 一時的なURL
 
     img.onload = () => {
       // 使用後にURLを解放
-      URL.revokeObjectURL(blobUrl);
+      blobURLManager.revokeURL(blobUrl);
 
       const canvas = document.createElement('canvas');
       canvas.width = img.width;
@@ -1735,7 +2078,7 @@ async function checkTransparencyRatio(blob, threshold = 0.9) {
     
     img.onerror = () => {
       // エラー時にもURLを解放
-      URL.revokeObjectURL(blobUrl);
+      blobURLManager.revokeURL(blobUrl);
       console.warn('画像読み込みエラー');
       resolve(false);
     };
@@ -1803,29 +2146,9 @@ async function fetchBlobFromUrl(url) {
  * 古いURL参照を解放する（現在使用中のURLは除外）
  * @param {Object} sticker - ステッカーオブジェクト
  */
-function releaseOldUrls(sticker) {
-  // 現在img.srcで使用中のURLを取得
-  const currentImgSrc = sticker.img?.src || '';
-  
-  // 現在使用中でないURLのみを解放
-  if (sticker.originalBlobUrl && sticker.originalBlobUrl !== currentImgSrc) {
-    URL.revokeObjectURL(sticker.originalBlobUrl);
-  }
-  if (sticker.blobUrl && sticker.blobUrl !== currentImgSrc) {
-    URL.revokeObjectURL(sticker.blobUrl);
-  }
-  if (sticker.blobWithBorderUrl && sticker.blobWithBorderUrl !== currentImgSrc) {
-    URL.revokeObjectURL(sticker.blobWithBorderUrl);
-  }
-  if (sticker.paddedBlobUrl && sticker.paddedBlobUrl !== currentImgSrc) {
-    URL.revokeObjectURL(sticker.paddedBlobUrl);
-  }
-  if (sticker.removedBgBlobUrl && sticker.removedBgBlobUrl !== currentImgSrc) {
-    URL.revokeObjectURL(sticker.removedBgBlobUrl);
-  }
-  if (sticker.removedBgBlobWithBorderUrl && sticker.removedBgBlobWithBorderUrl !== currentImgSrc) {
-    URL.revokeObjectURL(sticker.removedBgBlobWithBorderUrl);
-  }
+function releaseOldUrls(sticker, keepUrl = null) {
+  // BlobURLManagerを使用して安全に解放
+  blobURLManager.revokeStickerUrls(sticker, keepUrl);
 }
 
 /**
@@ -1838,8 +2161,11 @@ function updateStickerBaseImage(sticker, newBlob) {
   sticker.originalBlob = newBlob;  // 元画像を背景除去版に置き換え
   sticker.blob = newBlob;          // 表示用画像も背景除去版に
   
-  // 新しいURLを設定
-  const newBlobUrl = URL.createObjectURL(newBlob);
+  // 古いURLを解放
+  releaseOldUrls(sticker);
+  
+  // 新しいURLを設定（img要素に関連付けて追跡）
+  const newBlobUrl = blobURLManager.createURL(newBlob, sticker.img);
   sticker.originalBlobUrl = newBlobUrl;
   sticker.blobUrl = newBlobUrl;
 }
@@ -1873,13 +2199,13 @@ async function applyBorderAndPadding(sticker) {
   if (borderMode === 0 || !hasBorder) {
     // 縁取りなしの場合はパディング付き画像を使用
     sticker.blob = result.resultBlob;
-    sticker.blobUrl = URL.createObjectURL(result.resultBlob);
+    sticker.blobUrl = blobURLManager.createURL(result.resultBlob, sticker.img);
     sticker.blobWithBorder = null;
     sticker.blobWithBorderUrl = null;
   } else {
     // 縁取りありの場合は縁取り画像を設定
     sticker.blobWithBorder = result.borderBlob || result.resultBlob;
-    sticker.blobWithBorderUrl = URL.createObjectURL(sticker.blobWithBorder);
+    sticker.blobWithBorderUrl = blobURLManager.createURL(sticker.blobWithBorder, sticker.img);
     sticker.borderWidth = result.borderWidth;
   }
   
@@ -1887,29 +2213,19 @@ async function applyBorderAndPadding(sticker) {
   if (sticker.img) {
     const newUrl = hasBorder ? sticker.blobWithBorderUrl : sticker.blobUrl;
     if (newUrl) {
-      await new Promise((resolve) => {
-        const img = sticker.img;
-        const onLoad = () => {
-          img.removeEventListener('load', onLoad);
-          img.removeEventListener('error', onError);
-          // 画像が読み込まれた後に古いURLを解放
-          if (oldBlobUrl && oldBlobUrl !== newUrl) URL.revokeObjectURL(oldBlobUrl);
-          if (oldBlobWithBorderUrl && oldBlobWithBorderUrl !== newUrl) URL.revokeObjectURL(oldBlobWithBorderUrl);
-          resolve();
-        };
-        const onError = () => {
-          img.removeEventListener('load', onLoad);
-          img.removeEventListener('error', onError);
-          resolve(); // エラーでも続行
-        };
-        img.addEventListener('load', onLoad);
-        img.addEventListener('error', onError);
-        img.src = newUrl;
-        // 既に読み込まれている場合（キャッシュなど）
-        if (img.complete) {
-          onLoad();
+      // BlobURLManagerを使用して安全に画像URLを更新
+      await blobURLManager.updateImageUrl(sticker.img, newUrl);
+      
+      // 古いURLを解放（現在使用中のURLは除外）
+      setTimeout(() => {
+        const currentSrc = sticker.img.src;
+        if (oldBlobUrl && oldBlobUrl !== newUrl && oldBlobUrl !== currentSrc) {
+          blobURLManager.revokeURL(oldBlobUrl, sticker.img);
         }
-      });
+        if (oldBlobWithBorderUrl && oldBlobWithBorderUrl !== newUrl && oldBlobWithBorderUrl !== currentSrc) {
+          blobURLManager.revokeURL(oldBlobWithBorderUrl, sticker.img);
+        }
+      }, 100);
     }
   }
 }
