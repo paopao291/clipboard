@@ -427,7 +427,7 @@ async function togglePhysicsMode() {
     elements.pasteArea.disabled = false;
   } else {
     // 物理モード ON
-    enablePhysics();
+    await enablePhysics();
     state.enablePhysicsMode();
     elements.physicsBtn.classList.add("active");
     elements.canvas.classList.add("physics-mode");

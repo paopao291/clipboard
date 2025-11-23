@@ -718,11 +718,12 @@ export async function applyOutlineFilter(blob, borderMode = 2) {
 
 /**
  * Blobを適切なサイズにリサイズ（Safari最適化）
+ * 印刷対応：A4を4等分したサイズ（A6相当）で約240DPIを確保
  * @param {Blob} blob - 元の画像blob
  * @param {number} maxSize - 長辺の最大サイズ（px）
  * @returns {Promise<Blob>} リサイズ済みのblob
  */
-async function resizeImageBlob(blob, maxSize = 1200) {
+export async function resizeImageBlob(blob, maxSize = 1000) {
   return new Promise((resolve) => {
     const img = new Image();
     const blobUrl = blobURLManager.createURL(blob); // 一時的なURL
@@ -800,7 +801,7 @@ async function resizeImageBlob(blob, maxSize = 1200) {
  * @param {number} borderMode - 縁取りモード（0:なし, 1:4px, 2:8px）
  * @returns {Promise<{blob: Blob, blobWithBorder: Blob}>} 縁取りなし版と縁取りあり版
  */
-async function resizeImageBlobWithBorder(blob, maxSize = 1200, borderMode = 2) {
+async function resizeImageBlobWithBorder(blob, maxSize = 1000, borderMode = 2) {
   // まずリサイズ
   const resizedBlob = await resizeImageBlob(blob, maxSize);
 
@@ -897,7 +898,7 @@ export async function addStickerFromBlob(
   borderMode = STICKER_DEFAULTS.BORDER_MODE,
 ) {
   // まずリサイズだけ実行（高速）
-  const resizedBlob = await resizeImageBlob(blob, 1200);
+  const resizedBlob = await resizeImageBlob(blob, 1000);
 
   const stickerId = id || Date.now();
 
