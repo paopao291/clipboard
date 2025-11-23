@@ -97,7 +97,7 @@ class BlobURLManager {
 
     // 使用中でないことを確認
     if (this.isActive(url, imgElement)) {
-      console.warn("Attempted to revoke active blob URL:", url);
+      // 使用中のURLを保護（これは正常な動作）
       return false;
     }
 

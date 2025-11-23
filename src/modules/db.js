@@ -100,55 +100,68 @@ export async function saveStickerToDB(stickerData) {
  */
 export async function updateStickerInDB(id, updates) {
   try {
-    const transaction = db.transaction([DB_CONFIG.STORE_NAME], "readwrite");
-    const objectStore = transaction.objectStore(DB_CONFIG.STORE_NAME);
-    const data = await promisifyRequest(objectStore.get(id));
+    // Safari対策：BlobをArrayBufferに変換（トランザクション開始前に実行）
+    const updatesToApply = { ...updates };
 
-    if (data) {
-      // Safari対策：既存のdataからBlobプロパティを削除（念のため）
-      if (data.blob instanceof Blob) {
-        delete data.blob;
-      }
-      if (data.blobWithBorder instanceof Blob) {
-        delete data.blobWithBorder;
-      }
-
-      if (data.originalBlob instanceof Blob) {
-        delete data.originalBlob;
-      }
-
-      // Safari対策：BlobをArrayBufferに変換
-      const updatesToApply = { ...updates };
-
-      // blobを処理
-      if (updates.blob instanceof Blob) {
-        const arrayBuffer = await updates.blob.arrayBuffer();
-        updatesToApply.blobData = arrayBuffer;
-        updatesToApply.blobType = updates.blob.type;
-        delete updatesToApply.blob;
-      }
-
-      // blobWithBorderを処理
-      if (updates.blobWithBorder instanceof Blob) {
-        const arrayBuffer = await updates.blobWithBorder.arrayBuffer();
-        updatesToApply.blobWithBorderData = arrayBuffer;
-        updatesToApply.blobWithBorderType = updates.blobWithBorder.type;
-        delete updatesToApply.blobWithBorder;
-      }
-
-      // originalBlobを処理
-      if (updates.originalBlob instanceof Blob) {
-        const arrayBuffer = await updates.originalBlob.arrayBuffer();
-        updatesToApply.originalBlobData = arrayBuffer;
-        updatesToApply.originalBlobType = updates.originalBlob.type;
-        delete updatesToApply.originalBlob;
-      }
-
-      Object.assign(data, updatesToApply);
-      await promisifyRequest(objectStore.put(data));
+    // blobを処理
+    if (updates.blob instanceof Blob) {
+      const arrayBuffer = await updates.blob.arrayBuffer();
+      updatesToApply.blobData = arrayBuffer;
+      updatesToApply.blobType = updates.blob.type;
+      delete updatesToApply.blob;
     }
+
+    // blobWithBorderを処理
+    if (updates.blobWithBorder instanceof Blob) {
+      const arrayBuffer = await updates.blobWithBorder.arrayBuffer();
+      updatesToApply.blobWithBorderData = arrayBuffer;
+      updatesToApply.blobWithBorderType = updates.blobWithBorder.type;
+      delete updatesToApply.blobWithBorder;
+    }
+
+    // originalBlobを処理
+    if (updates.originalBlob instanceof Blob) {
+      const arrayBuffer = await updates.originalBlob.arrayBuffer();
+      updatesToApply.originalBlobData = arrayBuffer;
+      updatesToApply.originalBlobType = updates.originalBlob.type;
+      delete updatesToApply.originalBlob;
+    }
+
+    // ステップ1: 既存データを取得（読み取り専用トランザクション）
+    const readTransaction = db.transaction([DB_CONFIG.STORE_NAME], "readonly");
+    const readStore = readTransaction.objectStore(DB_CONFIG.STORE_NAME);
+    const data = await promisifyRequest(readStore.get(id));
+
+    if (!data) {
+      console.warn(`DB更新: ID ${id} のデータが見つかりません`);
+      return;
+    }
+
+    // Safari対策：既存のdataからBlobプロパティを削除（念のため）
+    if (data.blob instanceof Blob) {
+      delete data.blob;
+    }
+    if (data.blobWithBorder instanceof Blob) {
+      delete data.blobWithBorder;
+    }
+    if (data.originalBlob instanceof Blob) {
+      delete data.originalBlob;
+    }
+
+    // データをマージ
+    Object.assign(data, updatesToApply);
+
+    // ステップ2: 更新されたデータを保存（書き込みトランザクション）
+    const writeTransaction = db.transaction(
+      [DB_CONFIG.STORE_NAME],
+      "readwrite",
+    );
+    const writeStore = writeTransaction.objectStore(DB_CONFIG.STORE_NAME);
+    const putRequest = writeStore.put(data);
+    await promisifyRequest(putRequest);
   } catch (e) {
     console.error("DB更新エラー:", e);
+    throw e; // エラーを再スロー
   }
 }
 

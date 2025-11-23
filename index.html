@@ -2,22 +2,39 @@
 <html lang="ja">
     <head>
         <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+        />
         <title>Sticker album</title>
         <link rel="stylesheet" href="style.css" />
     </head>
     <body>
         <!-- SVGフィルタ定義：シンプルな縁取り（Safari対応版） -->
-        <svg style="position: absolute; width: 0; height: 0" xmlns="http://www.w3.org/2000/svg">
+        <svg
+            style="position: absolute; width: 0; height: 0"
+            xmlns="http://www.w3.org/2000/svg"
+        >
             <defs>
-                <filter id="outline-filter" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB">
+                <filter
+                    id="outline-filter"
+                    x="-50%"
+                    y="-50%"
+                    width="200%"
+                    height="200%"
+                    color-interpolation-filters="sRGB"
+                >
                     <feMorphology
                         operator="dilate"
                         radius="12"
                         in="SourceAlpha"
                         result="dilated"
                     />
-                    <feFlood flood-color="#ffffff" flood-opacity="1" result="white" />
+                    <feFlood
+                        flood-color="#ffffff"
+                        flood-opacity="1"
+                        result="white"
+                    />
                     <feComposite
                         in="white"
                         in2="dilated"
@@ -70,95 +87,253 @@
                 <!-- 選択中のステッカー操作ボタン群 -->
                 <div class="selection-buttons hidden">
                     <!-- 背景除去ボタン -->
-                    <button id="bgRemovalBtn" class="selection-btn bg-removal-btn" title="背景除去">
+                    <button
+                        id="bgRemovalBtn"
+                        class="selection-btn bg-removal-btn"
+                        title="背景除去"
+                    >
                         <!-- 背景除去適用アイコン（未処理時） -->
-                        <svg class="bg-removal-icon-on" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
-                            <path d="M120-574v-85l181-181h85L120-574Zm0-196v-70h70l-70 70Zm527 67q-10-11-21.5-21.5T602-743l97-97h85L647-703ZM220-361l77-77q7 11 14.5 20t16.5 17q-28 7-56.5 17.5T220-361Zm480-197v-2q0-19-3-37t-9-35l152-152v86L700-558ZM436-776l65-64h85l-64 64q-11-2-21-3t-21-1q-11 0-22 1t-22 3ZM120-375v-85l144-144q-2 11-3 22t-1 22q0 11 1 21t3 20L120-375Zm709 83q-8-12-18.5-23T788-335l52-52v85l-11 10Zm-116-82q-7-3-14-5.5t-14-4.5q-9-3-17.5-6t-17.5-5l190-191v86L713-374Zm-233-26q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47Zm0-80q33 0 56.5-23.5T560-560q0-33-23.5-56.5T480-640q-33 0-56.5 23.5T400-560q0 33 23.5 56.5T480-480ZM160-120v-71q0-34 17-63t47-44q51-26 115.5-44T480-360q76 0 140.5 18T736-298q30 15 47 44t17 63v71H160Zm81-80h478q-2-9-7-15.5T699-226q-36-18-91.5-36T480-280q-72 0-127.5 18T261-226q-8 4-13 11t-7 15Zm239 0Zm0-360Z"/>
+                        <svg
+                            class="bg-removal-icon-on"
+                            xmlns="http://www.w3.org/2000/svg"
+                            height="24px"
+                            viewBox="0 -960 960 960"
+                            width="24px"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="M120-574v-85l181-181h85L120-574Zm0-196v-70h70l-70 70Zm527 67q-10-11-21.5-21.5T602-743l97-97h85L647-703ZM220-361l77-77q7 11 14.5 20t16.5 17q-28 7-56.5 17.5T220-361Zm480-197v-2q0-19-3-37t-9-35l152-152v86L700-558ZM436-776l65-64h85l-64 64q-11-2-21-3t-21-1q-11 0-22 1t-22 3ZM120-375v-85l144-144q-2 11-3 22t-1 22q0 11 1 21t3 20L120-375Zm709 83q-8-12-18.5-23T788-335l52-52v85l-11 10Zm-116-82q-7-3-14-5.5t-14-4.5q-9-3-17.5-6t-17.5-5l190-191v86L713-374Zm-233-26q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47Zm0-80q33 0 56.5-23.5T560-560q0-33-23.5-56.5T480-640q-33 0-56.5 23.5T400-560q0 33 23.5 56.5T480-480ZM160-120v-71q0-34 17-63t47-44q51-26 115.5-44T480-360q76 0 140.5 18T736-298q30 15 47 44t17 63v71H160Zm81-80h478q-2-9-7-15.5T699-226q-36-18-91.5-36T480-280q-72 0-127.5 18T261-226q-8 4-13 11t-7 15Zm239 0Zm0-360Z"
+                            />
                         </svg>
                         <!-- 元に戻すアイコン（処理済み時） -->
-                        <svg class="bg-removal-icon-off" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
-                            <path d="M480-360v-60q0-25 17.5-42.5T540-480h60L480-360Zm0 161v-85l196-196h85L480-199Zm2 75 353-354q16 4 27.5 15.5T878-435L524-82q-16-5-26.5-15.5T482-124Zm117 44 281-281v85L684-80h-85Zm161 0 120-120v60q0 25-17.5 42.5T820-80h-60Zm71-480h-83q-26-88-99-144t-169-56q-117 0-198.5 81.5T200-480q0 72 32.5 132t87.5 98v-110h80v240H160v-80h94q-62-50-98-122.5T120-480q0-75 28.5-140.5t77-114q48.5-48.5 114-77T480-840q129 0 226.5 79.5T831-560Z"/>
+                        <svg
+                            class="bg-removal-icon-off"
+                            xmlns="http://www.w3.org/2000/svg"
+                            height="24px"
+                            viewBox="0 -960 960 960"
+                            width="24px"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="M480-360v-60q0-25 17.5-42.5T540-480h60L480-360Zm0 161v-85l196-196h85L480-199Zm2 75 353-354q16 4 27.5 15.5T878-435L524-82q-16-5-26.5-15.5T482-124Zm117 44 281-281v85L684-80h-85Zm161 0 120-120v60q0 25-17.5 42.5T820-80h-60Zm71-480h-83q-26-88-99-144t-169-56q-117 0-198.5 81.5T200-480q0 72 32.5 132t87.5 98v-110h80v240H160v-80h94q-62-50-98-122.5T120-480q0-75 28.5-140.5t77-114q48.5-48.5 114-77T480-840q129 0 226.5 79.5T831-560Z"
+                            />
                         </svg>
                     </button>
 
                     <!-- コピーボタン -->
-                    <button id="copyBtn" class="selection-btn copy-btn" title="コピー">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M360-240q-33 0-56.5-23.5T280-320v-480q0-33 23.5-56.5T360-880h360q33 0 56.5 23.5T800-800v480q0 33-23.5 56.5T720-240H360Zm0-80h360v-480H360v480ZM200-80q-33 0-56.5-23.5T120-160v-560h80v560h440v80H200Zm160-240v-480 480Z"/></svg>
-                    </button>
-                    
-                    <!-- 最背面へボタン -->
-                    <button id="sendToBackBtn" class="selection-btn send-to-back-btn" title="最背面へ">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
-                            <path d="M160-501q0 71 47.5 122T326-322l-62-62 56-56 160 160-160 160-56-56 64-64q-105-6-176.5-81T80-500q0-109 75.5-184.5T340-760h140v80H340q-75 0-127.5 52T160-501Zm400 261v-80h320v80H560Zm0-220v-80h320v80H560Zm0-220v-80h320v80H560Z"/>
+                    <button
+                        id="copyBtn"
+                        class="selection-btn copy-btn"
+                        title="コピー"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            height="24px"
+                            viewBox="0 -960 960 960"
+                            width="24px"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="M360-240q-33 0-56.5-23.5T280-320v-480q0-33 23.5-56.5T360-880h360q33 0 56.5 23.5T800-800v480q0 33-23.5 56.5T720-240H360Zm0-80h360v-480H360v480ZM200-80q-33 0-56.5-23.5T120-160v-560h80v560h440v80H200Zm160-240v-480 480Z"
+                            />
                         </svg>
                     </button>
-                    
-                    <!-- 縁取りトグルボタン -->
-                    <button id="borderBtn" class="selection-btn border-btn" title="縁取り">
-                        <!-- 縁取り共通アイコン -->
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M200-120q-33 0-56.5-23.5T120-200v-480h560v560H200Zm0-120h400L464-420 360-280l-64-86-96 126Zm0-520h-80q0-33 23.5-56.5T200-840v80Zm80 0v-80h80v80h-80Zm160 0v-80h80v80h-80Zm160 0v-80h80v80h-80Zm160 0v-80q33 0 56.5 23.5T840-760h-80Zm0 560h80q0 33-23.5 56.5T760-120v-80Zm0-80v-80h80v80h-80Zm0-160v-80h80v80h-80Zm0-160v-80h80v80h-80Z"/></svg>
+
+                    <!-- 最背面へボタン -->
+                    <button
+                        id="sendToBackBtn"
+                        class="selection-btn send-to-back-btn"
+                        title="最背面へ"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            height="24px"
+                            viewBox="0 -960 960 960"
+                            width="24px"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="M160-501q0 71 47.5 122T326-322l-62-62 56-56 160 160-160 160-56-56 64-64q-105-6-176.5-81T80-500q0-109 75.5-184.5T340-760h140v80H340q-75 0-127.5 52T160-501Zm400 261v-80h320v80H560Zm0-220v-80h320v80H560Zm0-220v-80h320v80H560Z"
+                            />
+                        </svg>
                     </button>
-                    
+
+                    <!-- 縁取りトグルボタン -->
+                    <button
+                        id="borderBtn"
+                        class="selection-btn border-btn"
+                        title="縁取り"
+                    >
+                        <!-- 縁取り共通アイコン -->
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            height="24px"
+                            viewBox="0 -960 960 960"
+                            width="24px"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="M200-120q-33 0-56.5-23.5T120-200v-480h560v560H200Zm0-120h400L464-420 360-280l-64-86-96 126Zm0-520h-80q0-33 23.5-56.5T200-840v80Zm80 0v-80h80v80h-80Zm160 0v-80h80v80h-80Zm160 0v-80h80v80h-80Zm160 0v-80q33 0 56.5 23.5T840-760h-80Zm0 560h80q0 33-23.5 56.5T760-120v-80Zm0-80v-80h80v80h-80Zm0-160v-80h80v80h-80Zm0-160v-80h80v80h-80Z"
+                            />
+                        </svg>
+                    </button>
+
                     <!-- 固定ボタン -->
-                    <button id="pinBtn" class="selection-btn pin-btn" title="固定">
+                    <button
+                        id="pinBtn"
+                        class="selection-btn pin-btn"
+                        title="固定"
+                    >
                         <!-- アウトライン版（未固定時） -->
-                        <svg class="pin-icon-outline" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
-                            <path d="m640-480 80 80v80H520v240l-40 40-40-40v-240H240v-80l80-80v-280h-40v-80h400v80h-40v280Zm-286 80h252l-46-46v-314H400v314l-46 46Zm126 0Z"/>
+                        <svg
+                            class="pin-icon-outline"
+                            xmlns="http://www.w3.org/2000/svg"
+                            height="24px"
+                            viewBox="0 -960 960 960"
+                            width="24px"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="m640-480 80 80v80H520v240l-40 40-40-40v-240H240v-80l80-80v-280h-40v-80h400v80h-40v280Zm-286 80h252l-46-46v-314H400v314l-46 46Zm126 0Z"
+                            />
                         </svg>
                         <!-- Fill版（固定時） -->
-                        <svg class="pin-icon-fill" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
-                            <path d="m640-480 80 80v80H520v240l-40 40-40-40v-240H240v-80l80-80v-280h-40v-80h400v80h-40v280Z"/>
+                        <svg
+                            class="pin-icon-fill"
+                            xmlns="http://www.w3.org/2000/svg"
+                            height="24px"
+                            viewBox="0 -960 960 960"
+                            width="24px"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="m640-480 80 80v80H520v240l-40 40-40-40v-240H240v-80l80-80v-280h-40v-80h400v80h-40v280Z"
+                            />
                         </svg>
                     </button>
                 </div>
 
                 <!-- ゴミ箱ボタン -->
                 <button id="trashBtn" class="trash-btn hidden" title="削除">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="22px" viewBox="0 -960 960 960" width="22px" fill="currentColor">
-                        <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        height="22px"
+                        viewBox="0 -960 960 960"
+                        width="22px"
+                        fill="currentColor"
+                    >
+                        <path
+                            d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"
+                        />
                     </svg>
                     <div class="trash-tooltip">ドラッグして削除</div>
                 </button>
 
                 <!-- FAB（追加ボタン） -->
                 <button id="addBtn" class="add-btn" title="画像を追加">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="28px" viewBox="0 -960 960 960" width="28px" fill="currentColor">
-                        <path d="M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z"/>
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        height="28px"
+                        viewBox="0 -960 960 960"
+                        width="28px"
+                        fill="currentColor"
+                    >
+                        <path
+                            d="M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z"
+                        />
                     </svg>
                 </button>
 
                 <!-- 右上ボタン群 -->
                 <div class="header-buttons">
                     <!-- 背景画像ボタン -->
-                    <button id="backgroundBtn" class="header-btn background-btn" title="背景画像">
+                    <button
+                        id="backgroundBtn"
+                        class="header-btn background-btn"
+                        title="背景画像"
+                    >
                         <!-- 背景なし時：通常の画像アイコン -->
-                        <svg class="background-icon-add" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
-                            <path d="M200-120q-33 0-56.5-23.5T120-200v-240h80v240h240v80H200Zm320 0v-80h240v-240h80v240q0 33-23.5 56.5T760-120H520ZM240-280l120-160 90 120 120-160 150 200H240ZM120-520v-240q0-33 23.5-56.5T200-840h240v80H200v240h-80Zm640 0v-240H520v-80h240q33 0 56.5 23.5T840-760v240h-80Zm-140-40q-26 0-43-17t-17-43q0-26 17-43t43-17q26 0 43 17t17 43q0 26-17 43t-43 17Z"/>
+                        <svg
+                            class="background-icon-add"
+                            xmlns="http://www.w3.org/2000/svg"
+                            height="24px"
+                            viewBox="0 -960 960 960"
+                            width="24px"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="M200-120q-33 0-56.5-23.5T120-200v-240h80v240h240v80H200Zm320 0v-80h240v-240h80v240q0 33-23.5 56.5T760-120H520ZM240-280l120-160 90 120 120-160 150 200H240ZM120-520v-240q0-33 23.5-56.5T200-840h240v80H200v240h-80Zm640 0v-240H520v-80h240q33 0 56.5 23.5T840-760v240h-80Zm-140-40q-26 0-43-17t-17-43q0-26 17-43t43-17q26 0 43 17t17 43q0 26-17 43t-43 17Z"
+                            />
                         </svg>
                         <!-- 背景あり時：画像なしアイコン -->
-                        <svg class="background-icon-remove" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
-                            <path d="m840-234-80-80v-446H314l-80-80h526q33 0 56.5 23.5T840-760v526ZM792-56l-64-64H200q-33 0-56.5-23.5T120-200v-528l-64-64 56-56 736 736-56 56ZM240-280l120-160 90 120 33-44-283-283v447h447l-80-80H240Zm297-257ZM424-424Z"/>
+                        <svg
+                            class="background-icon-remove"
+                            xmlns="http://www.w3.org/2000/svg"
+                            height="24px"
+                            viewBox="0 -960 960 960"
+                            width="24px"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="m840-234-80-80v-446H314l-80-80h526q33 0 56.5 23.5T840-760v526ZM792-56l-64-64H200q-33 0-56.5-23.5T120-200v-528l-64-64 56-56 736 736-56 56ZM240-280l120-160 90 120 33-44-283-283v447h447l-80-80H240Zm297-257ZM424-424Z"
+                            />
                         </svg>
                     </button>
-                    
+
                     <!-- 保存ボタン -->
-                    <button id="saveBtn" class="header-btn save-btn" title="画像として保存">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
-                            <path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/>
+                    <button
+                        id="saveBtn"
+                        class="header-btn save-btn"
+                        title="画像として保存"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            height="24px"
+                            viewBox="0 -960 960 960"
+                            width="24px"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"
+                            />
                         </svg>
                     </button>
-                    
+
                     <!-- UI非表示ボタン -->
-                    <button id="hideUIBtn" class="header-btn hide-ui-btn" title="UIを非表示">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
-                            <path d="m177-120-57-57 184-183H200v-80h240v240h-80v-104L177-120Zm343-400v-240h80v104l183-184 57 57-184 183h104v80H520Z"/>
+                    <button
+                        id="hideUIBtn"
+                        class="header-btn hide-ui-btn"
+                        title="UIを非表示"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            height="24px"
+                            viewBox="0 -960 960 960"
+                            width="24px"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="m177-120-57-57 184-183H200v-80h240v240h-80v-104L177-120Zm343-400v-240h80v104l183-184 57 57-184 183h104v80H520Z"
+                            />
                         </svg>
                     </button>
 
                     <!-- インフォボタン -->
-                    <button id="infoBtn" class="header-btn info-btn" title="操作方法">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
-                            <path d="M478-240q21 0 35.5-14.5T528-290q0-21-14.5-35.5T478-340q-21 0-35.5 14.5T428-290q0 21 14.5 35.5T478-240Zm-36-154h74q0-33 7.5-52t42.5-52q26-26 41-49.5t15-56.5q0-56-41-86t-97-30q-57 0-92.5 30T342-618l66 26q5-18 22.5-39t53.5-21q32 0 48 17.5t16 38.5q0 20-12 37.5T506-526q-44 39-54 59t-10 73Zm38 314q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/>
+                    <button
+                        id="infoBtn"
+                        class="header-btn info-btn"
+                        title="操作方法"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            height="24px"
+                            viewBox="0 -960 960 960"
+                            width="24px"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="M478-240q21 0 35.5-14.5T528-290q0-21-14.5-35.5T478-340q-21 0-35.5 14.5T428-290q0 21 14.5 35.5T478-240Zm-36-154h74q0-33 7.5-52t42.5-52q26-26 41-49.5t15-56.5q0-56-41-86t-97-30q-57 0-92.5 30T342-618l66 26q5-18 22.5-39t53.5-21q32 0 48 17.5t16 38.5q0 20-12 37.5T506-526q-44 39-54 59t-10 73Zm38 314q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"
+                            />
                         </svg>
                     </button>
                 </div>
@@ -166,16 +341,40 @@
                 <!-- 左下ボタン群 -->
                 <div class="footer-buttons">
                     <!-- 物理モード切り替えボタン -->
-                    <button id="physicsBtn" class="footer-btn physics-btn" title="物理モード">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
-                            <path d="M449-539q21 0 35.5-14.5T499-589q0-21-14.5-35.5T449-639q-21 0-35.5 14.5T399-589q0 21 14.5 35.5T449-539ZM822-80q-42 0-113-35t-152-95q-19 5-38.5 7.5T479-200q-117 0-198-81t-81-198q0-20 3-40t8-39q-59-81-94.5-151.5T81-822q0-27 15-42.5t41-15.5q26 0 67.5 18T319-801q-21 11-39 23t-35 26q-19-11-37-19t-38-17q18 38 38.5 74t43.5 71q38-54 97-85t130-31q117 0 198.5 81.5T759-479q0 71-31.5 130T642-252q35 23 71.5 44t74.5 38q-8-19-16.5-37T752-244q15-17 27-36t22-39q46 78 62.5 116.5T880-138q0 29-16 43.5T822-80ZM549-359q17 0 28.5-11.5T589-399q0-17-11.5-28.5T549-439q-17 0-28.5 11.5T509-399q0 17 11.5 28.5T549-359Zm50-140q13 0 21.5-8.5T629-529q0-13-8.5-21.5T599-559q-13 0-21.5 8.5T569-529q0 13 8.5 21.5T599-499ZM468-281q-51-44-98-91t-90-98q2 38 17 71.5t41 59.5q26 26 59 41t71 17Zm103-21q48-25 78-72.5T679-480q0-83-58.5-141T479-679q-58 0-105 30t-72 78q57 76 125 144t144 125Zm-197-73Zm117-116Z"/>
+                    <button
+                        id="physicsBtn"
+                        class="footer-btn physics-btn"
+                        title="物理モード"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            height="24px"
+                            viewBox="0 -960 960 960"
+                            width="24px"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="M449-539q21 0 35.5-14.5T499-589q0-21-14.5-35.5T449-639q-21 0-35.5 14.5T399-589q0 21 14.5 35.5T449-539ZM822-80q-42 0-113-35t-152-95q-19 5-38.5 7.5T479-200q-117 0-198-81t-81-198q0-20 3-40t8-39q-59-81-94.5-151.5T81-822q0-27 15-42.5t41-15.5q26 0 67.5 18T319-801q-21 11-39 23t-35 26q-19-11-37-19t-38-17q18 38 38.5 74t43.5 71q38-54 97-85t130-31q117 0 198.5 81.5T759-479q0 71-31.5 130T642-252q35 23 71.5 44t74.5 38q-8-19-16.5-37T752-244q15-17 27-36t22-39q46 78 62.5 116.5T880-138q0 29-16 43.5T822-80ZM549-359q17 0 28.5-11.5T589-399q0-17-11.5-28.5T549-439q-17 0-28.5 11.5T509-399q0 17 11.5 28.5T549-359Zm50-140q13 0 21.5-8.5T629-529q0-13-8.5-21.5T599-559q-13 0-21.5 8.5T569-529q0 13 8.5 21.5T599-499ZM468-281q-51-44-98-91t-90-98q2 38 17 71.5t41 59.5q26 26 59 41t71 17Zm103-21q48-25 78-72.5T679-480q0-83-58.5-141T479-679q-58 0-105 30t-72 78q57 76 125 144t144 125Zm-197-73Zm117-116Z"
+                            />
                         </svg>
                     </button>
 
                     <!-- 自動レイアウトボタン -->
-                    <button id="layoutBtn" class="footer-btn layout-btn" title="自動レイアウト">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
-                            <path d="m176-120-56-56 301-302-181-45 198-123-17-234 179 151 216-88-87 217 151 178-234-16-124 198-45-181-301 301Zm24-520-80-80 80-80 80 80-80 80Zm355 197 48-79 93 7-60-71 35-86-86 35-71-59 7 92-79 49 90 22 23 90Zm165 323-80-80 80-80 80 80-80 80ZM569-570Z"/>
+                    <button
+                        id="layoutBtn"
+                        class="footer-btn layout-btn"
+                        title="自動レイアウト"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            height="24px"
+                            viewBox="0 -960 960 960"
+                            width="24px"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="m176-120-56-56 301-302-181-45 198-123-17-234 179 151 216-88-87 217 151 178-234-16-124 198-45-181-301 301Zm24-520-80-80 80-80 80 80-80 80Zm355 197 48-79 93 7-60-71 35-86-86 35-71-59 7 92-79 49 90 22 23 90Zm165 323-80-80 80-80 80 80-80 80ZM569-570Z"
+                            />
                         </svg>
                     </button>
                 </div>
@@ -189,8 +388,9 @@
                             <h3>画像を追加</h3>
                             <p>
                                 画像をコピーして <kbd>Ctrl+V</kbd> /
-                                <kbd>Cmd+V</kbd><br>
-                                または右下の <strong>+</strong> ボタンからファイルを選択
+                                <kbd>Cmd+V</kbd><br />
+                                または右下の
+                                <strong>+</strong> ボタンからファイルを選択
                             </p>
 
                             <h3>移動</h3>
@@ -203,14 +403,21 @@
                             <p><kbd>Shift</kbd> を押しながらドラッグ</p>
 
                             <h3>削除</h3>
-                            <p>画像をドラッグして画面下のゴミ箱へ<br>
-                            <small>（このステッカーも削除できます！）</small></p>
+                            <p>
+                                画像をドラッグして画面下のゴミ箱へ<br />
+                                <small
+                                    >（このステッカーも削除できます！）</small
+                                >
+                            </p>
                         </div>
 
                         <div class="help-section mobile-hint">
                             <h3>画像を追加</h3>
-                            <p>画像をコピーして画面を長押し→「ペースト」<br>
-                            または右下の <strong>+</strong> ボタンからファイルを選択</p>
+                            <p>
+                                画像をコピーして画面を長押し→「ペースト」<br />
+                                または右下の
+                                <strong>+</strong> ボタンからファイルを選択
+                            </p>
 
                             <h3>移動</h3>
                             <p>1本指でドラッグ</p>
@@ -219,8 +426,12 @@
                             <p>2本指でピンチ</p>
 
                             <h3>削除</h3>
-                            <p>画像をドラッグして画面下のゴミ箱へ<br>
-                            <small>（このステッカーも削除できます！）</small></p>
+                            <p>
+                                画像をドラッグして画面下のゴミ箱へ<br />
+                                <small
+                                    >（このステッカーも削除できます！）</small
+                                >
+                            </p>
                         </div>
                     </div>
                 </template>
@@ -233,8 +444,21 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
         <!-- Background Removal（背景除去用） -->
         <script type="module">
-            import removeBackground from 'https://esm.sh/@imgly/background-removal@1.4.5';
-            window.removeBackground = removeBackground;
+            import removeBackground from "https://esm.sh/@imgly/background-removal@1.4.5";
+
+            // ONNX Runtimeの設定を最適化（シングルスレッドモード）
+            window.removeBackground = async (imageUrl) => {
+                return await removeBackground(imageUrl, {
+                    model: "medium",
+                    output: {
+                        format: "image/png",
+                        quality: 0.8,
+                    },
+                    progress: (key, current, total) => {
+                        // 進捗表示は不要なのでスキップ
+                    },
+                });
+            };
         </script>
         <script type="module" src="src/main.js"></script>
     </body>
