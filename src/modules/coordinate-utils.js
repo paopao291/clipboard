@@ -46,3 +46,45 @@ export function getCenterCoordinates() {
   return { x: 0, yPercent: 50 };
 }
 
+/**
+ * 物理座標（画面絶対座標）をハイブリッド座標に変換
+ * @param {Object} position - 物理エンジンの座標 {x, y}（両方ピクセル値）
+ * @returns {{ x: number, yPercent: number }} ハイブリッド座標
+ */
+export function physicsToHybrid(position) {
+  const centerX = window.innerWidth / 2;
+  const x = position.x - centerX;
+  const yPercent = (position.y / window.innerHeight) * 100;
+  return { x, yPercent };
+}
+
+/**
+ * ハイブリッド座標を物理座標（画面絶対座標）に変換
+ * @param {number} x - 画面中央からのX座標オフセット（px）
+ * @param {number} yPercent - 画面高さに対するY座標の割合（0-100）
+ * @returns {{ x: number, y: number }} 物理座標（両方ピクセル値）
+ */
+export function hybridToPhysics(x, yPercent) {
+  const centerX = window.innerWidth / 2;
+  const physicsX = centerX + x;
+  const physicsY = (yPercent / 100) * window.innerHeight;
+  return { x: physicsX, y: physicsY };
+}
+
+/**
+ * ラジアンを度に変換
+ * @param {number} radians - ラジアン
+ * @returns {number} 度
+ */
+export function radiansToDegrees(radians) {
+  return (radians * 180) / Math.PI;
+}
+
+/**
+ * 度をラジアンに変換
+ * @param {number} degrees - 度
+ * @returns {number} ラジアン
+ */
+export function degreesToRadians(degrees) {
+  return (degrees * Math.PI) / 180;
+}

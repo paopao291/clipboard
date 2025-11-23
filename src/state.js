@@ -1,5 +1,10 @@
 import { STICKER_DEFAULTS } from "./modules/constants.js";
 import { showOverlay, hideOverlay } from "./modules/ui.js";
+import {
+  blobToArrayData,
+  arrayDataToBlob,
+  cloneBlob,
+} from "./modules/blob-utils.js";
 
 /**
  * アプリケーションの状態管理
@@ -39,7 +44,7 @@ class AppState {
     this.copiedStickerData = null;
     // コピーした識別子（形式：sticker:123456）
     this.copiedStickerId = null;
-    
+
     // LocalStorageからコピーデータの復元を試行
     this.restoreCopiedStickerData();
   }
@@ -97,11 +102,11 @@ class AppState {
       showOverlay();
       // UI非表示状態を解除（選択モードはUI表示が前提）
       this.showUI();
-      
+
       // iOS最適化：ピンチ操作をスムーズにするため、キャンバスのtouch-actionを変更
-      const canvas = document.querySelector('.canvas');
+      const canvas = document.querySelector(".canvas");
       if (canvas) {
-        canvas.style.touchAction = 'none';
+        canvas.style.touchAction = "none";
       }
     }
 
@@ -116,11 +121,11 @@ class AppState {
     this.selectedSticker = null;
     // オーバーレイを非表示
     hideOverlay();
-    
+
     // iOS最適化：キャンバスのtouch-actionを元に戻す
-    const canvas = document.querySelector('.canvas');
+    const canvas = document.querySelector(".canvas");
     if (canvas) {
-      canvas.style.touchAction = '';
+      canvas.style.touchAction = "";
     }
   }
 
@@ -196,7 +201,7 @@ class AppState {
     this.lastTouchX = x;
     this.lastTouchY = y;
   }
-  
+
   /**
    * マウス位置を記録
    * @param {number} x - X座標
@@ -290,39 +295,43 @@ class AppState {
   async copySticker(stickerData) {
     // 現在の時刻からユニークなIDを生成
     const uniqueId = Date.now().toString();
-    
+
     // 古いコピーデータのBlobを解放（メモリリーク防止）
     if (this.copiedStickerData && this.copiedStickerData.originalBlob) {
       // Blobは自動的にガベージコレクションされるが、明示的にnullに設定
       this.copiedStickerData.originalBlob = null;
     }
-    
+
     // オリジナル画像のBlobを取得（優先順位：originalBlob > blob > URL取得）
     let originalBlob = null;
     if (stickerData.originalBlob) {
       // Blobをクローン（元のステッカーが削除されても影響を受けないように）
-      originalBlob = new Blob([stickerData.originalBlob], { type: stickerData.originalBlob.type });
+      originalBlob = cloneBlob(stickerData.originalBlob);
     } else if (stickerData.blob) {
-      originalBlob = new Blob([stickerData.blob], { type: stickerData.blob.type });
+      originalBlob = cloneBlob(stickerData.blob);
     } else if (stickerData.originalBlobUrl) {
       try {
-        const fetchedBlob = await fetch(stickerData.originalBlobUrl).then(r => r.blob());
-        originalBlob = new Blob([fetchedBlob], { type: fetchedBlob.type });
+        const fetchedBlob = await fetch(stickerData.originalBlobUrl).then((r) =>
+          r.blob(),
+        );
+        originalBlob = cloneBlob(fetchedBlob);
       } catch (err) {
-        console.warn('originalBlobUrlからのBlob取得エラー:', err);
+        console.warn("originalBlobUrlからのBlob取得エラー:", err);
       }
     } else if (stickerData.blobUrl) {
       try {
-        const fetchedBlob = await fetch(stickerData.blobUrl).then(r => r.blob());
-        originalBlob = new Blob([fetchedBlob], { type: fetchedBlob.type });
+        const fetchedBlob = await fetch(stickerData.blobUrl).then((r) =>
+          r.blob(),
+        );
+        originalBlob = cloneBlob(fetchedBlob);
       } catch (err) {
-        console.warn('blobUrlからのBlob取得エラー:', err);
+        console.warn("blobUrlからのBlob取得エラー:", err);
       }
     }
 
     // originalBlobが取得できなかった場合はエラー
     if (!originalBlob) {
-      throw new Error('コピーする画像データを取得できませんでした');
+      throw new Error("コピーする画像データを取得できませんでした");
     }
 
     // コピーするデータから必要な情報だけ取り出す
@@ -337,24 +346,26 @@ class AppState {
       borderMode: stickerData.borderMode,
       // その他の状態
       isPinned: stickerData.isPinned,
-      hasBgRemoved: stickerData.hasBgRemoved,
       bgRemovalProcessed: stickerData.bgRemovalProcessed,
     };
-    
+
     this.copiedStickerData = copiedData;
     this.copiedStickerId = `sticker:${uniqueId}`;
-    
+
     // IndexedDBに保存（リロード後の復元用、エラーが発生しても続行）
     try {
       await this.saveCopiedStickerData();
     } catch (err) {
       // IndexedDBへの保存が失敗しても、メモリ内のデータは有効なので続行
-      console.warn('IndexedDBへの保存に失敗しました（メモリ内のデータは有効）:', err);
+      console.warn(
+        "IndexedDBへの保存に失敗しました（メモリ内のデータは有効）:",
+        err,
+      );
     }
-    
+
     return this.copiedStickerId;
   }
-  
+
   /**
    * コピーしたステッカーデータをIndexedDBに保存（リロード後の復元用）
    * メモリ内のデータがメインで、これはオプション機能
@@ -365,40 +376,44 @@ class AppState {
     }
 
     // IDだけはLocalStorageに保存（簡易チェック用）
-    localStorage.setItem('clipboardAppCopiedStickerId', this.copiedStickerId);
+    localStorage.setItem("clipboardAppCopiedStickerId", this.copiedStickerId);
 
     // IndexedDBへの保存はオプション（リロード後の復元用）
     // SafariではBlobを直接保存できないため、配列に変換して保存
     try {
       const dataToSave = {};
-      
+
       // 通常のプロパティをコピー（Blob以外）
       for (const key in this.copiedStickerData) {
-        if (key !== 'originalBlob' && !(this.copiedStickerData[key] instanceof Blob)) {
+        if (
+          key !== "originalBlob" &&
+          !(this.copiedStickerData[key] instanceof Blob)
+        ) {
           dataToSave[key] = this.copiedStickerData[key];
         }
       }
-      
+
       // Blobを配列に変換
       if (this.copiedStickerData.originalBlob instanceof Blob) {
-        const arrayBuffer = await this.copiedStickerData.originalBlob.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer);
-        dataToSave.originalBlobData = Array.from(uint8Array); // ArrayBufferを配列に変換
-        dataToSave.originalBlobType = this.copiedStickerData.originalBlob.type;
+        const { data, type } = await blobToArrayData(
+          this.copiedStickerData.originalBlob,
+        );
+        dataToSave.originalBlobData = data;
+        dataToSave.originalBlobType = type;
       }
 
       // IndexedDBに保存
       const db = await this.openCopyDB();
       await new Promise((resolve, reject) => {
-        const tx = db.transaction('copiedStickers', 'readwrite');
-        const store = tx.objectStore('copiedStickers');
-        
+        const tx = db.transaction("copiedStickers", "readwrite");
+        const store = tx.objectStore("copiedStickers");
+
         // 古いデータを削除してから新しいデータを追加
         const clearReq = store.clear();
         clearReq.onerror = () => reject(clearReq.error);
         clearReq.onsuccess = () => {
           const addReq = store.add({
-            id: 'copiedSticker',
+            id: "copiedSticker",
             stickerId: this.copiedStickerId,
             data: dataToSave,
             timestamp: Date.now(),
@@ -407,41 +422,46 @@ class AppState {
           addReq.onsuccess = () => {
             tx.oncomplete = () => resolve();
             tx.onerror = () => reject(tx.error);
-            tx.onabort = () => reject(tx.error || new Error('IndexedDB transaction aborted'));
+            tx.onabort = () =>
+              reject(tx.error || new Error("IndexedDB transaction aborted"));
           };
         };
       });
       db.close();
-      
+
       // 古いコピーデータのクリーンアップ（24時間以上経過したデータを削除）
       // 注意: 現在は1つのコピーデータのみ保持するため、clear()で削除済み
       // 将来的に複数のコピーデータを保持する場合は、タイムスタンプベースのクリーンアップを実装
     } catch (err) {
       // IndexedDBへの保存が失敗しても、メモリ内のデータは有効なのでエラーを投げない
-      console.warn('コピーデータのIndexedDB保存に失敗（メモリ内のデータは有効）:', err);
+      console.warn(
+        "コピーデータのIndexedDB保存に失敗（メモリ内のデータは有効）:",
+        err,
+      );
       throw err; // 呼び出し元で処理
     }
   }
-  
+
   /**
    * IndexedDBからコピーしたステッカーデータを復元
    */
   async restoreCopiedStickerData() {
     try {
       // LocalStorageからIDを取得（簡易チェック用）
-      const stickerId = localStorage.getItem('clipboardAppCopiedStickerId');
+      const stickerId = localStorage.getItem("clipboardAppCopiedStickerId");
       if (!stickerId) return;
 
       // IndexedDBからBlobデータを取得
       const db = await this.openCopyDB();
       const result = await new Promise((resolve, reject) => {
-        const tx = db.transaction('copiedStickers', 'readonly');
-        const store = tx.objectStore('copiedStickers');
-        const getReq = store.get('copiedSticker');
+        const tx = db.transaction("copiedStickers", "readonly");
+        const store = tx.objectStore("copiedStickers");
+        const getReq = store.get("copiedSticker");
         getReq.onerror = () => reject(getReq.error);
         getReq.onsuccess = () => resolve(getReq.result);
         tx.onerror = () => reject(tx.error);
-        tx.onabort = () => reject(tx.error || new Error('IndexedDB transaction aborted'));
+        tx.onabort = () =>
+          reject(tx.error || new Error("IndexedDB transaction aborted"));
       });
       db.close();
 
@@ -449,33 +469,26 @@ class AppState {
         // Safari対策：配列をArrayBufferに変換してからBlobに戻す
         const restoredData = { ...result.data };
         if (restoredData.originalBlobData && restoredData.originalBlobType) {
-          // 配列の場合はArrayBufferに変換
-          let arrayBuffer;
-          if (Array.isArray(restoredData.originalBlobData)) {
-            arrayBuffer = new Uint8Array(restoredData.originalBlobData).buffer;
-          } else if (restoredData.originalBlobData instanceof ArrayBuffer) {
-            arrayBuffer = restoredData.originalBlobData;
-          } else {
-            // 既にBlobの場合（後方互換性）
-            arrayBuffer = restoredData.originalBlobData;
-          }
-          restoredData.originalBlob = new Blob([arrayBuffer], { type: restoredData.originalBlobType });
+          restoredData.originalBlob = arrayDataToBlob(
+            restoredData.originalBlobData,
+            restoredData.originalBlobType,
+          );
           delete restoredData.originalBlobData;
           delete restoredData.originalBlobType;
         }
-        
+
         this.copiedStickerId = stickerId;
         this.copiedStickerData = restoredData;
-        console.log('コピーデータを復元しました:', stickerId);
+        console.log("コピーデータを復元しました:", stickerId);
       }
     } catch (err) {
-      console.warn('コピーデータのIndexedDB復元に失敗:', err);
+      console.warn("コピーデータのIndexedDB復元に失敗:", err);
       // 失敗した場合はクリア
       this.copiedStickerData = null;
       this.copiedStickerId = null;
     }
   }
-  
+
   /**
    * コピーされたステッカーデータを取得
    * @returns {Object|null} コピーされたステッカーデータ
@@ -490,12 +503,12 @@ class AppState {
    */
   openCopyDB() {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open('stickerCopyDB', 1);
+      const request = indexedDB.open("stickerCopyDB", 1);
 
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
-        if (!db.objectStoreNames.contains('copiedStickers')) {
-          db.createObjectStore('copiedStickers', { keyPath: 'id' });
+        if (!db.objectStoreNames.contains("copiedStickers")) {
+          db.createObjectStore("copiedStickers", { keyPath: "id" });
         }
       };
 
@@ -504,12 +517,12 @@ class AppState {
       };
 
       request.onerror = (event) => {
-        console.error('IndexedDB接続エラー:', event.target.error);
+        console.error("IndexedDB接続エラー:", event.target.error);
         reject(event.target.error);
       };
     });
   }
-  
+
   /**
    * 文字列がコピーしたステッカー識別子かどうかを確認
    * @param {string} text - 確認するテキスト
@@ -517,7 +530,7 @@ class AppState {
    */
   isStickerIdentifier(text) {
     // "sticker:"で始まる文字列かどうかをチェック
-    return text && typeof text === 'string' && text.startsWith('sticker:');
+    return text && typeof text === "string" && text.startsWith("sticker:");
   }
 }
 

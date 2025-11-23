@@ -392,12 +392,7 @@ async function loadStickersFromDB() {
       borderWidth,
       stickerData.borderMode,
       originalBlobUrl, // オリジナル画像URL
-      null, // removedBgBlobUrl（不要）
-      null, // removedBgBlobWithBorderUrl（不要）
-      false, // hasBgRemoved（不要）
       bgRemovalProcessed, // この値が背景除去ボタンの表示/非表示を決定する
-      null, // removedBgBlob（不要）
-      null, // removedBgBlobWithBorder（不要）
       originalBlob, // オリジナル画像Blob（優先使用）
     );
   }

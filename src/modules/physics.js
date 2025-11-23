@@ -21,6 +21,7 @@ import {
   HELP_STICKER_CONFIG,
 } from "./constants.js";
 import { resizeImageBlob } from "./sticker.js";
+import { physicsToHybrid, radiansToDegrees } from "./coordinate-utils.js";
 
 // Matter.jsモジュール
 const { Engine, World, Bodies, Body, Events, Runner, Sleeping } = Matter;
@@ -647,8 +648,8 @@ function lerpAngle(a, b, t) {
  */
 function syncStickerFromPhysics(sticker, body) {
   // 座標変換
-  const { x, yPercent } = convertPhysicsToHybridCoords(body.position);
-  const rotation = convertRadiansToDegrees(body.angle);
+  const { x, yPercent } = physicsToHybrid(body.position);
+  const rotation = radiansToDegrees(body.angle);
 
   // ステッカーのプロパティを更新
   updateStickerProperties(sticker, x, yPercent, rotation);
@@ -671,39 +672,17 @@ function syncStickerFromPhysicsInterpolated(
   angle,
 ) {
   // 座標変換
-  const { x, yPercent } = convertPhysicsToHybridCoords({
+  const { x, yPercent } = physicsToHybrid({
     x: physicsX,
     y: physicsY,
   });
-  const rotation = convertRadiansToDegrees(angle);
+  const rotation = radiansToDegrees(angle);
 
   // ステッカーのプロパティを更新
   updateStickerProperties(sticker, x, yPercent, rotation);
 
   // DOMスタイルを更新
   updateStickerDOM(sticker, x, yPercent, rotation);
-}
-
-/**
- * 物理座標をハイブリッド座標系に変換
- * @param {Object} position - 物理ボディの位置 {x, y}
- * @returns {Object} ハイブリッド座標 {x, yPercent}
- */
-function convertPhysicsToHybridCoords(position) {
-  const centerX = window.innerWidth / 2;
-  const x = position.x - centerX;
-  const yPercent = (position.y / window.innerHeight) * 100;
-
-  return { x, yPercent };
-}
-
-/**
- * ラジアンを度に変換
- * @param {number} radians - ラジアン
- * @returns {number} 度
- */
-function convertRadiansToDegrees(radians) {
-  return (radians * 180) / Math.PI;
 }
 
 /**

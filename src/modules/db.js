@@ -1,4 +1,5 @@
 import { DB_CONFIG } from "./constants.js";
+import { blobToArrayBuffer, arrayBufferToBlob } from "./blob-utils.js";
 
 let db = null;
 
@@ -60,7 +61,7 @@ export async function saveStickerToDB(stickerData) {
     // Safari対策：BlobをArrayBufferに変換
     const dataToSave = { ...stickerData };
     if (stickerData.blob instanceof Blob) {
-      const arrayBuffer = await stickerData.blob.arrayBuffer();
+      const arrayBuffer = await blobToArrayBuffer(stickerData.blob);
       dataToSave.blobData = arrayBuffer;
       dataToSave.blobType = stickerData.blob.type;
       delete dataToSave.blob; // 元のBlobプロパティを削除
@@ -68,7 +69,7 @@ export async function saveStickerToDB(stickerData) {
 
     // blobWithBorderも同様に処理
     if (stickerData.blobWithBorder instanceof Blob) {
-      const arrayBuffer = await stickerData.blobWithBorder.arrayBuffer();
+      const arrayBuffer = await blobToArrayBuffer(stickerData.blobWithBorder);
       dataToSave.blobWithBorderData = arrayBuffer;
       dataToSave.blobWithBorderType = stickerData.blobWithBorder.type;
       delete dataToSave.blobWithBorder; // 元のBlobプロパティを削除
@@ -76,7 +77,7 @@ export async function saveStickerToDB(stickerData) {
 
     // originalBlobも同様に処理
     if (stickerData.originalBlob instanceof Blob) {
-      const arrayBuffer = await stickerData.originalBlob.arrayBuffer();
+      const arrayBuffer = await blobToArrayBuffer(stickerData.originalBlob);
       dataToSave.originalBlobData = arrayBuffer;
       dataToSave.originalBlobType = stickerData.originalBlob.type;
       delete dataToSave.originalBlob;
@@ -105,7 +106,7 @@ export async function updateStickerInDB(id, updates) {
 
     // blobを処理
     if (updates.blob instanceof Blob) {
-      const arrayBuffer = await updates.blob.arrayBuffer();
+      const arrayBuffer = await blobToArrayBuffer(updates.blob);
       updatesToApply.blobData = arrayBuffer;
       updatesToApply.blobType = updates.blob.type;
       delete updatesToApply.blob;
@@ -113,7 +114,7 @@ export async function updateStickerInDB(id, updates) {
 
     // blobWithBorderを処理
     if (updates.blobWithBorder instanceof Blob) {
-      const arrayBuffer = await updates.blobWithBorder.arrayBuffer();
+      const arrayBuffer = await blobToArrayBuffer(updates.blobWithBorder);
       updatesToApply.blobWithBorderData = arrayBuffer;
       updatesToApply.blobWithBorderType = updates.blobWithBorder.type;
       delete updatesToApply.blobWithBorder;
@@ -121,7 +122,7 @@ export async function updateStickerInDB(id, updates) {
 
     // originalBlobを処理
     if (updates.originalBlob instanceof Blob) {
-      const arrayBuffer = await updates.originalBlob.arrayBuffer();
+      const arrayBuffer = await blobToArrayBuffer(updates.originalBlob);
       updatesToApply.originalBlobData = arrayBuffer;
       updatesToApply.originalBlobType = updates.originalBlob.type;
       delete updatesToApply.originalBlob;
@@ -191,25 +192,27 @@ export async function loadAllStickersFromDB() {
     for (const sticker of stickers) {
       if (sticker.blobData && sticker.blobType) {
         // ArrayBufferからBlobを復元
-        sticker.blob = new Blob([sticker.blobData], { type: sticker.blobType });
+        sticker.blob = arrayBufferToBlob(sticker.blobData, sticker.blobType);
         delete sticker.blobData;
         delete sticker.blobType;
       }
 
       // blobWithBorderも同様に処理（既存データとの互換性を維持）
       if (sticker.blobWithBorderData && sticker.blobWithBorderType) {
-        sticker.blobWithBorder = new Blob([sticker.blobWithBorderData], {
-          type: sticker.blobWithBorderType,
-        });
+        sticker.blobWithBorder = arrayBufferToBlob(
+          sticker.blobWithBorderData,
+          sticker.blobWithBorderType,
+        );
         delete sticker.blobWithBorderData;
         delete sticker.blobWithBorderType;
       }
 
       // originalBlobも同様に処理
       if (sticker.originalBlobData && sticker.originalBlobType) {
-        sticker.originalBlob = new Blob([sticker.originalBlobData], {
-          type: sticker.originalBlobType,
-        });
+        sticker.originalBlob = arrayBufferToBlob(
+          sticker.originalBlobData,
+          sticker.originalBlobType,
+        );
         delete sticker.originalBlobData;
         delete sticker.originalBlobType;
       }
