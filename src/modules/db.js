@@ -1,4 +1,4 @@
-import { DB_CONFIG } from './constants.js';
+import { DB_CONFIG } from "./constants.js";
 
 let db = null;
 
@@ -8,10 +8,10 @@ let db = null;
  * @returns {Promise<any>}
  */
 function promisifyRequest(request) {
-    return new Promise((resolve, reject) => {
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
 }
 
 /**
@@ -19,33 +19,35 @@ function promisifyRequest(request) {
  * @returns {Promise<IDBDatabase>}
  */
 export function initDB() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_CONFIG.NAME, DB_CONFIG.VERSION);
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_CONFIG.NAME, DB_CONFIG.VERSION);
 
-        request.onerror = () => {
-            console.error('IndexedDB open error');
-            reject(request.error);
-        };
+    request.onerror = () => {
+      console.error("IndexedDB open error");
+      reject(request.error);
+    };
 
-        request.onsuccess = () => {
-            db = request.result;
-            resolve(db); // dbを返す
-        };
+    request.onsuccess = () => {
+      db = request.result;
+      resolve(db); // dbを返す
+    };
 
-        request.onupgradeneeded = (event) => {
-            const db = event.target.result;
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
 
-            if (!db.objectStoreNames.contains(DB_CONFIG.STORE_NAME)) {
-                const objectStore = db.createObjectStore(DB_CONFIG.STORE_NAME, { keyPath: 'id' });
-                objectStore.createIndex('timestamp', 'timestamp', { unique: false });
-            }
-            
-            // 背景画像用のオブジェクトストアを作成
-            if (!db.objectStoreNames.contains('background')) {
-                db.createObjectStore('background', { keyPath: 'id' });
-            }
-        };
-    });
+      if (!db.objectStoreNames.contains(DB_CONFIG.STORE_NAME)) {
+        const objectStore = db.createObjectStore(DB_CONFIG.STORE_NAME, {
+          keyPath: "id",
+        });
+        objectStore.createIndex("timestamp", "timestamp", { unique: false });
+      }
+
+      // 背景画像用のオブジェクトストアを作成
+      if (!db.objectStoreNames.contains("background")) {
+        db.createObjectStore("background", { keyPath: "id" });
+      }
+    };
+  });
 }
 
 /**
@@ -54,56 +56,40 @@ export function initDB() {
  * @returns {Promise<void>}
  */
 export async function saveStickerToDB(stickerData) {
-    try {
-        // Safari対策：BlobをArrayBufferに変換
-        const dataToSave = { ...stickerData };
-        if (stickerData.blob instanceof Blob) {
-            const arrayBuffer = await stickerData.blob.arrayBuffer();
-            dataToSave.blobData = arrayBuffer;
-            dataToSave.blobType = stickerData.blob.type;
-            delete dataToSave.blob; // 元のBlobプロパティを削除
-        }
-        
-        // blobWithBorderも同様に処理
-        if (stickerData.blobWithBorder instanceof Blob) {
-            const arrayBuffer = await stickerData.blobWithBorder.arrayBuffer();
-            dataToSave.blobWithBorderData = arrayBuffer;
-            dataToSave.blobWithBorderType = stickerData.blobWithBorder.type;
-            delete dataToSave.blobWithBorder; // 元のBlobプロパティを削除
-        }
-        
-        // 背景除去版も同様に処理
-        if (stickerData.removedBgBlob instanceof Blob) {
-            const arrayBuffer = await stickerData.removedBgBlob.arrayBuffer();
-            dataToSave.removedBgBlobData = arrayBuffer;
-            dataToSave.removedBgBlobType = stickerData.removedBgBlob.type;
-            delete dataToSave.removedBgBlob;
-        }
-        
-        // 背景除去+縁取り版も同様に処理
-        if (stickerData.removedBgBlobWithBorder instanceof Blob) {
-            const arrayBuffer = await stickerData.removedBgBlobWithBorder.arrayBuffer();
-            dataToSave.removedBgBlobWithBorderData = arrayBuffer;
-            dataToSave.removedBgBlobWithBorderType = stickerData.removedBgBlobWithBorder.type;
-            delete dataToSave.removedBgBlobWithBorder;
-        }
-        
-        // originalBlobも同様に処理
-        if (stickerData.originalBlob instanceof Blob) {
-            const arrayBuffer = await stickerData.originalBlob.arrayBuffer();
-            dataToSave.originalBlobData = arrayBuffer;
-            dataToSave.originalBlobType = stickerData.originalBlob.type;
-            delete dataToSave.originalBlob;
-        }
-        
-        const transaction = db.transaction([DB_CONFIG.STORE_NAME], 'readwrite');
-        const objectStore = transaction.objectStore(DB_CONFIG.STORE_NAME);
-        const request = objectStore.put(dataToSave);
-        return promisifyRequest(request);
-    } catch (error) {
-        console.error('DB保存エラー:', error);
-        throw error;
+  try {
+    // Safari対策：BlobをArrayBufferに変換
+    const dataToSave = { ...stickerData };
+    if (stickerData.blob instanceof Blob) {
+      const arrayBuffer = await stickerData.blob.arrayBuffer();
+      dataToSave.blobData = arrayBuffer;
+      dataToSave.blobType = stickerData.blob.type;
+      delete dataToSave.blob; // 元のBlobプロパティを削除
     }
+
+    // blobWithBorderも同様に処理
+    if (stickerData.blobWithBorder instanceof Blob) {
+      const arrayBuffer = await stickerData.blobWithBorder.arrayBuffer();
+      dataToSave.blobWithBorderData = arrayBuffer;
+      dataToSave.blobWithBorderType = stickerData.blobWithBorder.type;
+      delete dataToSave.blobWithBorder; // 元のBlobプロパティを削除
+    }
+
+    // originalBlobも同様に処理
+    if (stickerData.originalBlob instanceof Blob) {
+      const arrayBuffer = await stickerData.originalBlob.arrayBuffer();
+      dataToSave.originalBlobData = arrayBuffer;
+      dataToSave.originalBlobType = stickerData.originalBlob.type;
+      delete dataToSave.originalBlob;
+    }
+
+    const transaction = db.transaction([DB_CONFIG.STORE_NAME], "readwrite");
+    const objectStore = transaction.objectStore(DB_CONFIG.STORE_NAME);
+    const request = objectStore.put(dataToSave);
+    return promisifyRequest(request);
+  } catch (error) {
+    console.error("DB保存エラー:", error);
+    throw error;
+  }
 }
 
 /**
@@ -113,78 +99,57 @@ export async function saveStickerToDB(stickerData) {
  * @returns {Promise<void>}
  */
 export async function updateStickerInDB(id, updates) {
-    try {
-        const transaction = db.transaction([DB_CONFIG.STORE_NAME], 'readwrite');
-        const objectStore = transaction.objectStore(DB_CONFIG.STORE_NAME);
-        const data = await promisifyRequest(objectStore.get(id));
-        
-        if (data) {
-            // Safari対策：既存のdataからBlobプロパティを削除（念のため）
-            if (data.blob instanceof Blob) {
-                delete data.blob;
-            }
-            if (data.blobWithBorder instanceof Blob) {
-                delete data.blobWithBorder;
-            }
-            if (data.removedBgBlob instanceof Blob) {
-                delete data.removedBgBlob;
-            }
-            if (data.removedBgBlobWithBorder instanceof Blob) {
-                delete data.removedBgBlobWithBorder;
-            }
-            if (data.originalBlob instanceof Blob) {
-                delete data.originalBlob;
-            }
-            
-            // Safari対策：BlobをArrayBufferに変換
-            const updatesToApply = { ...updates };
-            
-            // blobを処理
-            if (updates.blob instanceof Blob) {
-                const arrayBuffer = await updates.blob.arrayBuffer();
-                updatesToApply.blobData = arrayBuffer;
-                updatesToApply.blobType = updates.blob.type;
-                delete updatesToApply.blob;
-            }
-            
-            // blobWithBorderを処理
-            if (updates.blobWithBorder instanceof Blob) {
-                const arrayBuffer = await updates.blobWithBorder.arrayBuffer();
-                updatesToApply.blobWithBorderData = arrayBuffer;
-                updatesToApply.blobWithBorderType = updates.blobWithBorder.type;
-                delete updatesToApply.blobWithBorder;
-            }
-            
-            // removedBgBlobを処理
-            if (updates.removedBgBlob instanceof Blob) {
-                const arrayBuffer = await updates.removedBgBlob.arrayBuffer();
-                updatesToApply.removedBgBlobData = arrayBuffer;
-                updatesToApply.removedBgBlobType = updates.removedBgBlob.type;
-                delete updatesToApply.removedBgBlob;
-            }
-            
-            // removedBgBlobWithBorderを処理
-            if (updates.removedBgBlobWithBorder instanceof Blob) {
-                const arrayBuffer = await updates.removedBgBlobWithBorder.arrayBuffer();
-                updatesToApply.removedBgBlobWithBorderData = arrayBuffer;
-                updatesToApply.removedBgBlobWithBorderType = updates.removedBgBlobWithBorder.type;
-                delete updatesToApply.removedBgBlobWithBorder;
-            }
-            
-            // originalBlobを処理
-            if (updates.originalBlob instanceof Blob) {
-                const arrayBuffer = await updates.originalBlob.arrayBuffer();
-                updatesToApply.originalBlobData = arrayBuffer;
-                updatesToApply.originalBlobType = updates.originalBlob.type;
-                delete updatesToApply.originalBlob;
-            }
-            
-            Object.assign(data, updatesToApply);
-            await promisifyRequest(objectStore.put(data));
-        }
-    } catch (e) {
-        console.error('DB更新エラー:', e);
+  try {
+    const transaction = db.transaction([DB_CONFIG.STORE_NAME], "readwrite");
+    const objectStore = transaction.objectStore(DB_CONFIG.STORE_NAME);
+    const data = await promisifyRequest(objectStore.get(id));
+
+    if (data) {
+      // Safari対策：既存のdataからBlobプロパティを削除（念のため）
+      if (data.blob instanceof Blob) {
+        delete data.blob;
+      }
+      if (data.blobWithBorder instanceof Blob) {
+        delete data.blobWithBorder;
+      }
+
+      if (data.originalBlob instanceof Blob) {
+        delete data.originalBlob;
+      }
+
+      // Safari対策：BlobをArrayBufferに変換
+      const updatesToApply = { ...updates };
+
+      // blobを処理
+      if (updates.blob instanceof Blob) {
+        const arrayBuffer = await updates.blob.arrayBuffer();
+        updatesToApply.blobData = arrayBuffer;
+        updatesToApply.blobType = updates.blob.type;
+        delete updatesToApply.blob;
+      }
+
+      // blobWithBorderを処理
+      if (updates.blobWithBorder instanceof Blob) {
+        const arrayBuffer = await updates.blobWithBorder.arrayBuffer();
+        updatesToApply.blobWithBorderData = arrayBuffer;
+        updatesToApply.blobWithBorderType = updates.blobWithBorder.type;
+        delete updatesToApply.blobWithBorder;
+      }
+
+      // originalBlobを処理
+      if (updates.originalBlob instanceof Blob) {
+        const arrayBuffer = await updates.originalBlob.arrayBuffer();
+        updatesToApply.originalBlobData = arrayBuffer;
+        updatesToApply.originalBlobType = updates.originalBlob.type;
+        delete updatesToApply.originalBlob;
+      }
+
+      Object.assign(data, updatesToApply);
+      await promisifyRequest(objectStore.put(data));
     }
+  } catch (e) {
+    console.error("DB更新エラー:", e);
+  }
 }
 
 /**
@@ -193,10 +158,10 @@ export async function updateStickerInDB(id, updates) {
  * @returns {Promise<void>}
  */
 export function deleteStickerFromDB(id) {
-    const transaction = db.transaction([DB_CONFIG.STORE_NAME], 'readwrite');
-    const objectStore = transaction.objectStore(DB_CONFIG.STORE_NAME);
-    const request = objectStore.delete(id);
-    return promisifyRequest(request);
+  const transaction = db.transaction([DB_CONFIG.STORE_NAME], "readwrite");
+  const objectStore = transaction.objectStore(DB_CONFIG.STORE_NAME);
+  const request = objectStore.delete(id);
+  return promisifyRequest(request);
 }
 
 /**
@@ -204,54 +169,44 @@ export function deleteStickerFromDB(id) {
  * @returns {Promise<Array>}
  */
 export async function loadAllStickersFromDB() {
-    try {
-        const transaction = db.transaction([DB_CONFIG.STORE_NAME], 'readonly');
-        const objectStore = transaction.objectStore(DB_CONFIG.STORE_NAME);
-        const stickers = await promisifyRequest(objectStore.getAll());
-        
-        // Safari対策：ArrayBufferをBlobに戻す
-        for (const sticker of stickers) {
-            if (sticker.blobData && sticker.blobType) {
-                // ArrayBufferからBlobを復元
-                sticker.blob = new Blob([sticker.blobData], { type: sticker.blobType });
-                delete sticker.blobData;
-                delete sticker.blobType;
-            }
-            
-            // blobWithBorderも同様に処理（既存データとの互換性を維持）
-            if (sticker.blobWithBorderData && sticker.blobWithBorderType) {
-                sticker.blobWithBorder = new Blob([sticker.blobWithBorderData], { type: sticker.blobWithBorderType });
-                delete sticker.blobWithBorderData;
-                delete sticker.blobWithBorderType;
-            }
-            
-            // 背景除去版も同様に処理
-            if (sticker.removedBgBlobData && sticker.removedBgBlobType) {
-                sticker.removedBgBlob = new Blob([sticker.removedBgBlobData], { type: sticker.removedBgBlobType });
-                delete sticker.removedBgBlobData;
-                delete sticker.removedBgBlobType;
-            }
-            
-            // 背景除去+縁取り版も同様に処理
-            if (sticker.removedBgBlobWithBorderData && sticker.removedBgBlobWithBorderType) {
-                sticker.removedBgBlobWithBorder = new Blob([sticker.removedBgBlobWithBorderData], { type: sticker.removedBgBlobWithBorderType });
-                delete sticker.removedBgBlobWithBorderData;
-                delete sticker.removedBgBlobWithBorderType;
-            }
-            
-            // originalBlobも同様に処理
-            if (sticker.originalBlobData && sticker.originalBlobType) {
-                sticker.originalBlob = new Blob([sticker.originalBlobData], { type: sticker.originalBlobType });
-                delete sticker.originalBlobData;
-                delete sticker.originalBlobType;
-            }
-        }
-        
-        // z-index順にソート（小さい順から追加することで重ね順を再現）
-        stickers.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
-        return stickers;
-    } catch (e) {
-        console.error('DB読み込みエラー:', e);
-        return [];
+  try {
+    const transaction = db.transaction([DB_CONFIG.STORE_NAME], "readonly");
+    const objectStore = transaction.objectStore(DB_CONFIG.STORE_NAME);
+    const stickers = await promisifyRequest(objectStore.getAll());
+
+    // Safari対策：ArrayBufferをBlobに戻す
+    for (const sticker of stickers) {
+      if (sticker.blobData && sticker.blobType) {
+        // ArrayBufferからBlobを復元
+        sticker.blob = new Blob([sticker.blobData], { type: sticker.blobType });
+        delete sticker.blobData;
+        delete sticker.blobType;
+      }
+
+      // blobWithBorderも同様に処理（既存データとの互換性を維持）
+      if (sticker.blobWithBorderData && sticker.blobWithBorderType) {
+        sticker.blobWithBorder = new Blob([sticker.blobWithBorderData], {
+          type: sticker.blobWithBorderType,
+        });
+        delete sticker.blobWithBorderData;
+        delete sticker.blobWithBorderType;
+      }
+
+      // originalBlobも同様に処理
+      if (sticker.originalBlobData && sticker.originalBlobType) {
+        sticker.originalBlob = new Blob([sticker.originalBlobData], {
+          type: sticker.originalBlobType,
+        });
+        delete sticker.originalBlobData;
+        delete sticker.originalBlobType;
+      }
     }
+
+    // z-index順にソート（小さい順から追加することで重ね順を再現）
+    stickers.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+    return stickers;
+  } catch (e) {
+    console.error("DB読み込みエラー:", e);
+    return [];
+  }
 }

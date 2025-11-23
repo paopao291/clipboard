@@ -1,5 +1,9 @@
 import { state } from "../state.js";
-import { STICKER_DEFAULTS, HELP_STICKER_CONFIG, BORDER_WIDTHS } from "./constants.js";
+import {
+  STICKER_DEFAULTS,
+  HELP_STICKER_CONFIG,
+  BORDER_WIDTHS,
+} from "./constants.js";
 import {
   saveStickerToDB,
   updateStickerInDB,
@@ -40,10 +44,10 @@ class BlobURLManager {
    */
   createURL(blob, imgElement = null) {
     if (!blob || !(blob instanceof Blob)) {
-      throw new Error('Invalid blob provided');
+      throw new Error("Invalid blob provided");
     }
     const url = URL.createObjectURL(blob);
-    
+
     if (imgElement) {
       // img要素に関連付けて追跡
       if (!this.activeUrls.has(imgElement)) {
@@ -54,7 +58,7 @@ class BlobURLManager {
       // 一時的なURLとしてマーク
       this.tempUrls.add(url);
     }
-    
+
     return url;
   }
 
@@ -69,14 +73,14 @@ class BlobURLManager {
       const urls = this.activeUrls.get(imgElement);
       return urls && urls.has(url);
     }
-    
+
     // すべてのimg要素で使用中か確認
     for (const urls of this.activeUrls.values()) {
       if (urls.has(url)) {
         return true;
       }
     }
-    
+
     return false;
   }
 
@@ -87,19 +91,19 @@ class BlobURLManager {
    * @returns {boolean} 解放に成功した場合true
    */
   revokeURL(url, imgElement = null) {
-    if (!url || !url.startsWith('blob:')) {
+    if (!url || !url.startsWith("blob:")) {
       return false;
     }
 
     // 使用中でないことを確認
     if (this.isActive(url, imgElement)) {
-      console.warn('Attempted to revoke active blob URL:', url);
+      console.warn("Attempted to revoke active blob URL:", url);
       return false;
     }
 
     try {
       URL.revokeObjectURL(url);
-      
+
       // 追跡から削除
       if (imgElement && this.activeUrls.has(imgElement)) {
         this.activeUrls.get(imgElement).delete(url);
@@ -108,10 +112,10 @@ class BlobURLManager {
         }
       }
       this.tempUrls.delete(url);
-      
+
       return true;
     } catch (error) {
-      console.warn('Failed to revoke blob URL:', error);
+      console.warn("Failed to revoke blob URL:", error);
       return false;
     }
   }
@@ -123,13 +127,13 @@ class BlobURLManager {
    */
   revokeAllForImage(imgElement, keepUrl = null) {
     if (!imgElement) return;
-    
+
     const urls = this.activeUrls.get(imgElement);
     if (!urls) return;
-    
-    const urlsToRevoke = Array.from(urls).filter(url => url !== keepUrl);
-    urlsToRevoke.forEach(url => this.revokeURL(url, imgElement));
-    
+
+    const urlsToRevoke = Array.from(urls).filter((url) => url !== keepUrl);
+    urlsToRevoke.forEach((url) => this.revokeURL(url, imgElement));
+
     if (keepUrl) {
       // keepUrlのみを残す
       this.activeUrls.set(imgElement, new Set([keepUrl]));
@@ -153,12 +157,12 @@ class BlobURLManager {
       }
 
       let isResolved = false;
-      
+
       const cleanup = () => {
         if (isResolved) return;
         isResolved = true;
-        img.removeEventListener('load', onLoad);
-        img.removeEventListener('error', onError);
+        img.removeEventListener("load", onLoad);
+        img.removeEventListener("error", onError);
       };
 
       const onLoad = () => {
@@ -168,17 +172,17 @@ class BlobURLManager {
           resolve();
         } else {
           // naturalWidthが0の場合はエラー
-          reject(new Error('Image loaded but naturalWidth is 0'));
+          reject(new Error("Image loaded but naturalWidth is 0"));
         }
       };
 
       const onError = () => {
         cleanup();
-        reject(new Error('Image load failed'));
+        reject(new Error("Image load failed"));
       };
 
-      img.addEventListener('load', onLoad);
-      img.addEventListener('error', onError);
+      img.addEventListener("load", onLoad);
+      img.addEventListener("error", onError);
 
       // 既に読み込まれている場合
       if (img.complete && img.naturalWidth > 0) {
@@ -188,7 +192,7 @@ class BlobURLManager {
         setTimeout(() => {
           if (!isResolved) {
             cleanup();
-            reject(new Error('Image load timeout'));
+            reject(new Error("Image load timeout"));
           }
         }, timeout);
       }
@@ -212,17 +216,22 @@ class BlobURLManager {
    */
   async updateImageUrl(img, newUrl, waitDelay = 100) {
     if (!img) return;
-    
+
     const oldUrl = img.src;
-    
+
     // 新しいURLが設定されるまで待つ
     await this.waitForImageLoad(img, newUrl);
-    
+
     // 少し待ってから古いURLを解放（確実に新しいURLが使用されていることを確認）
     setTimeout(() => {
       const currentSrc = img.src;
       // 現在使用中のURLでない場合のみ解放
-      if (oldUrl && oldUrl !== newUrl && oldUrl !== currentSrc && oldUrl.startsWith('blob:')) {
+      if (
+        oldUrl &&
+        oldUrl !== newUrl &&
+        oldUrl !== currentSrc &&
+        oldUrl.startsWith("blob:")
+      ) {
         this.revokeURL(oldUrl, img);
       }
     }, waitDelay);
@@ -232,11 +241,11 @@ class BlobURLManager {
    * すべての一時的なURLを解放
    */
   revokeAllTemp() {
-    this.tempUrls.forEach(url => {
+    this.tempUrls.forEach((url) => {
       try {
         URL.revokeObjectURL(url);
       } catch (error) {
-        console.warn('Failed to revoke temp URL:', error);
+        console.warn("Failed to revoke temp URL:", error);
       }
     });
     this.tempUrls.clear();
@@ -249,18 +258,16 @@ class BlobURLManager {
    */
   revokeStickerUrls(sticker, keepUrl = null) {
     if (!sticker || !sticker.img) return;
-    
+
     const currentSrc = sticker.img.src;
     const urlsToCheck = [
       sticker.originalBlobUrl,
       sticker.blobUrl,
       sticker.blobWithBorderUrl,
       sticker.paddedBlobUrl,
-      sticker.removedBgBlobUrl,
-      sticker.removedBgBlobWithBorderUrl,
-    ].filter(url => url && url !== keepUrl && url !== currentSrc);
+    ].filter((url) => url && url !== keepUrl && url !== currentSrc);
 
-    urlsToCheck.forEach(url => {
+    urlsToCheck.forEach((url) => {
       this.revokeURL(url, sticker.img);
     });
   }
@@ -285,43 +292,43 @@ const OUTLINE_CONFIG = {
  */
 function hasTransparency(img) {
   // キャンバスに描画して分析
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.min(img.width, 100);  // パフォーマンスのため小さく
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.min(img.width, 100); // パフォーマンスのため小さく
   canvas.height = Math.min(img.height, 100);
-  const ctx = canvas.getContext('2d');
-  
+  const ctx = canvas.getContext("2d");
+
   // 画像を描画
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  
+
   try {
     // エッジ（縁）のピクセルをチェック（透過PNGの場合、端が透明になる可能性が高い）
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imageData.data;
-    
+
     // 画像の周囲をサンプリングチェック
     for (let i = 0; i < canvas.width; i++) {
       // 上端と下端
-      const topIndex = (i * 4) + 3;
-      const bottomIndex = ((canvas.height - 1) * canvas.width * 4) + (i * 4) + 3;
+      const topIndex = i * 4 + 3;
+      const bottomIndex = (canvas.height - 1) * canvas.width * 4 + i * 4 + 3;
       if (data[topIndex] < 255 || data[bottomIndex] < 255) {
         return true;
       }
     }
-    
+
     for (let i = 0; i < canvas.height; i++) {
       // 左端と右端
-      const leftIndex = (i * canvas.width * 4) + 3;
-      const rightIndex = (i * canvas.width * 4) + ((canvas.width - 1) * 4) + 3;
+      const leftIndex = i * canvas.width * 4 + 3;
+      const rightIndex = i * canvas.width * 4 + (canvas.width - 1) * 4 + 3;
       if (data[leftIndex] < 255 || data[rightIndex] < 255) {
         return true;
       }
     }
-    
+
     // 内部のサンプリングチェック（中央付近）
     const centerX = Math.floor(canvas.width / 2);
     const centerY = Math.floor(canvas.height / 2);
     const radius = Math.min(20, Math.floor(canvas.width / 4));
-    
+
     for (let y = centerY - radius; y < centerY + radius; y++) {
       for (let x = centerX - radius; x < centerX + radius; x++) {
         if (x >= 0 && x < canvas.width && y >= 0 && y < canvas.height) {
@@ -332,10 +339,10 @@ function hasTransparency(img) {
         }
       }
     }
-    
+
     return false;
   } catch (e) {
-    console.warn('透過チェック中にエラー:', e);
+    console.warn("透過チェック中にエラー:", e);
     return false; // エラーの場合は透過なしと判断
   }
 }
@@ -347,9 +354,16 @@ function hasTransparency(img) {
  * @param {boolean} hasTransparency - 画像に透過があるかどうか
  * @returns {Array<{x: number, y: number}>} オフセット配列
  */
-function generateOutlineOffsets(borderWidth, imageType = "", hasTransparency = false) {
+function generateOutlineOffsets(
+  borderWidth,
+  imageType = "",
+  hasTransparency = false,
+) {
   // JPEGまたは透過のないPNGの場合は四角形の縁取り（8方向）
-  if (imageType === "image/jpeg" || (imageType === "image/png" && !hasTransparency)) {
+  if (
+    imageType === "image/jpeg" ||
+    (imageType === "image/png" && !hasTransparency)
+  ) {
     return [
       { x: -borderWidth, y: 0 }, // 左
       { x: borderWidth, y: 0 }, // 右
@@ -360,26 +374,26 @@ function generateOutlineOffsets(borderWidth, imageType = "", hasTransparency = f
       { x: -borderWidth, y: borderWidth }, // 左下
       { x: borderWidth, y: borderWidth }, // 右下
     ];
-  } 
+  }
   // 透過のあるPNGの場合は円形の縁取り（36方向）
   else {
     const offsets = [];
-    
+
     // 0度から350度まで、10度ずつ36方向を生成
     for (let angle = 0; angle < 360; angle += 10) {
       // 角度をラジアンに変換
       const angleRad = angle * (Math.PI / 180);
-      
+
       // 三角関数でx,y座標を計算（cos,sin）
       const x = Math.cos(angleRad) * borderWidth;
       const y = Math.sin(angleRad) * borderWidth;
-      
-      offsets.push({ 
-        x: Math.round(x * 100) / 100, 
-        y: Math.round(y * 100) / 100 
+
+      offsets.push({
+        x: Math.round(x * 100) / 100,
+        y: Math.round(y * 100) / 100,
       });
     }
-    
+
     return offsets;
   }
 }
@@ -396,19 +410,16 @@ export function calculateBorderWidth(width, height, borderMode = 2) {
   if (borderMode === 0) {
     return 0;
   }
-  
+
   const imageSize = Math.max(width, height);
-  
+
   // borderModeに基づいて画像サイズに応じた縁取り幅を計算
   if (borderMode > 0 && borderMode < BORDER_WIDTHS.length) {
     const ratio = BORDER_WIDTHS[borderMode];
     // 最低でもOUTLINE_CONFIG.MIN_WIDTHピクセル確保
-    return Math.max(
-      OUTLINE_CONFIG.MIN_WIDTH,
-      Math.round(imageSize * ratio)
-    );
+    return Math.max(OUTLINE_CONFIG.MIN_WIDTH, Math.round(imageSize * ratio));
   }
-  
+
   // 後方互換性のために残す（従来の動的計算）
   return Math.max(
     OUTLINE_CONFIG.MIN_WIDTH,
@@ -456,9 +467,19 @@ function createResizedContentCanvas(img, borderWidth) {
   // 高品質な縮小
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
-  
+
   // 元画像の縦横比を維持して描画
-  ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, contentWidth, contentHeight);
+  ctx.drawImage(
+    img,
+    0,
+    0,
+    img.width,
+    img.height,
+    0,
+    0,
+    contentWidth,
+    contentHeight,
+  );
 
   return canvas;
 }
@@ -474,7 +495,15 @@ function createResizedContentCanvas(img, borderWidth) {
  * @param {boolean} hasTransparency - 画像に透過があるかどうか
  * @returns {HTMLCanvasElement} 完成したcanvas
  */
-function addBorderOrPadding(contentCanvas, borderWidth, withOutline, finalWidth, finalHeight, imageType = "", hasTransparency = false) {
+function addBorderOrPadding(
+  contentCanvas,
+  borderWidth,
+  withOutline,
+  finalWidth,
+  finalHeight,
+  imageType = "",
+  hasTransparency = false,
+) {
   const canvas = document.createElement("canvas");
   canvas.width = finalWidth;
   canvas.height = finalHeight;
@@ -490,12 +519,16 @@ function addBorderOrPadding(contentCanvas, borderWidth, withOutline, finalWidth,
     const whiteMaskedImage = createWhiteMaskedImage(contentCanvas);
 
     // 画像タイプと透過有無に応じたオフセットを生成
-    const offsets = generateOutlineOffsets(borderWidth, imageType, hasTransparency);
+    const offsets = generateOutlineOffsets(
+      borderWidth,
+      imageType,
+      hasTransparency,
+    );
     for (const offset of offsets) {
       ctx.drawImage(
         whiteMaskedImage,
         offset.x + borderWidth,
-        offset.y + borderWidth
+        offset.y + borderWidth,
       );
     }
   }
@@ -582,29 +615,35 @@ export async function addPaddingToImage(blob, borderWidth) {
       canvas.width = img.width;
       canvas.height = img.height;
       const ctx = canvas.getContext("2d");
-      
+
       // 元画像をそのまま描画
       ctx.drawImage(img, 0, 0, img.width, img.height);
-      
+
       // 新しいキャンバスを作成（パディング付き）
       const finalWidth = img.width + borderWidth * 2;
       const finalHeight = img.height + borderWidth * 2;
-      
+
       const finalCanvas = document.createElement("canvas");
       finalCanvas.width = finalWidth;
       finalCanvas.height = finalHeight;
       const finalCtx = finalCanvas.getContext("2d");
-      
+
       // 透明な背景（デフォルト）
       finalCtx.clearRect(0, 0, finalWidth, finalHeight);
-      
+
       // 元画像を中央に描画
       finalCtx.drawImage(canvas, borderWidth, borderWidth);
-      
-      console.log(`パディング追加: ${img.width}x${img.height} → ${finalCanvas.width}x${finalCanvas.height}`);
-      return await canvasToBlob(finalCanvas, blob, "padding追加失敗、元の画像を使用");
+
+      console.log(
+        `パディング追加: ${img.width}x${img.height} → ${finalCanvas.width}x${finalCanvas.height}`,
+      );
+      return await canvasToBlob(
+        finalCanvas,
+        blob,
+        "padding追加失敗、元の画像を使用",
+      );
     },
-    blob
+    blob,
   );
 }
 
@@ -622,48 +661,58 @@ export async function applyOutlineFilter(blob, borderMode = 2) {
       if (borderMode === 0) {
         return { blob, borderWidth: 0, borderMode: 0 };
       }
-      
+
       // 計算された縁取り幅
-      const borderWidth = calculateBorderWidth(img.width, img.height, borderMode);
-      
+      const borderWidth = calculateBorderWidth(
+        img.width,
+        img.height,
+        borderMode,
+      );
+
       if (borderWidth <= 0) {
         console.warn("縁取り幅が0以下です。縁取りを適用しません");
         return { blob, borderWidth: 0, borderMode };
       }
-      
+
       // 元画像のサイズを保存
       const originalWidth = img.width;
       const originalHeight = img.height;
-      
+
       // コンテンツキャンバスを作成（縮小せず、元画像そのもの）
-      const canvas = document.createElement('canvas');
+      const canvas = document.createElement("canvas");
       canvas.width = originalWidth;
       canvas.height = originalHeight;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0);
-      
+
       // 画像の種類と透過の有無を判定
-      const imageType = blob.type || 'image/png';
+      const imageType = blob.type || "image/png";
       const transparency = hasTransparency(img);
-      
-      console.log(`縁取り適用: モード${borderMode}, 幅${borderWidth}px, 画像サイズ${originalWidth}x${originalHeight}`);
-      
+
+      console.log(
+        `縁取り適用: モード${borderMode}, 幅${borderWidth}px, 画像サイズ${originalWidth}x${originalHeight}`,
+      );
+
       // 透過とファイルタイプの両方を考慮したaddBorderOrPadding関数の呼び出し
       // 最終サイズは元のサイズ + 縁取り幅*2
       const finalCanvas = addBorderOrPadding(
-        canvas, 
-        borderWidth, 
-        true, 
-        originalWidth + borderWidth * 2, 
-        originalHeight + borderWidth * 2, 
+        canvas,
+        borderWidth,
+        true,
+        originalWidth + borderWidth * 2,
+        originalHeight + borderWidth * 2,
         imageType,
-        transparency
+        transparency,
       );
-      
-      const resultBlob = await canvasToBlob(finalCanvas, blob, "縁取り画像生成失敗、元の画像を使用");
+
+      const resultBlob = await canvasToBlob(
+        finalCanvas,
+        blob,
+        "縁取り画像生成失敗、元の画像を使用",
+      );
       return { blob: resultBlob, borderWidth, borderMode };
     },
-    { blob: blob, borderWidth: 0, borderMode }
+    { blob: blob, borderWidth: 0, borderMode },
   );
 }
 
@@ -681,14 +730,14 @@ async function resizeImageBlob(blob, maxSize = 1200) {
       // 縦横比を維持してリサイズ
       let width = img.width;
       let height = img.height;
-      
+
       // 既に小さい画像はそのまま返す
       if (width <= maxSize && height <= maxSize) {
         blobURLManager.revokeURL(blobUrl);
         resolve(blob);
         return;
       }
-      
+
       // 長辺をmaxSizeに合わせる
       if (width > height) {
         height = (height / width) * maxSize;
@@ -697,49 +746,49 @@ async function resizeImageBlob(blob, maxSize = 1200) {
         width = (width / height) * maxSize;
         height = maxSize;
       }
-      
+
       // Canvasでリサイズ
       const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext("2d");
-      
+
       // 高品質なリサイズ設定
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = "high";
-      
+
       ctx.drawImage(img, 0, 0, width, height);
-      
+
       // 元の画像フォーマットを判定
       const mimeType = blob.type || "image/png";
       const isPNG = mimeType === "image/png";
       const quality = isPNG ? 1.0 : 0.9; // PNGは品質指定不要、JPEGは90%
-      
+
       // Blobに変換（元のフォーマットを維持）
       canvas.toBlob(
         (resizedBlob) => {
-        blobURLManager.revokeURL(blobUrl);
-        if (resizedBlob) {
+          blobURLManager.revokeURL(blobUrl);
+          if (resizedBlob) {
             console.log(
               `画像リサイズ: ${img.width}x${img.height} → ${width}x${height} (${mimeType})`,
             );
-          resolve(resizedBlob);
-        } else {
+            resolve(resizedBlob);
+          } else {
             console.warn("リサイズ失敗、元の画像を使用");
-          resolve(blob);
-        }
+            resolve(blob);
+          }
         },
         mimeType,
         quality,
       );
     };
-    
+
     img.onerror = () => {
       blobURLManager.revokeURL(blobUrl);
       console.warn("画像読み込み失敗、元の画像を使用");
       resolve(blob);
     };
-    
+
     img.src = blobUrl;
   });
 }
@@ -770,8 +819,8 @@ async function resizeImageBlobWithBorder(blob, maxSize = 1200, borderMode = 2) {
  * @returns {number} 基準幅
  */
 function getBaseWidth(sticker) {
-  return sticker.isHelpSticker 
-    ? HELP_STICKER_CONFIG.BASE_WIDTH 
+  return sticker.isHelpSticker
+    ? HELP_STICKER_CONFIG.BASE_WIDTH
     : STICKER_DEFAULTS.BASE_WIDTH;
 }
 
@@ -792,7 +841,7 @@ function calculateScale(sticker) {
 function getSizeConstraints(sticker) {
   if (sticker.isHelpSticker) {
     const isMobile = window.innerWidth <= 768;
-    const maxWidth = isMobile 
+    const maxWidth = isMobile
       ? Math.min(
           HELP_STICKER_CONFIG.MAX_WIDTH_DESKTOP,
           (window.innerWidth * HELP_STICKER_CONFIG.MAX_WIDTH_MOBILE_PERCENT) /
@@ -849,7 +898,7 @@ export async function addStickerFromBlob(
 ) {
   // まずリサイズだけ実行（高速）
   const resizedBlob = await resizeImageBlob(blob, 1200);
-  
+
   const stickerId = id || Date.now();
 
   // 画像サイズを取得して縁取り幅を計算
@@ -870,30 +919,41 @@ export async function addStickerFromBlob(
   // モード2（5%）の最大縁取り幅を計算
   const maxBorderWidth = Math.max(
     8, // 最小値
-    Math.round(Math.max(imageDimensions.width, imageDimensions.height) * BORDER_WIDTHS[2])
+    Math.round(
+      Math.max(imageDimensions.width, imageDimensions.height) *
+        BORDER_WIDTHS[2],
+    ),
   );
-  
+
   // 現在のモードの縁取り幅
-  const borderWidth = borderMode === 0 ? 0 : 
-    Math.max(8, Math.round(Math.max(imageDimensions.width, imageDimensions.height) * BORDER_WIDTHS[borderMode]));
-  
+  const borderWidth =
+    borderMode === 0
+      ? 0
+      : Math.max(
+          8,
+          Math.round(
+            Math.max(imageDimensions.width, imageDimensions.height) *
+              BORDER_WIDTHS[borderMode],
+          ),
+        );
+
   // リサイズ済み画像をベース画像として保存（パディングや縁取りを適用する前の状態）
   // これが全ての処理の基準となる「元画像」
   // 注意: この時点ではimg要素がまだ作成されていないため、後で関連付ける
   const originalBlobUrl = blobURLManager.createURL(resizedBlob);
-  
+
   // borderModeが未定義の場合はデフォルト値を使用
   if (borderMode === undefined) {
     borderMode = STICKER_DEFAULTS.BORDER_MODE;
   }
-  
-  console.log(`アップロード: 使用する縁取りモード = ${borderMode}`)
-  
+
+  console.log(`アップロード: 使用する縁取りモード = ${borderMode}`);
+
   let url, blobUrl, blobWithBorderUrl, paddedBlobUrl;
-  
+
   // 元画像URLを保持
   blobUrl = originalBlobUrl;
-  
+
   // アップロード時の処理をシンプルに
   // 注意: この時点ではimg要素がまだ作成されていないため、後でaddStickerToDOMで関連付ける
   if (borderMode === 0) {
@@ -903,30 +963,31 @@ export async function addStickerFromBlob(
     url = blobURLManager.createURL(paddedBlob);
     blobWithBorderUrl = null;
     paddedBlobUrl = url;
-  } 
-  else if (borderMode === 1) {
+  } else if (borderMode === 1) {
     // モード1（2.5%）: 2.5%縁取り + 残りパディング
     console.log(`アップロード: モード1 - 2.5%縁取り + 残りパディング`);
     const { blob: borderBlob } = await applyOutlineFilter(resizedBlob, 1);
-    const paddedBorderBlob = await addPaddingToImage(borderBlob, maxBorderWidth - borderWidth);
+    const paddedBorderBlob = await addPaddingToImage(
+      borderBlob,
+      maxBorderWidth - borderWidth,
+    );
     blobWithBorderUrl = blobURLManager.createURL(paddedBorderBlob);
-    
+
     // パディング付き画像も生成（縁取りなし表示用）
     const paddedBlob = await addPaddingToImage(resizedBlob, maxBorderWidth);
     paddedBlobUrl = blobURLManager.createURL(paddedBlob);
-    
+
     url = hasBorder ? blobWithBorderUrl : paddedBlobUrl;
-  }
-  else {
+  } else {
     // モード2（5%縁取り）: 標準（パディングなし）
     console.log(`アップロード: モード2 - 5%縁取り（パディングなし）`);
     const { blob: borderBlob } = await applyOutlineFilter(resizedBlob, 2);
     blobWithBorderUrl = blobURLManager.createURL(borderBlob);
-    
+
     // パディング付き画像も生成（縁取りなし表示用）
     const paddedBlob = await addPaddingToImage(resizedBlob, maxBorderWidth);
     paddedBlobUrl = blobURLManager.createURL(paddedBlob);
-    
+
     url = hasBorder ? blobWithBorderUrl : paddedBlobUrl;
   }
 
@@ -964,24 +1025,26 @@ export async function addStickerFromBlob(
         // モード0やモード1での追加パディングを保持するため、現在のURLを保存
         addedSticker.borderWidth = borderWidth;
         addedSticker.borderMode = borderMode;
-        
+
         // すでに適切な画像が表示されているので、変更しない
         // サーバー保存とDBへの追加のみ行う
-  
+
         // 現在表示中の画像を取得
         let blobForBorder = null;
         if (blobWithBorderUrl) {
           try {
-            blobForBorder = await fetch(blobWithBorderUrl).then(r => r.blob());
+            blobForBorder = await fetch(blobWithBorderUrl).then((r) =>
+              r.blob(),
+            );
           } catch (fetchErr) {
             console.warn("画像取得エラー:", fetchErr);
           }
         }
-  
+
         // 元画像と現在表示中の画像をDBに保存
         await saveStickerToDB({
           id: stickerId,
-          blob: resizedBlob,  // 表示用の画像
+          blob: resizedBlob, // 表示用の画像
           originalBlob: resizedBlob, // リサイズ済み・縁取り/パディング前の元画像
           blobWithBorder: blobForBorder, // 現在表示中の画像
           x: addedSticker.x,
@@ -993,7 +1056,7 @@ export async function addStickerFromBlob(
           hasBorder: addedSticker.hasBorder,
           borderMode: addedSticker.borderMode, // 縁取りモードを保存
           timestamp: Date.now(),
-    });
+        });
       }
     } catch (err) {
       console.warn("ステッカー保存エラー:", err);
@@ -1016,7 +1079,7 @@ export async function addStickerFromBlob(
     timestamp: Date.now(),
     // この時点では縁取り版のBlobは保存しない（後で追加される）
   });
-  
+
   console.log(`ステッカー初期保存: borderMode = ${borderMode}`);
 
   // 追加したステッカーを選択状態にする
@@ -1060,12 +1123,12 @@ export function addStickerToDOM(
   borderWidth = 0,
   borderMode = STICKER_DEFAULTS.BORDER_MODE,
   originalBlobUrl = null, // リサイズ済み・パディング/縁取り前の元画像URL
-  removedBgBlobUrl = null,
-  removedBgBlobWithBorderUrl = null,
-  hasBgRemoved = false,
+  _removedBgBlobUrl = null, // 廃止予定（後方互換性のため残す）
+  _removedBgBlobWithBorderUrl = null, // 廃止予定（後方互換性のため残す）
+  _hasBgRemoved = false, // 廃止予定（後方互換性のため残す）
   bgRemovalProcessed = false,
-  removedBgBlob = null,
-  removedBgBlobWithBorder = null,
+  _removedBgBlob = null, // 廃止予定（後方互換性のため残す）
+  _removedBgBlobWithBorder = null, // 廃止予定（後方互換性のため残す）
   originalBlob = null, // リサイズ済み・パディング/縁取り前の元画像Blob（優先使用）
 ) {
   const stickerId = id || Date.now();
@@ -1083,23 +1146,18 @@ export function addStickerToDOM(
   // 画像要素を作成
   const img = document.createElement("img");
   img.src = url;
-  
+
   // すべてのblob URLをimg要素に関連付けて追跡
   // 注意: paddedBlobUrlは後でstickerオブジェクトに追加される可能性があるため、ここでは追跡しない
-  const urlsToTrack = [
-    url,
-    blobUrl,
-    blobWithBorderUrl,
-    originalBlobUrl,
-    removedBgBlobUrl,
-    removedBgBlobWithBorderUrl,
-  ].filter(url => url && url.startsWith('blob:'));
-  
+  const urlsToTrack = [url, blobUrl, blobWithBorderUrl, originalBlobUrl].filter(
+    (url) => url && url.startsWith("blob:"),
+  );
+
   if (urlsToTrack.length > 0) {
     if (!blobURLManager.activeUrls.has(img)) {
       blobURLManager.activeUrls.set(img, new Set());
     }
-    urlsToTrack.forEach(url => {
+    urlsToTrack.forEach((url) => {
       blobURLManager.activeUrls.get(img).add(url);
     });
   }
@@ -1150,11 +1208,6 @@ export function addStickerToDOM(
     rotation: rotation,
     zIndex: actualZIndex,
     element: stickerDiv,
-    removedBgBlobUrl: removedBgBlobUrl,
-    removedBgBlobWithBorderUrl: removedBgBlobWithBorderUrl,
-    removedBgBlob: removedBgBlob,
-    removedBgBlobWithBorder: removedBgBlobWithBorder,
-    hasBgRemoved: hasBgRemoved,
     bgRemovalProcessed: bgRemovalProcessed,
     imgWrapper: imgWrapper,
     img: img,
@@ -1164,12 +1217,12 @@ export function addStickerToDOM(
     borderMode: borderMode,
   };
   state.addSticker(stickerObject);
-  
+
   // 固定状態を反映
   if (isPinned) {
     stickerDiv.classList.add("pinned");
   }
-  
+
   // 縁取り状態を反映
   if (!hasBorder) {
     stickerDiv.classList.add("no-border");
@@ -1180,7 +1233,7 @@ export function addStickerToDOM(
   stickerDiv.classList.add(`border-mode-${borderMode}`);
 
   // 画像ステッカーのpadding設定は削除（ヘルプステッカーのみ使用）
-  
+
   // transformを適用（scaleと回転）
   applyStickerTransform(stickerObject);
 
@@ -1224,7 +1277,7 @@ export async function removeSticker(id) {
 
     // 削除時にUIを表示
     state.showUI();
-    
+
     // インフォボタンの表示状態を更新
     updateInfoButtonVisibility();
 
@@ -1276,8 +1329,6 @@ export async function removeSticker(id) {
       // すべてのblob URLを解放
       releaseOldUrls(sticker);
       if (sticker.paddedBlobUrl) URL.revokeObjectURL(sticker.paddedBlobUrl);
-      if (sticker.removedBgBlobUrl) URL.revokeObjectURL(sticker.removedBgBlobUrl);
-      if (sticker.removedBgBlobWithBorderUrl) URL.revokeObjectURL(sticker.removedBgBlobWithBorderUrl);
 
       // ヘルプステッカーでない場合のみIndexedDBから削除
       if (!sticker.isHelpSticker) {
@@ -1300,12 +1351,12 @@ async function undoRemoveSticker(stickerData) {
 
   // 状態に再追加
   state.addSticker(stickerData);
-  
+
   // 固定状態を復元
   if (stickerData.isPinned) {
     stickerData.element.classList.add("pinned");
   }
-  
+
   // 縁取り状態を復元
   if (stickerData.hasBorder === false) {
     stickerData.element.classList.add("no-border");
@@ -1361,11 +1412,11 @@ export async function bringToFront(sticker) {
 export async function sendToBack(sticker) {
   // 現在の最小z-indexを見つける
   const minZIndex = Math.min(...state.stickers.map((s) => s.zIndex));
-  
+
   // 最小値-1を設定（ただし1以上を保持）
   const newZIndex = Math.max(1, minZIndex - 1);
   await updateStickerZIndex(sticker, newZIndex);
-  
+
   showToast("最背面に移動しました");
 }
 
@@ -1400,14 +1451,14 @@ export function updateStickerRotation(sticker, rotation) {
 export function updateStickerSize(sticker, width) {
   // サイズ制限を取得
   const { minWidth, maxWidth } = getSizeConstraints(sticker);
-  
+
   // サイズを制限して保存
   sticker.width = Math.max(minWidth, Math.min(maxWidth, width));
-  
+
   // 固定幅を設定
   const baseWidth = getBaseWidth(sticker);
   sticker.element.style.width = `${baseWidth}px`;
-  
+
   // transformを適用（scaleと回転）
   applyStickerTransform(sticker);
 
@@ -1431,7 +1482,7 @@ export async function saveStickerChanges(sticker) {
     updateHelpStickerState(sticker);
     return;
   }
-  
+
   await updateStickerInDB(sticker.id, {
     x: sticker.x,
     yPercent: sticker.yPercent,
@@ -1460,7 +1511,7 @@ export async function saveAllStickerPositions(stickers, options = {}) {
   });
 
   await Promise.all(promises);
-  
+
   if (options.showToastOnComplete) {
     showToast("位置を保存しました");
   }
@@ -1472,14 +1523,14 @@ export async function saveAllStickerPositions(stickers, options = {}) {
  */
 export async function toggleStickerPin(sticker) {
   sticker.isPinned = !sticker.isPinned;
-  
+
   // DOMクラスを更新
   if (sticker.isPinned) {
     sticker.element.classList.add("pinned");
   } else {
     sticker.element.classList.remove("pinned");
   }
-  
+
   // ヘルプステッカーでない場合はDBに保存
   if (!sticker.isHelpSticker) {
     await updateStickerInDB(sticker.id, { isPinned: sticker.isPinned });
@@ -1487,12 +1538,10 @@ export async function toggleStickerPin(sticker) {
     // ヘルプステッカーはlocalStorageに保存
     updateHelpStickerState(sticker);
   }
-  
+
   // ボタンの表示状態を更新
   updateInfoButtonVisibility();
 }
-
-
 
 /**
  * 指定されたモードに基づいて画像の縁取りとパディングを処理する共通関数
@@ -1502,13 +1551,18 @@ export async function toggleStickerPin(sticker) {
  * @param {number} height - 画像の高さ（計算用）
  * @returns {Promise<{resultBlob: Blob, borderBlob: Blob, paddedBlob: Blob, borderWidth: number}>} 処理結果
  */
-async function processBorderAndPadding(originalBlob, borderMode, width, height) {
+async function processBorderAndPadding(
+  originalBlob,
+  borderMode,
+  width,
+  height,
+) {
   // 各モードの最大サイズ（モード2の5%幅）を計算
   const maxBorderWidth = calculateBorderWidth(width, height, 2);
-  
+
   // 各モードに応じたパディング幅を計算
   let paddingWidth;
-  
+
   if (borderMode === 0) {
     // モード0: 5%相当の幅をすべてパディングに
     paddingWidth = maxBorderWidth;
@@ -1520,57 +1574,65 @@ async function processBorderAndPadding(originalBlob, borderMode, width, height) 
     // モード2: 縁取りなし表示用には5%相当のパディングを使用
     paddingWidth = maxBorderWidth;
   }
-  
+
   // モード別の処理
   if (borderMode === 0) {
     // モード0（縁取りなし）: 5%パディングを追加
     console.log(`モード${borderMode}: 5%パディングを追加（${paddingWidth}px）`);
-    
+
     // パディング付き画像を生成
     const paddedBlob = await addPaddingToImage(originalBlob, paddingWidth);
-    
+
     return {
       resultBlob: paddedBlob,
       borderBlob: null,
       paddedBlob: paddedBlob,
-      borderWidth: 0
+      borderWidth: 0,
     };
-  } 
-  else if (borderMode === 1) {
+  } else if (borderMode === 1) {
     // モード1（2.5%）: 2.5%の縁取り + 残りはパディングで合計5%確保
-    const { blob: borderBlob, borderWidth } = await applyOutlineFilter(originalBlob, 1);
-    
+    const { blob: borderBlob, borderWidth } = await applyOutlineFilter(
+      originalBlob,
+      1,
+    );
+
     // 縁取り画像にパディングを追加（5%相当）
-    console.log(`モード${borderMode}: 縁取り${borderWidth}px + パディング${paddingWidth}px（合計${borderWidth + paddingWidth}px）`);
+    console.log(
+      `モード${borderMode}: 縁取り${borderWidth}px + パディング${paddingWidth}px（合計${borderWidth + paddingWidth}px）`,
+    );
     const paddedBorderBlob = await addPaddingToImage(borderBlob, paddingWidth);
-    
+
     // 縁取りなし用のパディング付き画像も生成（5%相当のパディング）
     console.log(`モード${borderMode}: 縁取りなし用に5%パディング追加`);
     const paddedBlob = await addPaddingToImage(originalBlob, maxBorderWidth);
-    
+
     return {
       resultBlob: paddedBorderBlob,
       borderBlob: paddedBorderBlob,
       paddedBlob: paddedBlob,
-      borderWidth: borderWidth
+      borderWidth: borderWidth,
     };
-  }
-  else {
+  } else {
     // モード2（5%）: 通常の5%縁取り（パディングなし）
-    const { blob: borderBlob, borderWidth } = await applyOutlineFilter(originalBlob, 2);
-    
+    const { blob: borderBlob, borderWidth } = await applyOutlineFilter(
+      originalBlob,
+      2,
+    );
+
     // 5%縁取りはパディング不要
-    console.log(`モード${borderMode}: 縁取り${borderWidth}px（パディングなし）`);
-    
+    console.log(
+      `モード${borderMode}: 縁取り${borderWidth}px（パディングなし）`,
+    );
+
     // 縁取りなし用のパディング付き画像は生成（5%相当のパディング）
     console.log(`モード${borderMode}: 縁取りなし用に5%パディング追加`);
     const paddedBlob = await addPaddingToImage(originalBlob, maxBorderWidth);
-    
+
     return {
       resultBlob: borderBlob, // パディングなし
       borderBlob: borderBlob,
       paddedBlob: paddedBlob,
-      borderWidth: borderWidth
+      borderWidth: borderWidth,
     };
   }
 }
@@ -1581,22 +1643,27 @@ async function processBorderAndPadding(originalBlob, borderMode, width, height) 
  */
 export async function toggleStickerBorder(sticker) {
   // 現在のborderModeを取得（未設定の場合はデフォルト値）
-  const currentBorderMode = sticker.borderMode !== undefined ? sticker.borderMode : STICKER_DEFAULTS.BORDER_MODE;
-  
+  const currentBorderMode =
+    sticker.borderMode !== undefined
+      ? sticker.borderMode
+      : STICKER_DEFAULTS.BORDER_MODE;
+
   // 次のモードを設定（0:なし → 1:2.5% → 2:5% → 0:なし...）
   let nextBorderMode = (currentBorderMode + 1) % BORDER_WIDTHS.length;
   sticker.borderMode = nextBorderMode;
-  
+
   // 縁取りの有無設定（モード0の場合はfalse、それ以外はtrue）
   sticker.hasBorder = nextBorderMode !== 0;
-  
-  console.log(`縁取りモード変更: ${currentBorderMode} → ${nextBorderMode}, hasBorder: ${sticker.hasBorder}`);
+
+  console.log(
+    `縁取りモード変更: ${currentBorderMode} → ${nextBorderMode}, hasBorder: ${sticker.hasBorder}`,
+  );
 
   // 既存のborder-modeクラスをすべて削除
   for (let i = 0; i < BORDER_WIDTHS.length; i++) {
     sticker.element.classList.remove(`border-mode-${i}`);
   }
-  
+
   // 新しいborder-modeクラスを追加
   sticker.element.classList.add(`border-mode-${nextBorderMode}`);
 
@@ -1604,7 +1671,7 @@ export async function toggleStickerBorder(sticker) {
   if (sticker.img && sticker.blobUrl) {
     // 元のオリジナル画像を取得（優先順位：originalBlob > originalBlobUrl > blobUrl）
     let originalBlob = null;
-    
+
     // まず、Blobオブジェクトが直接利用可能か確認
     if (sticker.originalBlob) {
       originalBlob = sticker.originalBlob;
@@ -1612,8 +1679,11 @@ export async function toggleStickerBorder(sticker) {
     } else {
       // Blobオブジェクトがない場合は、URLから取得を試みる
       const originalBlobUrl = sticker.originalBlobUrl || sticker.blobUrl;
-      console.log("縁取りモード変更: オリジナルBlobURLから取得:", originalBlobUrl);
-      
+      console.log(
+        "縁取りモード変更: オリジナルBlobURLから取得:",
+        originalBlobUrl,
+      );
+
       try {
         originalBlob = await getBlobFromURL(originalBlobUrl);
         if (!originalBlob) {
@@ -1624,44 +1694,47 @@ export async function toggleStickerBorder(sticker) {
           }
         }
       } catch (err) {
-        console.warn("縁取りモード変更: URLからの取得に失敗、sticker.blobを使用:", err);
+        console.warn(
+          "縁取りモード変更: URLからの取得に失敗、sticker.blobを使用:",
+          err,
+        );
         // エラー時はsticker.blobを使用
         if (sticker.blob) {
           originalBlob = sticker.blob;
         }
       }
     }
-    
+
     if (originalBlob) {
       // 元画像の実際のサイズを取得
       const imageDimensions = await getImageDimensions(originalBlob);
       console.log("元画像の実際のサイズ:", imageDimensions);
-      
+
       // 共通関数を使用して画像処理
       const result = await processBorderAndPadding(
-        originalBlob, 
-        nextBorderMode, 
-        imageDimensions.width, 
-        imageDimensions.height
+        originalBlob,
+        nextBorderMode,
+        imageDimensions.width,
+        imageDimensions.height,
       );
-      
+
       // 古いURLを保存
       const oldBlobUrl = sticker.blobUrl;
       const oldBlobWithBorderUrl = sticker.blobWithBorderUrl;
       const oldPaddedBlobUrl = sticker.paddedBlobUrl;
-      
+
       // 処理結果を保存
       if (nextBorderMode === 0) {
         // モード0（縁取りなし）: パディング付き画像のURLをセット
         const newURL = blobURLManager.createURL(result.resultBlob, sticker.img);
         const oldCurrentUrl = sticker.img?.src; // 現在のURLを保存
-        
+
         // blobUrlも更新（updateStickerImageUrlが参照するため）
         sticker.blobUrl = newURL;
         sticker.blobWithBorderUrl = null; // 縁取りなしなのでnull
         sticker.paddedBlobUrl = newURL;
         sticker.url = newURL;
-        
+
         // 画像を設定して読み込みを待つ
         await new Promise((resolve) => {
           const img = sticker.img;
@@ -1670,98 +1743,133 @@ export async function toggleStickerBorder(sticker) {
             return;
           }
           const onLoad = () => {
-            img.removeEventListener('load', onLoad);
-            img.removeEventListener('error', onError);
+            img.removeEventListener("load", onLoad);
+            img.removeEventListener("error", onError);
             // 古いURLを解放（現在使用中のURLは除外）
-            if (oldBlobUrl && oldBlobUrl !== newURL && oldBlobUrl !== oldCurrentUrl) blobURLManager.revokeURL(oldBlobUrl, img);
-            if (oldBlobWithBorderUrl && oldBlobWithBorderUrl !== newURL && oldBlobWithBorderUrl !== oldCurrentUrl) blobURLManager.revokeURL(oldBlobWithBorderUrl, img);
-            if (oldPaddedBlobUrl && oldPaddedBlobUrl !== newURL && oldPaddedBlobUrl !== oldCurrentUrl) blobURLManager.revokeURL(oldPaddedBlobUrl, img);
+            if (
+              oldBlobUrl &&
+              oldBlobUrl !== newURL &&
+              oldBlobUrl !== oldCurrentUrl
+            )
+              blobURLManager.revokeURL(oldBlobUrl, img);
+            if (
+              oldBlobWithBorderUrl &&
+              oldBlobWithBorderUrl !== newURL &&
+              oldBlobWithBorderUrl !== oldCurrentUrl
+            )
+              blobURLManager.revokeURL(oldBlobWithBorderUrl, img);
+            if (
+              oldPaddedBlobUrl &&
+              oldPaddedBlobUrl !== newURL &&
+              oldPaddedBlobUrl !== oldCurrentUrl
+            )
+              blobURLManager.revokeURL(oldPaddedBlobUrl, img);
             resolve();
           };
           const onError = () => {
-            img.removeEventListener('load', onLoad);
-            img.removeEventListener('error', onError);
+            img.removeEventListener("load", onLoad);
+            img.removeEventListener("error", onError);
             resolve();
           };
-          img.addEventListener('load', onLoad);
-          img.addEventListener('error', onError);
+          img.addEventListener("load", onLoad);
+          img.addEventListener("error", onError);
           img.src = newURL;
           if (img.complete) onLoad();
         });
       } else {
         // モード1,2（縁取りあり）: 縁取り+パディング付き画像のURLをセット
         const newURL = blobURLManager.createURL(result.resultBlob, sticker.img);
-        const paddedBlobUrl = blobURLManager.createURL(result.paddedBlob, sticker.img);
-        
+        const paddedBlobUrl = blobURLManager.createURL(
+          result.paddedBlob,
+          sticker.img,
+        );
+
         sticker.borderWidth = result.borderWidth;
         sticker.blobWithBorderUrl = newURL;
         sticker.paddedBlobUrl = paddedBlobUrl;
         // blobUrlも更新（hasBorderがfalseの場合に使用される）
         sticker.blobUrl = paddedBlobUrl;
-        
+
         // モードに応じた画像を表示
-        console.log(`モード${nextBorderMode}の画像を表示: hasBorder=${sticker.hasBorder}`);
-        
+        console.log(
+          `モード${nextBorderMode}の画像を表示: hasBorder=${sticker.hasBorder}`,
+        );
+
         // 古いURLを保存（updateStickerImageUrlを呼ぶ前に）
         const oldCurrentUrl = sticker.img?.src;
-        
+
         // モード0: 常にパディング付き画像
         // モード1,2: 縁取りONなら縁取り画像、OFFならパディング付き画像
         // 背景除去状態も考慮して表示画像を決定
         updateStickerImageUrl(sticker);
-        
+
         // 新しいURLが設定された後に古いURLを解放
         const newCurrentUrl = sticker.img?.src;
         await new Promise((resolve) => {
           const img = sticker.img;
           if (!img) {
             // imgがない場合は古いURLを解放して終了
-            if (oldBlobUrl && oldBlobUrl !== newCurrentUrl) blobURLManager.revokeURL(oldBlobUrl);
-            if (oldBlobWithBorderUrl && oldBlobWithBorderUrl !== newCurrentUrl) blobURLManager.revokeURL(oldBlobWithBorderUrl);
-            if (oldPaddedBlobUrl && oldPaddedBlobUrl !== newCurrentUrl) blobURLManager.revokeURL(oldPaddedBlobUrl);
+            if (oldBlobUrl && oldBlobUrl !== newCurrentUrl)
+              blobURLManager.revokeURL(oldBlobUrl);
+            if (oldBlobWithBorderUrl && oldBlobWithBorderUrl !== newCurrentUrl)
+              blobURLManager.revokeURL(oldBlobWithBorderUrl);
+            if (oldPaddedBlobUrl && oldPaddedBlobUrl !== newCurrentUrl)
+              blobURLManager.revokeURL(oldPaddedBlobUrl);
             resolve();
             return;
           }
-          
+
           let isResolved = false;
-          
+
           const onLoad = () => {
             if (isResolved) return;
             isResolved = true;
-            img.removeEventListener('load', onLoad);
-            img.removeEventListener('error', onError);
-            
+            img.removeEventListener("load", onLoad);
+            img.removeEventListener("error", onError);
+
             // 画像が確実に読み込まれたことを確認
             if (img.naturalWidth > 0) {
               // 少し待ってから古いURLを解放（確実に新しいURLが使用されていることを確認）
               setTimeout(() => {
                 const currentSrc = img.src;
                 // 現在使用中のURLは除外
-                if (oldBlobUrl && oldBlobUrl !== newCurrentUrl && oldBlobUrl !== currentSrc) {
+                if (
+                  oldBlobUrl &&
+                  oldBlobUrl !== newCurrentUrl &&
+                  oldBlobUrl !== currentSrc
+                ) {
                   blobURLManager.revokeURL(oldBlobUrl, img);
                 }
-                if (oldBlobWithBorderUrl && oldBlobWithBorderUrl !== newCurrentUrl && oldBlobWithBorderUrl !== currentSrc) {
+                if (
+                  oldBlobWithBorderUrl &&
+                  oldBlobWithBorderUrl !== newCurrentUrl &&
+                  oldBlobWithBorderUrl !== currentSrc
+                ) {
                   blobURLManager.revokeURL(oldBlobWithBorderUrl, img);
                 }
-                if (oldPaddedBlobUrl && oldPaddedBlobUrl !== newCurrentUrl && oldPaddedBlobUrl !== currentSrc) {
+                if (
+                  oldPaddedBlobUrl &&
+                  oldPaddedBlobUrl !== newCurrentUrl &&
+                  oldPaddedBlobUrl !== currentSrc
+                ) {
                   blobURLManager.revokeURL(oldPaddedBlobUrl, img);
                 }
               }, 100);
             }
             resolve();
           };
-          
+
           const onError = () => {
             if (isResolved) return;
             isResolved = true;
-            img.removeEventListener('load', onLoad);
-            img.removeEventListener('error', onError);
+            img.removeEventListener("load", onLoad);
+            img.removeEventListener("error", onError);
             resolve();
           };
-          
-          img.addEventListener('load', onLoad);
-          img.addEventListener('error', onError);
-          
+
+          img.addEventListener("load", onLoad);
+          img.addEventListener("error", onError);
+
           // 既に読み込まれている場合でも、naturalWidthを確認
           if (img.complete && img.naturalWidth > 0) {
             setTimeout(onLoad, 10);
@@ -1777,7 +1885,7 @@ export async function toggleStickerBorder(sticker) {
       }
     }
   }
-  
+
   // DOMクラスを更新
   if (!sticker.hasBorder) {
     sticker.element.classList.add("no-border");
@@ -1789,18 +1897,18 @@ export async function toggleStickerBorder(sticker) {
   if (sticker.isHelpSticker) {
     updateHelpStickerBorder(sticker);
   }
-  
+
   // ヘルプステッカーでない場合はDBに保存
   if (!sticker.isHelpSticker) {
-    await updateStickerInDB(sticker.id, { 
-      hasBorder: sticker.hasBorder, 
-      borderMode: sticker.borderMode 
+    await updateStickerInDB(sticker.id, {
+      hasBorder: sticker.hasBorder,
+      borderMode: sticker.borderMode,
     });
   } else {
     // ヘルプステッカーはlocalStorageに保存
     updateHelpStickerState(sticker);
   }
-  
+
   // ボタンの表示状態を更新
   updateInfoButtonVisibility();
 }
@@ -1814,44 +1922,55 @@ async function removeBgFromBlob(blob) {
   try {
     // window.removeBackgroundはindex.htmlで定義されている
     if (!window.removeBackground) {
-      throw new Error('背景除去ライブラリが読み込まれていません');
+      throw new Error("背景除去ライブラリが読み込まれていません");
     }
-    
+
+    // パフォーマンス最適化: 背景除去前に画像を小さくリサイズ（800px以下）
+    // 背景除去ライブラリは高解像度画像では遅いため、処理速度を優先
+    const optimizedBlob = await resizeImageBlob(blob, 800);
+
     // Blobをbase64に変換
-    const imageUrl = blobURLManager.createURL(blob); // 一時的なURL
+    const imageUrl = blobURLManager.createURL(optimizedBlob); // 一時的なURL
     const img = new Image();
     await new Promise((resolve, reject) => {
       img.onload = resolve;
       img.onerror = reject;
       img.src = imageUrl;
     });
-    
+
     // 背景除去を実行
     const resultBlob = await window.removeBackground(imageUrl);
-    
+
     // クリーンアップ
     blobURLManager.revokeURL(imageUrl);
-    
+
     // アルファチャンネルに閾値処理を適用（エッジをはっきりさせる）
     const solidifiedBlob = await solidifyAlphaChannel(resultBlob);
-    
+
     // 透明ピクセルの比率を確認
-    const isMostlyTransparent = await checkTransparencyRatio(solidifiedBlob, 0.9);
+    const isMostlyTransparent = await checkTransparencyRatio(
+      solidifiedBlob,
+      0.9,
+    );
     if (isMostlyTransparent) {
-      throw new Error('対象物が見つかりませんでした');
+      throw new Error("対象物が見つかりませんでした");
     }
-    
+
     // 透明部分をトリミングして実際のコンテンツサイズにする
     const trimResult = await trimTransparentEdges(solidifiedBlob);
-    
+
     // trimTransparentEdges関数が{blob, isValid}を返すように変更されている場合の対応
-    if (trimResult && typeof trimResult === 'object' && trimResult.hasOwnProperty('blob')) {
+    if (
+      trimResult &&
+      typeof trimResult === "object" &&
+      trimResult.hasOwnProperty("blob")
+    ) {
       if (!trimResult.isValid) {
-        throw new Error('対象物が見つかりませんでした');
+        throw new Error("対象物が見つかりませんでした");
       }
       return trimResult.blob;
     }
-    
+
     return solidifiedBlob; // トリミングできなかった場合はsolidifiedBlobを返す
   } catch (error) {
     // エラーをそのまま上位に投げる（ログは上位で出力）
@@ -1870,41 +1989,41 @@ async function solidifyAlphaChannel(blob, threshold = 128) {
     const img = new Image();
     const blobUrl = blobURLManager.createURL(blob); // 一時的なURL
     img.onload = () => {
-      const canvas = document.createElement('canvas');
+      const canvas = document.createElement("canvas");
       canvas.width = img.width;
       canvas.height = img.height;
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
       // 画像を描画
       ctx.drawImage(img, 0, 0);
-      
+
       // ピクセルデータを取得
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
-      
+
       // アルファチャンネルに閾値処理を適用
       for (let i = 3; i < data.length; i += 4) {
         const alpha = data[i];
         // 閾値以上なら完全に不透明、以下なら完全に透明
         data[i] = alpha >= threshold ? 255 : 0;
       }
-      
+
       // 処理後のデータを描画
       ctx.putImageData(imageData, 0, 0);
-      
+
       // Blobに変換
       canvas.toBlob((resultBlob) => {
         blobURLManager.revokeURL(blobUrl);
         if (resultBlob) {
           resolve(resultBlob);
         } else {
-          reject(new Error('Blob変換に失敗しました'));
+          reject(new Error("Blob変換に失敗しました"));
         }
-      }, 'image/png');
+      }, "image/png");
     };
     img.onerror = () => {
       blobURLManager.revokeURL(blobUrl);
-      reject(new Error('画像読み込み失敗'));
+      reject(new Error("画像読み込み失敗"));
     };
     img.src = blobUrl;
   });
@@ -1921,30 +2040,30 @@ async function trimTransparentEdges(blob) {
     const img = new Image();
     const blobUrl = blobURLManager.createURL(blob); // 一時的なURL
     img.onload = () => {
-      const canvas = document.createElement('canvas');
+      const canvas = document.createElement("canvas");
       canvas.width = img.width;
       canvas.height = img.height;
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
       // 画像を描画
       ctx.drawImage(img, 0, 0);
-      
+
       // ピクセルデータを取得
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
       const width = imageData.width;
       const height = imageData.height;
-      
+
       // 不透明なピクセルをカウント
       let opaquePixels = 0;
       const totalPixels = width * height;
-      
+
       // 不透明なピクセルの境界を見つける
       let minX = width;
       let minY = height;
       let maxX = 0;
       let maxY = 0;
-      
+
       // 境界を探索と不透明ピクセル数のカウント
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
@@ -1958,63 +2077,73 @@ async function trimTransparentEdges(blob) {
           }
         }
       }
-      
+
       // 不透明ピクセルの割合を計算（0.0〜1.0）
       const opaqueRatio = opaquePixels / totalPixels;
-      console.log(`背景除去結果: 不透明ピクセル ${opaquePixels}/${totalPixels} (${(opaqueRatio * 100).toFixed(2)}%)`);
-      
+      console.log(
+        `背景除去結果: 不透明ピクセル ${opaquePixels}/${totalPixels} (${(opaqueRatio * 100).toFixed(2)}%)`,
+      );
+
       // 不透明ピクセルが極端に少ない場合（例: 1%未満）は無効とする
       if (opaqueRatio < 0.01) {
         blobURLManager.revokeURL(blobUrl);
-        console.warn('背景除去後、対象物がほとんど見つかりませんでした。元の画像を使用します。');
+        console.warn(
+          "背景除去後、対象物がほとんど見つかりませんでした。元の画像を使用します。",
+        );
         resolve({ blob: blob, isValid: false });
         return;
       }
-      
+
       // 安全マージン（px）
       const margin = 10;
       minX = Math.max(0, minX - margin);
       minY = Math.max(0, minY - margin);
       maxX = Math.min(width - 1, maxX + margin);
       maxY = Math.min(height - 1, maxY + margin);
-      
+
       // トリミング範囲が有効か確認（内容がない場合）
       if (minX >= maxX || minY >= maxY) {
         blobURLManager.revokeURL(blobUrl);
-        console.warn('トリミング範囲が無効です。元の画像を返します。');
+        console.warn("トリミング範囲が無効です。元の画像を返します。");
         resolve({ blob: blob, isValid: false });
         return;
       }
-      
+
       // トリミング後のサイズを計算
       const trimWidth = maxX - minX + 1;
       const trimHeight = maxY - minY + 1;
-      
+
       // トリミングした画像を新しいキャンバスに描画
-      const trimmedCanvas = document.createElement('canvas');
+      const trimmedCanvas = document.createElement("canvas");
       trimmedCanvas.width = trimWidth;
       trimmedCanvas.height = trimHeight;
-      const trimmedCtx = trimmedCanvas.getContext('2d');
-      
+      const trimmedCtx = trimmedCanvas.getContext("2d");
+
       trimmedCtx.drawImage(
         canvas,
-        minX, minY, trimWidth, trimHeight,
-        0, 0, trimWidth, trimHeight
+        minX,
+        minY,
+        trimWidth,
+        trimHeight,
+        0,
+        0,
+        trimWidth,
+        trimHeight,
       );
-      
+
       // Blobに変換
       trimmedCanvas.toBlob((resultBlob) => {
         blobURLManager.revokeURL(blobUrl);
         if (resultBlob) {
           resolve({ blob: resultBlob, isValid: true });
         } else {
-          reject(new Error('トリミング後のBlob変換に失敗しました'));
+          reject(new Error("トリミング後のBlob変換に失敗しました"));
         }
-      }, 'image/png');
+      }, "image/png");
     };
     img.onerror = () => {
       blobURLManager.revokeURL(blobUrl);
-      reject(new Error('画像読み込み失敗'));
+      reject(new Error("画像読み込み失敗"));
     };
     img.src = blobUrl;
   });
@@ -2031,7 +2160,7 @@ async function trimTransparentEdges(blob) {
 async function checkTransparencyRatio(blob, threshold = 0.9) {
   // blobが有効かチェック
   if (!blob || !(blob instanceof Blob)) {
-    console.warn('無効なBlobが渡されました');
+    console.warn("無効なBlobが渡されました");
     return false;
   }
 
@@ -2043,46 +2172,49 @@ async function checkTransparencyRatio(blob, threshold = 0.9) {
       // 使用後にURLを解放
       blobURLManager.revokeURL(blobUrl);
 
-      const canvas = document.createElement('canvas');
+      const canvas = document.createElement("canvas");
       canvas.width = img.width;
       canvas.height = img.height;
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
       // 画像を描画
       ctx.drawImage(img, 0, 0);
-      
+
       try {
         // ピクセルデータを取得
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
         const totalPixels = canvas.width * canvas.height;
         let transparentPixels = 0;
-        
+
         // 透明なピクセル（アルファ値が10未満）をカウント
         for (let i = 3; i < data.length; i += 4) {
-          if (data[i] < 10) { // アルファ値がほぼ0
+          if (data[i] < 10) {
+            // アルファ値がほぼ0
             transparentPixels++;
           }
         }
-        
+
         const transparentRatio = transparentPixels / totalPixels;
-        console.log(`透明ピクセル: ${transparentPixels}/${totalPixels} (${(transparentRatio * 100).toFixed(2)}%)`);
-        
+        console.log(
+          `透明ピクセル: ${transparentPixels}/${totalPixels} (${(transparentRatio * 100).toFixed(2)}%)`,
+        );
+
         // 閾値以上の透明度ならtrue
         resolve(transparentRatio >= threshold);
       } catch (e) {
-        console.warn('透明度チェックエラー:', e);
+        console.warn("透明度チェックエラー:", e);
         resolve(false); // エラーの場合は透明でないと判断
       }
     };
-    
+
     img.onerror = () => {
       // エラー時にもURLを解放
       blobURLManager.revokeURL(blobUrl);
-      console.warn('画像読み込みエラー');
+      console.warn("画像読み込みエラー");
       resolve(false);
     };
-    
+
     img.src = blobUrl;
   });
 }
@@ -2095,37 +2227,45 @@ export async function toggleStickerBgRemoval(sticker) {
   try {
     // 既に処理済みなら何もしない
     if (sticker.bgRemovalProcessed) {
-      console.log('既に背景除去済みです');
+      console.log("既に背景除去済みです");
       return;
     }
 
     // 前処理
     if (!sticker.blobUrl) {
-      throw new Error('ステッカーのblobUrlが存在しません');
+      throw new Error("ステッカーのblobUrlが存在しません");
     }
-    sticker.element.classList.add('processing'); // 処理中アニメーション表示
-    
+    sticker.element.classList.add("processing"); // 処理中アニメーション表示
+
     // 背景除去開始のトースト表示
-    showToast('背景除去を開始しています...');
-    
-    // ステップ1: 背景除去処理
-    const originalBlob = await fetchBlobFromUrl(sticker.blobUrl);
+    showToast("背景除去を開始しています...");
+
+    // ステップ1: 元画像を取得（originalBlobがあれば優先）
+    let originalBlob;
+    if (sticker.originalBlob) {
+      originalBlob = sticker.originalBlob;
+    } else {
+      originalBlob = await fetchBlobFromUrl(sticker.blobUrl);
+    }
+
+    // ステップ2: 背景除去処理（画像は内部で最適化される）
+    showToast("背景除去を処理中...");
     const removedBgBlob = await removeBgFromBlob(originalBlob);
-    
-    // ステップ2: 元画像の更新
+
+    // ステップ3: 元画像の更新
     releaseOldUrls(sticker);
     updateStickerBaseImage(sticker, removedBgBlob);
-    
-    // ステップ3: 現在のモードに応じた縁取り・パディング適用
+
+    // ステップ4: 現在のモードに応じた縁取り・パディング適用
+    showToast("縁取りを適用中...");
     await applyBorderAndPadding(sticker);
-    
-    // ステップ4: 完了処理
+
+    // ステップ5: 完了処理
     finalizeBgRemoval(sticker, removedBgBlob);
-    
   } catch (error) {
-    console.error('背景除去エラー:', error);
-    sticker.element.classList.remove('processing');
-    showToast(error.message || '背景除去に失敗しました');
+    console.error("背景除去エラー:", error);
+    sticker.element.classList.remove("processing");
+    showToast(error.message || "背景除去に失敗しました");
   }
 }
 
@@ -2158,12 +2298,12 @@ function releaseOldUrls(sticker, keepUrl = null) {
  */
 function updateStickerBaseImage(sticker, newBlob) {
   // 背景除去版を新しい「元画像」として扱う
-  sticker.originalBlob = newBlob;  // 元画像を背景除去版に置き換え
-  sticker.blob = newBlob;          // 表示用画像も背景除去版に
-  
+  sticker.originalBlob = newBlob; // 元画像を背景除去版に置き換え
+  sticker.blob = newBlob; // 表示用画像も背景除去版に
+
   // 古いURLを解放
   releaseOldUrls(sticker);
-  
+
   // 新しいURLを設定（img要素に関連付けて追跡）
   const newBlobUrl = blobURLManager.createURL(newBlob, sticker.img);
   sticker.originalBlobUrl = newBlobUrl;
@@ -2177,24 +2317,26 @@ function updateStickerBaseImage(sticker, newBlob) {
 async function applyBorderAndPadding(sticker) {
   // 現在の設定を取得
   const hasBorder = sticker.hasBorder;
-  const borderMode = sticker.borderMode !== undefined ? 
-                     sticker.borderMode : STICKER_DEFAULTS.BORDER_MODE;
-  
+  const borderMode =
+    sticker.borderMode !== undefined
+      ? sticker.borderMode
+      : STICKER_DEFAULTS.BORDER_MODE;
+
   // 画像サイズを取得
   const imageDimensions = await getImageDimensions(sticker.originalBlob);
-  
+
   // 縁取り/パディング処理
   const result = await processBorderAndPadding(
-    sticker.originalBlob, 
-    borderMode, 
-    imageDimensions.width, 
-    imageDimensions.height
+    sticker.originalBlob,
+    borderMode,
+    imageDimensions.width,
+    imageDimensions.height,
   );
-  
+
   // 古いURLを保存（新しいURLを設定する前に）
   const oldBlobUrl = sticker.blobUrl;
   const oldBlobWithBorderUrl = sticker.blobWithBorderUrl;
-  
+
   // モードに応じて画像を設定
   if (borderMode === 0 || !hasBorder) {
     // 縁取りなしの場合はパディング付き画像を使用
@@ -2205,24 +2347,31 @@ async function applyBorderAndPadding(sticker) {
   } else {
     // 縁取りありの場合は縁取り画像を設定
     sticker.blobWithBorder = result.borderBlob || result.resultBlob;
-    sticker.blobWithBorderUrl = blobURLManager.createURL(sticker.blobWithBorder, sticker.img);
+    sticker.blobWithBorderUrl = blobURLManager.createURL(
+      sticker.blobWithBorder,
+      sticker.img,
+    );
     sticker.borderWidth = result.borderWidth;
   }
-  
+
   // 新しいURLをDOMに設定してから、古いURLを解放（画像が読み込まれるまで待つ）
   if (sticker.img) {
     const newUrl = hasBorder ? sticker.blobWithBorderUrl : sticker.blobUrl;
     if (newUrl) {
       // BlobURLManagerを使用して安全に画像URLを更新
       await blobURLManager.updateImageUrl(sticker.img, newUrl);
-      
+
       // 古いURLを解放（現在使用中のURLは除外）
       setTimeout(() => {
         const currentSrc = sticker.img.src;
         if (oldBlobUrl && oldBlobUrl !== newUrl && oldBlobUrl !== currentSrc) {
           blobURLManager.revokeURL(oldBlobUrl, sticker.img);
         }
-        if (oldBlobWithBorderUrl && oldBlobWithBorderUrl !== newUrl && oldBlobWithBorderUrl !== currentSrc) {
+        if (
+          oldBlobWithBorderUrl &&
+          oldBlobWithBorderUrl !== newUrl &&
+          oldBlobWithBorderUrl !== currentSrc
+        ) {
           blobURLManager.revokeURL(oldBlobWithBorderUrl, sticker.img);
         }
       }, 100);
@@ -2237,22 +2386,22 @@ async function applyBorderAndPadding(sticker) {
  */
 async function finalizeBgRemoval(sticker, removedBgBlob) {
   sticker.bgRemovalProcessed = true;
-  sticker.element.classList.remove('processing');
-  
+  sticker.element.classList.remove("processing");
+
   // 画像URLを更新（縁取り状態に応じて）
   updateStickerImageUrl(sticker);
-  
-  // DBに保存
+
+  // DBに保存（背景除去後は元画像が更新されているため、通常の保存でOK）
   await updateStickerInDB(sticker.id, {
-    originalBlob: removedBgBlob,  // 元画像を更新
-    blob: sticker.blob,          // 表示用画像（パディングあり/なし）
-    blobWithBorder: sticker.blobWithBorder,  // 縁取り版
-    bgRemovalProcessed: true
+    originalBlob: removedBgBlob, // 元画像を更新（背景除去版）
+    blob: sticker.blob, // 表示用画像（パディングあり/なし）
+    blobWithBorder: sticker.blobWithBorder, // 縁取り版
+    bgRemovalProcessed: true,
   });
-  
+
   // UI更新
   updateInfoButtonVisibility();
-  showToast('背景除去を適用しました');
+  showToast("背景除去を適用しました");
 }
 
 /**
@@ -2261,14 +2410,12 @@ async function finalizeBgRemoval(sticker, removedBgBlob) {
  */
 function updateStickerImageUrl(sticker) {
   if (!sticker.img) return;
-  
+
   let newUrl;
-  
+
   // 縁取りの状態のみを考慮（背景除去後は元画像が背景除去版になっている）
-  newUrl = sticker.hasBorder
-    ? sticker.blobWithBorderUrl
-    : sticker.blobUrl;
-  
+  newUrl = sticker.hasBorder ? sticker.blobWithBorderUrl : sticker.blobUrl;
+
   if (newUrl) {
     sticker.img.src = newUrl;
     sticker.url = newUrl;
@@ -2322,20 +2469,23 @@ export async function copySticker(sticker) {
     console.warn("コピーするステッカーが指定されていません");
     return false;
   }
-  
+
   try {
     // state.jsのcopySticker関数を使ってステッカー情報をメモリに保存（非同期対応）
     const identifier = await state.copySticker(sticker);
-    
+
     // システムクリップボードに特殊識別子をコピー（Safari対応）
     try {
       await navigator.clipboard.writeText(identifier);
     } catch (clipboardErr) {
       // SafariでクリップボードAPIが失敗する場合、メモリ保存のみで続行
-      console.warn("クリップボードへの書き込みに失敗しました（メモリ保存は成功）:", clipboardErr);
+      console.warn(
+        "クリップボードへの書き込みに失敗しました（メモリ保存は成功）:",
+        clipboardErr,
+      );
       // メモリ保存は成功しているので、コピーは成功とみなす
     }
-    
+
     // コピー成功を通知
     showToast("コピーしました");
     return true;
@@ -2355,11 +2505,11 @@ export async function copySticker(sticker) {
 export async function pasteSticker(x, yPercent) {
   // メモリからコピーデータを取得
   const copiedData = state.getCopiedStickerData();
-  
+
   if (!copiedData) {
     // リロード直後など復元が未完了の可能性があるため、復元を試みる
     try {
-      if (typeof state.restoreCopiedStickerData === 'function') {
+      if (typeof state.restoreCopiedStickerData === "function") {
         await state.restoreCopiedStickerData();
       }
     } catch (e) {
@@ -2373,14 +2523,14 @@ export async function pasteSticker(x, yPercent) {
     // 復元できた場合は以降の処理で使用
     return await pasteSticker(x, yPercent);
   }
-  
+
   try {
     // 座標の調整
-    const adjustedYPercent = typeof yPercent === 'number' ? yPercent : 50;
-    const xOffset = typeof x === 'number' ? x : 0;
-    
+    const adjustedYPercent = typeof yPercent === "number" ? yPercent : 50;
+    const xOffset = typeof x === "number" ? x : 0;
+
     let blob = null;
-    
+
     // 優先順位：1. Blobデータ 2. URL
     if (copiedData.originalBlob) {
       // IndexedDBから復元したBlobデータを直接使用
@@ -2398,11 +2548,11 @@ export async function pasteSticker(x, yPercent) {
     } else {
       throw new Error("コピーしたステッカーデータが無効です");
     }
-    
+
     if (!blob) {
       throw new Error("有効な画像データがありません");
     }
-    
+
     // 新しいステッカーとして追加
     await addStickerFromBlob(
       blob,
@@ -2413,9 +2563,9 @@ export async function pasteSticker(x, yPercent) {
       null, // 新しいIDが自動生成される
       null, // 新しいz-indexが自動生成される
       copiedData.hasBorder,
-      copiedData.borderMode
+      copiedData.borderMode,
     );
-    
+
     return true;
   } catch (err) {
     console.warn("ステッカーのペーストに失敗しました:", err);

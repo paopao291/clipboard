@@ -291,30 +291,44 @@ class AppState {
     // 現在の時刻からユニークなIDを生成
     const uniqueId = Date.now().toString();
     
+    // 古いコピーデータのBlobを解放（メモリリーク防止）
+    if (this.copiedStickerData && this.copiedStickerData.originalBlob) {
+      // Blobは自動的にガベージコレクションされるが、明示的にnullに設定
+      this.copiedStickerData.originalBlob = null;
+    }
+    
     // オリジナル画像のBlobを取得（優先順位：originalBlob > blob > URL取得）
     let originalBlob = null;
     if (stickerData.originalBlob) {
-      originalBlob = stickerData.originalBlob;
+      // Blobをクローン（元のステッカーが削除されても影響を受けないように）
+      originalBlob = new Blob([stickerData.originalBlob], { type: stickerData.originalBlob.type });
     } else if (stickerData.blob) {
-      originalBlob = stickerData.blob;
+      originalBlob = new Blob([stickerData.blob], { type: stickerData.blob.type });
     } else if (stickerData.originalBlobUrl) {
       try {
-        originalBlob = await fetch(stickerData.originalBlobUrl).then(r => r.blob());
+        const fetchedBlob = await fetch(stickerData.originalBlobUrl).then(r => r.blob());
+        originalBlob = new Blob([fetchedBlob], { type: fetchedBlob.type });
       } catch (err) {
         console.warn('originalBlobUrlからのBlob取得エラー:', err);
       }
     } else if (stickerData.blobUrl) {
       try {
-        originalBlob = await fetch(stickerData.blobUrl).then(r => r.blob());
+        const fetchedBlob = await fetch(stickerData.blobUrl).then(r => r.blob());
+        originalBlob = new Blob([fetchedBlob], { type: fetchedBlob.type });
       } catch (err) {
         console.warn('blobUrlからのBlob取得エラー:', err);
       }
     }
 
+    // originalBlobが取得できなかった場合はエラー
+    if (!originalBlob) {
+      throw new Error('コピーする画像データを取得できませんでした');
+    }
+
     // コピーするデータから必要な情報だけ取り出す
     const copiedData = {
       // Blobデータを直接保持（リロード後も有効）
-      originalBlob: originalBlob, // 元画像Blob（優先使用）
+      originalBlob: originalBlob, // 元画像Blob（クローン済み）
       // サイズと表示に関する属性
       width: stickerData.width,
       rotation: stickerData.rotation,
@@ -378,6 +392,8 @@ class AppState {
       await new Promise((resolve, reject) => {
         const tx = db.transaction('copiedStickers', 'readwrite');
         const store = tx.objectStore('copiedStickers');
+        
+        // 古いデータを削除してから新しいデータを追加
         const clearReq = store.clear();
         clearReq.onerror = () => reject(clearReq.error);
         clearReq.onsuccess = () => {
@@ -396,6 +412,10 @@ class AppState {
         };
       });
       db.close();
+      
+      // 古いコピーデータのクリーンアップ（24時間以上経過したデータを削除）
+      // 注意: 現在は1つのコピーデータのみ保持するため、clear()で削除済み
+      // 将来的に複数のコピーデータを保持する場合は、タイムスタンプベースのクリーンアップを実装
     } catch (err) {
       // IndexedDBへの保存が失敗しても、メモリ内のデータは有効なのでエラーを投げない
       console.warn('コピーデータのIndexedDB保存に失敗（メモリ内のデータは有効）:', err);
