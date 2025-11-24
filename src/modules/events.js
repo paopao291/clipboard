@@ -255,11 +255,11 @@ export async function handlePaste(e) {
   e.preventDefault();
 
   // クリップボードからテキストを取得してステッカー識別子かどうか確認
-  let clipboardText = '';
+  let clipboardText = "";
   try {
-    clipboardText = e.clipboardData.getData('text/plain');
+    clipboardText = e.clipboardData.getData("text/plain");
   } catch (err) {
-    console.warn('クリップボードテキスト取得エラー:', err);
+    console.warn("クリップボードテキスト取得エラー:", err);
   }
 
   // 座標の取得（最後のマウス位置→タッチ位置→中央の優先順位）
@@ -443,9 +443,9 @@ export async function handleStickerMouseDown(e, id) {
 
   const sticker = state.getStickerById(id);
   if (!sticker) return;
-  
+
   // 処理中のステッカーは選択できない
-  if (sticker.element && sticker.element.classList.contains('processing')) {
+  if (sticker.element && sticker.element.classList.contains("processing")) {
     return;
   }
 
@@ -541,7 +541,7 @@ export async function handleStickerMouseDown(e, id) {
 export function handleMouseMove(e) {
   // マウス位置を記録
   state.setLastMousePosition(e.clientX, e.clientY);
-  
+
   if (!state.selectedSticker) return;
 
   // ドラッグ準備状態からドラッグ開始
@@ -682,16 +682,13 @@ export async function handleMouseUp(e) {
  * @param {number} id - シールID
  */
 export async function handleWheel(e, id) {
-  // Ctrl/Cmdキーが押されている場合はページズーム（デフォルト動作）を優先
-  if (e.ctrlKey || e.metaKey) {
-    return;
-  }
-
   // 物理モード中は拡大縮小を無効化
   if (isPhysicsActive()) {
     return;
   }
 
+  // Ctrl/Cmdキー + ホイールの場合、トラックパッドのピンチジェスチャーとして処理
+  // （ステッカーの拡大縮小を優先し、ページズームは無効化）
   e.preventDefault();
   e.stopPropagation();
 
@@ -733,11 +730,6 @@ export async function handleWheel(e, id) {
  * @param {WheelEvent} e
  */
 export async function handleCanvasWheel(e) {
-  // Ctrl/Cmdキーが押されている場合はページズーム（デフォルト動作）を優先
-  if (e.ctrlKey || e.metaKey) {
-    return;
-  }
-
   // 物理モード中は拡大縮小を無効化
   if (isPhysicsActive()) {
     return;
@@ -746,6 +738,8 @@ export async function handleCanvasWheel(e) {
   // 選択中のステッカーがある場合のみ処理
   if (!state.selectedSticker) return;
 
+  // Ctrl/Cmdキー + ホイールの場合、トラックパッドのピンチジェスチャーとして処理
+  // （ステッカーの拡大縮小を優先し、ページズームは無効化）
   e.preventDefault();
 
   const delta =
@@ -774,9 +768,9 @@ export async function handleStickerTouchStart(e, id) {
 
   const sticker = state.getStickerById(id);
   if (!sticker) return;
-  
+
   // 処理中のステッカーは選択できない
-  if (sticker.element && sticker.element.classList.contains('processing')) {
+  if (sticker.element && sticker.element.classList.contains("processing")) {
     return;
   }
 
@@ -1192,37 +1186,40 @@ export async function handleKeyboardShortcut(e) {
   if (!isCmdKey) return;
 
   // Cmd+C または Ctrl+C
-  if (e.key === 'c' || e.key === 'C') {
+  if (e.key === "c" || e.key === "C") {
     if (state.selectedSticker) {
       // ヘルプステッカーの場合はコピー機能を無効化
-      const isHelpSticker = state.selectedSticker.element.classList.contains('help-sticker');
+      const isHelpSticker =
+        state.selectedSticker.element.classList.contains("help-sticker");
       if (isHelpSticker) {
         return; // コピー処理をスキップ
       }
-      
+
       e.preventDefault();
       try {
         // 処理中にUIを操作させないためにローディング表示も検討
         await copySticker(state.selectedSticker);
       } catch (err) {
-        console.warn('キーボードショートカットによるコピー処理に失敗:', err);
+        console.warn("キーボードショートカットによるコピー処理に失敗:", err);
       }
     }
   }
 
   // Cmd+V または Ctrl+V
-  if (e.key === 'v' || e.key === 'V') {
+  if (e.key === "v" || e.key === "V") {
     // 編集可能要素にフォーカスがある場合は、デフォルト動作（テキスト編集）を優先
-    if (document.activeElement instanceof HTMLInputElement ||
-        document.activeElement instanceof HTMLTextAreaElement) {
+    if (
+      document.activeElement instanceof HTMLInputElement ||
+      document.activeElement instanceof HTMLTextAreaElement
+    ) {
       return;
     }
-    
+
     // ペーストエリアにペーストする場合は何もしない（handlePasteが処理する）
     if (document.activeElement === elements.pasteArea) {
       return;
     }
-    
+
     // メモリ内にコピーデータがある場合は直接ペースト
     const copiedData = state.getCopiedStickerData();
     if (copiedData) {
@@ -1236,16 +1233,16 @@ export async function handleKeyboardShortcut(e) {
       } else {
         coords = getCenterCoordinates();
       }
-      
+
       try {
-        const { pasteSticker } = await import('./sticker.js');
+        const { pasteSticker } = await import("./sticker.js");
         await pasteSticker(coords.x, coords.yPercent);
       } catch (err) {
-        console.warn('キーボードショートカットによるペースト処理に失敗:', err);
+        console.warn("キーボードショートカットによるペースト処理に失敗:", err);
       }
       return;
     }
-    
+
     // クリップボードから直接データを取得できない場合があるので、
     // ペーストエリアを介してペーストイベントを発生させる
     if (elements.pasteArea) {
