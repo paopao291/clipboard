@@ -43,6 +43,7 @@ import {
   toggleStickerBgRemoval,
   sendToBack,
   copySticker,
+  initWebPSupport,
 } from "./modules/sticker.js";
 import {
   initPhysicsEngine,
@@ -71,6 +72,9 @@ async function init() {
 
   // 背景画像用のDBを初期化
   initBackgroundDB(database);
+
+  // WebP対応状況をチェック
+  await initWebPSupport();
 
   // 物理エンジンを初期化
   initPhysicsEngine();
@@ -234,6 +238,37 @@ async function loadStickersFromDB() {
     );
     const originalBlob = stickerData.originalBlob || stickerData.blob;
 
+    // 画像タイプと透過情報を取得（DBに保存されていればそれを優先、なければ判定）
+    let originalType =
+      stickerData.originalType || originalBlob.type || "image/png";
+    let transparency = stickerData.hasTransparency;
+
+    // DBに保存されていない場合のみ判定（後方互換性）
+    if (transparency === null || transparency === undefined) {
+      transparency = await new Promise((resolve) => {
+        const testImg = new Image();
+        const testUrl = URL.createObjectURL(originalBlob);
+        testImg.onload = async () => {
+          // hasTransparency関数をインポートして使用
+          const { hasTransparency: checkTransparency } = await import(
+            "./modules/sticker.js"
+          );
+          const result = checkTransparency(testImg);
+          URL.revokeObjectURL(testUrl);
+          resolve(result);
+        };
+        testImg.onerror = () => {
+          URL.revokeObjectURL(testUrl);
+          resolve(false);
+        };
+        testImg.src = testUrl;
+      });
+    }
+
+    console.log(
+      `リロード: ID=${stickerData.id}, originalType=${originalType}, transparency=${transparency}`,
+    );
+
     // モジュールをインポート
     const { calculateBorderWidth, addPaddingToImage, applyOutlineFilter } =
       await import("./modules/sticker.js");
@@ -257,7 +292,12 @@ async function loadStickersFromDB() {
       blobWithBorderUrl = null;
     } else if (borderMode === 1) {
       // モード1: 2.5%縁取り + 残りパディング
-      const { blob: borderResult } = await applyOutlineFilter(originalBlob, 1);
+      const { blob: borderResult } = await applyOutlineFilter(
+        originalBlob,
+        1,
+        originalType,
+        transparency,
+      );
       // 残りのパディング幅を計算
       const remainingPadding = maxBorderWidth - borderWidth;
       console.log(`モード1: 残りのパディング幅 = ${remainingPadding}px`);
@@ -268,7 +308,12 @@ async function loadStickersFromDB() {
       blobWithBorderUrl = URL.createObjectURL(paddedBorderBlob);
     } else {
       // モード2: 5%縁取り
-      const { blob: borderResult } = await applyOutlineFilter(originalBlob, 2);
+      const { blob: borderResult } = await applyOutlineFilter(
+        originalBlob,
+        2,
+        originalType,
+        transparency,
+      );
       blobWithBorderUrl = URL.createObjectURL(borderResult);
     }
 
@@ -394,6 +439,10 @@ async function loadStickersFromDB() {
       originalBlobUrl, // オリジナル画像URL
       bgRemovalProcessed, // この値が背景除去ボタンの表示/非表示を決定する
       originalBlob, // オリジナル画像Blob（優先使用）
+      stickerData.originalType || null, // 元の画像タイプ
+      stickerData.hasTransparency !== undefined
+        ? stickerData.hasTransparency
+        : null, // 透過の有無
     );
   }
 

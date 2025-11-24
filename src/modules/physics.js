@@ -264,7 +264,7 @@ async function generateProxyImages() {
       const sourceBlob = await response.blob();
 
       // 低解像度プロキシを生成（現在表示されている縁取り付き画像から）
-      const proxyBlob = await resizeImageBlob(sourceBlob, PROXY_SIZE);
+      const { blob: proxyBlob } = await resizeImageBlob(sourceBlob, PROXY_SIZE);
       const proxyUrl = URL.createObjectURL(proxyBlob);
 
       // 元のURLを保存

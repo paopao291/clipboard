@@ -24,6 +24,21 @@ import {
   removePhysicsBody,
 } from "./physics.js";
 import { blobURLManager } from "./blob-url-manager.js";
+import { convertToWebP, supportsWebP } from "./image-converter.js";
+
+// WebP対応状況（アプリ起動時にチェック）
+let webpSupported = true; // デフォルトはtrue（モダンブラウザを想定）
+
+/**
+ * WebP対応状況を初期化
+ * アプリ起動時に呼び出す
+ */
+export async function initWebPSupport() {
+  webpSupported = await supportsWebP();
+  console.log(
+    `WebP対応: ${webpSupported ? "サポートされています" : "サポートされていません（フォールバック）"}`,
+  );
+}
 
 /**
  * 縁取りの設定
@@ -39,7 +54,7 @@ const OUTLINE_CONFIG = {
  * @param {HTMLImageElement} img - チェックする画像
  * @returns {boolean} 透過がある場合はtrue
  */
-function hasTransparency(img) {
+export function hasTransparency(img) {
   // キャンバスに描画して分析
   const canvas = document.createElement("canvas");
   canvas.width = Math.min(img.width, 100); // パフォーマンスのため小さく
@@ -94,6 +109,64 @@ function hasTransparency(img) {
     console.warn("透過チェック中にエラー:", e);
     return false; // エラーの場合は透過なしと判断
   }
+}
+
+/**
+ * 画像のタイプと透過情報を取得・判定する統一関数
+ * @param {Object} options - オプション
+ * @param {Blob|null} options.blob - 画像Blob
+ * @param {Object|null} options.sticker - ステッカーオブジェクト（保存情報を取得）
+ * @param {string|null} options.storedType - 保存された画像タイプ
+ * @param {boolean|null} options.storedTransparency - 保存された透過情報
+ * @param {HTMLImageElement|null} options.img - 読み込み済みのimg要素（判定用）
+ * @returns {Promise<{type: string, hasTransparency: boolean}>}
+ */
+async function getImageTypeInfo({
+  blob = null,
+  sticker = null,
+  storedType = null,
+  storedTransparency = null,
+  img = null,
+} = {}) {
+  // 優先順位: 明示的な保存データ > ステッカーの保存データ > Blobメタ > デフォルト
+  const type = storedType || sticker?.originalType || blob?.type || "image/png";
+
+  // 透過判定
+  let transparency = storedTransparency;
+
+  // ステッカーから取得を試みる
+  if (transparency === null || transparency === undefined) {
+    transparency = sticker?.hasTransparency;
+  }
+
+  // 保存データがない場合は判定
+  if (transparency === null || transparency === undefined) {
+    if (img) {
+      // 既に読み込まれている画像要素から判定
+      transparency = hasTransparency(img);
+    } else if (blob) {
+      // Blobから画像を読み込んで判定
+      const blobUrl = blobURLManager.createURL(blob);
+      const newImg = new Image();
+      transparency = await new Promise((resolve) => {
+        newImg.onload = () => {
+          const result = hasTransparency(newImg);
+          blobURLManager.revokeURL(blobUrl);
+          resolve(result);
+        };
+        newImg.onerror = () => {
+          blobURLManager.revokeURL(blobUrl);
+          resolve(false);
+        };
+        newImg.src = blobUrl;
+      });
+    } else {
+      // 判定不可能な場合はデフォルト
+      transparency = false;
+    }
+  }
+
+  return { type, hasTransparency: transparency };
 }
 
 /**
@@ -400,9 +473,16 @@ export async function addPaddingToImage(blob, borderWidth) {
  * 画像タイプと透過有無に応じた縁取り画像を生成
  * @param {Blob} blob - 元の画像blob
  * @param {number} borderMode - 縁取りモード（0:なし, 1:2.5%, 2:5%）
+ * @param {string} originalType - 元の画像タイプ（WebP変換前のタイプ）
+ * @param {boolean} transparency - 透過の有無
  * @returns {Promise<{blob: Blob, borderWidth: number}>} 縁取りが焼き込まれたblobと縁取りの幅
  */
-export async function applyOutlineFilter(blob, borderMode = 2) {
+export async function applyOutlineFilter(
+  blob,
+  borderMode = 2,
+  originalType = null,
+  transparency = null,
+) {
   return loadImageAndProcess(
     blob,
     async (img) => {
@@ -434,12 +514,17 @@ export async function applyOutlineFilter(blob, borderMode = 2) {
       const ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0);
 
-      // 画像の種類と透過の有無を判定
-      const imageType = blob.type || "image/png";
-      const transparency = hasTransparency(img);
+      // 画像の種類と透過の有無を取得（統合関数使用）
+      const { type: imageType, hasTransparency: hasTransparencyFlag } =
+        await getImageTypeInfo({
+          blob,
+          storedType: originalType,
+          storedTransparency: transparency,
+          img,
+        });
 
       console.log(
-        `縁取り適用: モード${borderMode}, 幅${borderWidth}px, 画像サイズ${originalWidth}x${originalHeight}`,
+        `縁取り適用: モード${borderMode}, 幅${borderWidth}px, 画像サイズ${originalWidth}x${originalHeight}, タイプ=${imageType}, 透過=${hasTransparencyFlag}`,
       );
 
       // 透過とファイルタイプの両方を考慮したaddBorderOrPadding関数の呼び出し
@@ -451,7 +536,7 @@ export async function applyOutlineFilter(blob, borderMode = 2) {
         originalWidth + borderWidth * 2,
         originalHeight + borderWidth * 2,
         imageType,
-        transparency,
+        hasTransparencyFlag,
       );
 
       const resultBlob = await canvasToBlob(
@@ -470,21 +555,37 @@ export async function applyOutlineFilter(blob, borderMode = 2) {
  * 印刷対応：A4を4等分したサイズ（A6相当）で約240DPIを確保
  * @param {Blob} blob - 元の画像blob
  * @param {number} maxSize - 長辺の最大サイズ（px）
- * @returns {Promise<Blob>} リサイズ済みのblob
+ * @returns {Promise<{blob: Blob, originalType: string, hasTransparency: boolean}>} リサイズ済みのblobと元の画像タイプ、透過情報
  */
 export async function resizeImageBlob(blob, maxSize = 1000) {
+  // 元の画像タイプを保存（WebP変換前に記録）
+  const originalType = blob.type || "image/png";
+
   return new Promise((resolve) => {
     const img = new Image();
     const blobUrl = blobURLManager.createURL(blob); // 一時的なURL
-    img.onload = () => {
+    img.onload = async () => {
+      // 透過情報を判定（リサイズ前に行う）
+      const transparency = hasTransparency(img);
+
       // 縦横比を維持してリサイズ
       let width = img.width;
       let height = img.height;
 
-      // 既に小さい画像はそのまま返す
+      // 既に小さい画像の場合
       if (width <= maxSize && height <= maxSize) {
         blobURLManager.revokeURL(blobUrl);
-        resolve(blob);
+        // WebP変換のみ実行
+        if (webpSupported && blob.type !== "image/webp") {
+          const webpBlob = await convertToWebP(blob, 0.9);
+          resolve({
+            blob: webpBlob,
+            originalType,
+            hasTransparency: transparency,
+          });
+        } else {
+          resolve({ blob, originalType, hasTransparency: transparency });
+        }
         return;
       }
 
@@ -509,23 +610,26 @@ export async function resizeImageBlob(blob, maxSize = 1000) {
 
       ctx.drawImage(img, 0, 0, width, height);
 
-      // 元の画像フォーマットを判定
-      const mimeType = blob.type || "image/png";
-      const isPNG = mimeType === "image/png";
-      const quality = isPNG ? 1.0 : 0.9; // PNGは品質指定不要、JPEGは90%
+      // WebP対応の場合はWebPに変換、非対応の場合は元のフォーマットを維持
+      const mimeType = webpSupported ? "image/webp" : blob.type || "image/png";
+      const quality = 0.9; // WebP/JPEG共通で90%品質
 
-      // Blobに変換（元のフォーマットを維持）
+      // Blobに変換
       canvas.toBlob(
         (resizedBlob) => {
           blobURLManager.revokeURL(blobUrl);
           if (resizedBlob) {
             console.log(
-              `画像リサイズ: ${img.width}x${img.height} → ${width}x${height} (${mimeType})`,
+              `画像リサイズ: ${img.width}x${img.height} → ${width}x${height} (${mimeType}, ${Math.round(resizedBlob.size / 1024)}KB)`,
             );
-            resolve(resizedBlob);
+            resolve({
+              blob: resizedBlob,
+              originalType,
+              hasTransparency: transparency,
+            });
           } else {
             console.warn("リサイズ失敗、元の画像を使用");
-            resolve(blob);
+            resolve({ blob, originalType, hasTransparency: transparency });
           }
         },
         mimeType,
@@ -536,7 +640,7 @@ export async function resizeImageBlob(blob, maxSize = 1000) {
     img.onerror = () => {
       blobURLManager.revokeURL(blobUrl);
       console.warn("画像読み込み失敗、元の画像を使用");
-      resolve(blob);
+      resolve({ blob, originalType, hasTransparency: transparency });
     };
 
     img.src = blobUrl;
@@ -552,10 +656,19 @@ export async function resizeImageBlob(blob, maxSize = 1000) {
  */
 async function resizeImageBlobWithBorder(blob, maxSize = 1000, borderMode = 2) {
   // まずリサイズ
-  const resizedBlob = await resizeImageBlob(blob, maxSize);
+  const {
+    blob: resizedBlob,
+    originalType,
+    hasTransparency,
+  } = await resizeImageBlob(blob, maxSize);
 
   // 縁取りあり版を生成
-  const blobWithBorder = await applyOutlineFilter(resizedBlob, borderMode);
+  const blobWithBorder = await applyOutlineFilter(
+    resizedBlob,
+    borderMode,
+    originalType,
+    hasTransparency,
+  );
 
   return {
     blob: resizedBlob,
@@ -647,7 +760,11 @@ export async function addStickerFromBlob(
   borderMode = STICKER_DEFAULTS.BORDER_MODE,
 ) {
   // まずリサイズだけ実行（高速）
-  const resizedBlob = await resizeImageBlob(blob, 1000);
+  const {
+    blob: resizedBlob,
+    originalType,
+    hasTransparency,
+  } = await resizeImageBlob(blob, 1000);
 
   const stickerId = id || Date.now();
 
@@ -714,6 +831,8 @@ export async function addStickerFromBlob(
     borderMode,
     imageDimensions.width,
     imageDimensions.height,
+    originalType,
+    hasTransparency,
   );
 
   // 全モードで統一的にURLを生成
@@ -748,6 +867,8 @@ export async function addStickerFromBlob(
     originalBlobUrl, // オリジナル画像URL
     false, // bgRemovalProcessed
     resizedBlob, // originalBlob（Blobオブジェクト）
+    originalType, // 元の画像タイプ
+    hasTransparency, // 透過の有無
   );
 
   // バックグラウンド処理は不要（既に生成済み）
@@ -789,6 +910,8 @@ export async function addStickerFromBlob(
           isPinned: addedSticker.isPinned,
           hasBorder: addedSticker.hasBorder,
           borderMode: addedSticker.borderMode, // 縁取りモードを保存
+          originalType: originalType, // 元の画像タイプを保存
+          hasTransparency: hasTransparency, // 透過情報を保存
           timestamp: Date.now(),
         });
       }
@@ -810,6 +933,8 @@ export async function addStickerFromBlob(
     isPinned: false,
     hasBorder: hasBorder,
     borderMode: borderMode, // 縁取りモードを保存
+    originalType: originalType, // 元の画像タイプを保存
+    hasTransparency: hasTransparency, // 透過情報を保存
     timestamp: Date.now(),
     // この時点では縁取り版のBlobは保存しない（後で追加される）
   });
@@ -840,6 +965,10 @@ export async function addStickerFromBlob(
  * @param {number} borderWidth - 縁取りの幅（px）
  * @param {number} borderMode - 縁取りモード（0:なし, 1:2.5%, 2:5%）
  * @param {string} [originalBlobUrl] - リサイズ済み・パディング/縁取り前の元画像URL
+ * @param {boolean} bgRemovalProcessed - 背景除去済みフラグ
+ * @param {Blob} originalBlob - リサイズ済み・パディング/縁取り前の元画像Blob（優先使用）
+ * @param {string} originalType - 元の画像タイプ（WebP変換前）
+ * @param {boolean} hasTransparencyFlag - 透過の有無
  * @returns {number} 実際のz-index
  */
 export function addStickerToDOM(
@@ -859,6 +988,8 @@ export function addStickerToDOM(
   originalBlobUrl = null, // リサイズ済み・パディング/縁取り前の元画像URL
   bgRemovalProcessed = false,
   originalBlob = null, // リサイズ済み・パディング/縁取り前の元画像Blob（優先使用）
+  originalType = null, // 元の画像タイプ
+  hasTransparencyFlag = null, // 透過の有無
 ) {
   const stickerId = id || Date.now();
 
@@ -944,6 +1075,8 @@ export function addStickerToDOM(
     hasBorder: hasBorder,
     borderWidth: borderWidth,
     borderMode: borderMode,
+    originalType: originalType, // 元の画像タイプを保持
+    hasTransparency: hasTransparencyFlag, // 透過情報を保持
   };
   state.addSticker(stickerObject);
 
@@ -1285,6 +1418,8 @@ async function processBorderAndPadding(
   borderMode,
   width,
   height,
+  originalType = null,
+  hasTransparency = null,
 ) {
   // 各モードの最大サイズ（モード2の5%幅）を計算
   const maxBorderWidth = calculateBorderWidth(width, height, 2);
@@ -1323,6 +1458,8 @@ async function processBorderAndPadding(
     const { blob: borderBlob, borderWidth } = await applyOutlineFilter(
       originalBlob,
       1,
+      originalType,
+      hasTransparency,
     );
 
     // 縁取り画像にパディングを追加（5%相当）
@@ -1346,6 +1483,8 @@ async function processBorderAndPadding(
     const { blob: borderBlob, borderWidth } = await applyOutlineFilter(
       originalBlob,
       2,
+      originalType,
+      hasTransparency,
     );
 
     // 5%縁取りはパディング不要
@@ -1435,9 +1574,20 @@ export async function toggleStickerBorder(sticker) {
     }
 
     if (originalBlob) {
-      // 元画像の実際のサイズを取得
+      // 元画像の実際のサイズと画像情報を取得
       const imageDimensions = await getImageDimensions(originalBlob);
       console.log("元画像の実際のサイズ:", imageDimensions);
+
+      // 画像タイプと透過情報を取得（統合関数使用）
+      const { type: originalType, hasTransparency: transparency } =
+        await getImageTypeInfo({
+          blob: originalBlob,
+          sticker,
+        });
+
+      console.log(
+        `縁取りモード変更: originalType=${originalType}, transparency=${transparency}`,
+      );
 
       // 共通関数を使用して画像処理
       const result = await processBorderAndPadding(
@@ -1445,6 +1595,8 @@ export async function toggleStickerBorder(sticker) {
         nextBorderMode,
         imageDimensions.width,
         imageDimensions.height,
+        originalType,
+        transparency,
       );
 
       // 古いURLを保存
@@ -1602,7 +1754,7 @@ async function removeBgFromBlob(blob) {
 
     // パフォーマンス最適化: 背景除去前に画像を小さくリサイズ（800px以下）
     // 背景除去ライブラリは高解像度画像では遅いため、処理速度を優先
-    const optimizedBlob = await resizeImageBlob(blob, 800);
+    const { blob: optimizedBlob } = await resizeImageBlob(blob, 800);
 
     // Blobをbase64に変換
     const imageUrl = blobURLManager.createURL(optimizedBlob); // 一時的なURL
@@ -1976,6 +2128,10 @@ function updateStickerBaseImage(sticker, newBlob) {
   sticker.originalBlob = newBlob; // 元画像を背景除去版に置き換え
   sticker.blob = newBlob; // 表示用画像も背景除去版に
 
+  // 背景除去後は必ず透過PNGになるため、画像タイプ情報を更新
+  sticker.originalType = "image/png";
+  sticker.hasTransparency = true;
+
   // 古いURLを解放
   releaseOldUrls(sticker);
 
@@ -2000,12 +2156,25 @@ async function applyBorderAndPadding(sticker) {
   // 画像サイズを取得
   const imageDimensions = await getImageDimensions(sticker.originalBlob);
 
+  // 画像タイプと透過情報を取得（統合関数使用）
+  const { type: originalType, hasTransparency: transparency } =
+    await getImageTypeInfo({
+      blob: sticker.originalBlob,
+      sticker,
+    });
+
+  console.log(
+    `applyBorderAndPadding: originalType=${originalType}, transparency=${transparency}`,
+  );
+
   // 縁取り/パディング処理
   const result = await processBorderAndPadding(
     sticker.originalBlob,
     borderMode,
     imageDimensions.width,
     imageDimensions.height,
+    originalType,
+    transparency,
   );
 
   // 古いURLを保存（新しいURLを設定する前に）
@@ -2072,6 +2241,8 @@ async function finalizeBgRemoval(sticker, removedBgBlob) {
     blob: sticker.blob, // 表示用画像（パディングあり/なし）
     blobWithBorder: sticker.blobWithBorder, // 縁取り版
     bgRemovalProcessed: true,
+    originalType: sticker.originalType, // 更新された画像タイプ（image/png）
+    hasTransparency: sticker.hasTransparency, // 更新された透過情報（true）
   });
 
   // UI更新
@@ -2121,13 +2292,13 @@ async function getBlobFromURL(url) {
 async function getImageDimensions(blob) {
   return new Promise((resolve) => {
     const img = new Image();
-    const blobUrl = URL.createObjectURL(blob);
+    const blobUrl = blobURLManager.createURL(blob);
     img.onload = () => {
-      URL.revokeObjectURL(blobUrl);
+      blobURLManager.revokeURL(blobUrl);
       resolve({ width: img.width, height: img.height });
     };
     img.onerror = () => {
-      URL.revokeObjectURL(blobUrl);
+      blobURLManager.revokeURL(blobUrl);
       resolve({ width: 0, height: 0, error: true });
     };
     img.src = blobUrl;
