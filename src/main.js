@@ -470,8 +470,9 @@ async function togglePhysicsMode() {
     // pasteAreaを有効化
     elements.pasteArea.disabled = false;
   } else {
-    // 物理モード ON
+    // 物理モード ON（ジャイロなしでも固定重力で動作）
     await enablePhysics();
+
     state.enablePhysicsMode();
     elements.physicsBtn.classList.add("active");
     elements.canvas.classList.add("physics-mode");

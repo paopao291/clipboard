@@ -21,17 +21,17 @@
     --color-white-overlay-hover: rgba(255, 255, 255, 0.25);
     --color-overlay-dark: rgba(0, 0, 0, 0.35);
     --color-overlay-darker: rgba(0, 0, 0, 0.4);
-    --color-physics: rgb(0, 80, 58);        /* 重力ボタン：深い緑 */
-    --color-layout: rgb(240, 90, 36);       /* 斥力ボタン：オレンジ */
-    --color-cream: #FFFBF0;                 /* クリーム色 */
-    --color-kraft: #f1ede3;                 /* クラフト紙色 */
+    --color-physics: rgb(0, 80, 58); /* 重力ボタン：深い緑 */
+    --color-layout: rgb(240, 90, 36); /* 斥力ボタン：オレンジ */
+    --color-cream: #fffbf0; /* クリーム色 */
+    --color-kraft: #f1ede3; /* クラフト紙色 */
     --color-bg-main: #f7f7f4;
 
     /* フォントサイズシステム（rem = アクセシブル） */
-    --font-sm: 0.8125rem;   /* 13px */
-    --font-base: 0.875rem;  /* 14px */
-    --font-md: 1rem;        /* 16px */
-    --font-xl: 1.5rem;      /* 24px */
+    --font-sm: 0.8125rem; /* 13px */
+    --font-base: 0.875rem; /* 14px */
+    --font-md: 1rem; /* 16px */
+    --font-xl: 1.5rem; /* 24px */
 
     /* シャドウシステム */
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
@@ -97,10 +97,10 @@ body.has-background-image {
     background-repeat: no-repeat;
 }
 
-a, button {
+a,
+button {
     -webkit-tap-highlight-color: transparent;
-  }
-  
+}
 
 #app {
     width: 100%;
@@ -174,22 +174,10 @@ a, button {
         -webkit-touch-callout: default; /* iOS Safari用: 長押しメニューを有効化 */
     }
 
-    /* スマホ：ボタンサイズ調整 */
+    /* スマホ：ボタン配置調整 */
     .header-buttons {
         top: var(--spacing-sm);
         right: var(--spacing-sm);
-    }
-
-    .header-btn,
-    .selection-btn {
-        width: var(--size-button-mobile);
-        height: var(--size-button-mobile);
-    }
-
-    .header-btn svg,
-    .selection-btn svg {
-        width: var(--size-icon-sm);
-        height: var(--size-icon-sm);
     }
 
     /* 選択ボタン群 */
@@ -267,7 +255,9 @@ a, button {
     display: flex;
     gap: 12px;
     z-index: 10000;
-    transition: opacity 0.3s var(--ease-out-expo), visibility 0.3s;
+    transition:
+        opacity 0.3s var(--ease-out-expo),
+        visibility 0.3s;
     opacity: 1;
     visibility: visible;
 }
@@ -342,8 +332,8 @@ body.has-background-image .background-btn .background-icon-remove {
     bottom: var(--spacing-base);
     left: 50%;
     transform: translateX(-50%) scale(1);
-    width: var(--size-button-md);
-    height: var(--size-button-md);
+    width: var(--size-button-mobile);
+    height: var(--size-button-mobile);
     background-color: transparent;
     border: 1px solid var(--color-white);
     border-radius: 50%;
@@ -386,8 +376,8 @@ body.has-background-image .background-btn .background-icon-remove {
     position: fixed;
     bottom: var(--spacing-base);
     right: var(--spacing-base);
-    width: var(--size-button-md);
-    height: var(--size-button-md);
+    width: var(--size-button-mobile-lg);
+    height: var(--size-button-mobile-lg);
     background: var(--color-black);
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 50%;
@@ -407,12 +397,16 @@ body.has-background-image .background-btn .background-icon-remove {
 .add-btn:hover {
     transform: scale(1.05);
     background: var(--color-black-strong);
-    box-shadow: var(--shadow-md), 0 2px 4px rgba(0, 0, 0, 0.15);
+    box-shadow:
+        var(--shadow-md),
+        0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .add-btn:active {
     transform: scale(0.95);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12), 0 0px 2px rgba(0, 0, 0, 0.08);
+    box-shadow:
+        0 1px 4px rgba(0, 0, 0, 0.12),
+        0 0px 2px rgba(0, 0, 0, 0.08);
 }
 
 .add-btn svg {
@@ -428,7 +422,9 @@ body.has-background-image .background-btn .background-icon-remove {
     display: flex;
     gap: 12px;
     z-index: 10000;
-    transition: opacity 0.3s var(--ease-out-expo), visibility 0.3s;
+    transition:
+        opacity 0.3s var(--ease-out-expo),
+        visibility 0.3s;
     opacity: 1;
     visibility: visible;
 }
@@ -441,8 +437,8 @@ body.has-background-image .background-btn .background-icon-remove {
 /* 右上アイコンボタン：基本スタイル（共通） */
 .header-btn,
 .selection-btn {
-    width: var(--size-button-sm);
-    height: var(--size-button-sm);
+    width: var(--size-button-mobile);
+    height: var(--size-button-mobile);
     color: var(--color-white);
     border: none;
     border-radius: 50%;
@@ -464,9 +460,9 @@ body.has-background-image .background-btn .background-icon-remove {
 /* header-buttons内のボタン：グレー背景 */
 .header-btn {
     background: rgba(33, 33, 33, 0.15);
-}   
+}
 
-@media (hover: hover) {     
+@media (hover: hover) {
     .header-btn:hover {
         transform: scale(1.05);
         background: rgba(33, 33, 33, 0.25);
@@ -483,7 +479,7 @@ body.has-background-image .background-btn .background-icon-remove {
     background: rgba(33, 33, 33, 0.3);
 }
 
-@media (hover: hover) { 
+@media (hover: hover) {
     .selection-btn:hover {
         transform: scale(1.05);
         background: rgba(33, 33, 33, 0.4);
@@ -534,7 +530,9 @@ body.has-background-image .background-btn .background-icon-remove {
     display: flex;
     gap: 12px;
     z-index: 10000;
-    transition: opacity 0.3s var(--ease-out-expo), visibility 0.3s;
+    transition:
+        opacity 0.3s var(--ease-out-expo),
+        visibility 0.3s;
     opacity: 1;
     visibility: visible;
 }
@@ -546,8 +544,8 @@ body.has-background-image .background-btn .background-icon-remove {
 
 /* 左下ボタン：基本スタイル（共通） */
 .footer-btn {
-    width: var(--size-button-md);
-    height: var(--size-button-md);
+    width: var(--size-button-mobile);
+    height: var(--size-button-mobile);
     background: var(--color-white-translucent);
     border: none;
     border-radius: 50%;
@@ -563,17 +561,21 @@ body.has-background-image .background-btn .background-icon-remove {
     transform: scale(1);
 }
 
-@media (hover: hover) { 
+@media (hover: hover) {
     .footer-btn:not(.hidden):hover {
         transform: scale(1.05);
         background: var(--color-white);
-        box-shadow: var(--shadow-md), 0 2px 4px rgba(0, 0, 0, 0.1);
+        box-shadow:
+            var(--shadow-md),
+            0 2px 4px rgba(0, 0, 0, 0.1);
     }
 }
 
 .footer-btn:not(.hidden):active {
     transform: scale(0.95);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1), var(--shadow-sm);
+    box-shadow:
+        0 1px 4px rgba(0, 0, 0, 0.1),
+        var(--shadow-sm);
 }
 
 .footer-btn svg {
@@ -769,7 +771,7 @@ body.has-background-image .background-btn .background-icon-remove {
 
 .sticker.pinned .sticker-img-wrapper::after,
 .sticker.pinned .help-sticker-wrapper::after {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: 0;
@@ -814,9 +816,15 @@ body.has-background-image .background-btn .background-icon-remove {
 }
 
 @keyframes click-feedback {
-    0% { transform: scale(1); }
-    25% { transform: scale(0.98); }
-    100% { transform: scale(1); }
+    0% {
+        transform: scale(1);
+    }
+    25% {
+        transform: scale(0.97);
+    }
+    100% {
+        transform: scale(1);
+    }
 }
 
 /* リサイズ中はトランジションを無効化（パフォーマンス改善） */
@@ -859,7 +867,7 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
 
 /* ゴミ箱に吸い込まれるアニメーション */
 .sticker.being-deleted {
-    transition: 
+    transition:
         left 0.25s var(--ease-out-expo),
         top 0.25s var(--ease-out-expo),
         transform 0.25s var(--ease-out-expo),
@@ -889,27 +897,32 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
 }
 
 .sticker.processing .sticker-img-wrapper::before {
-    content: '';
+    content: "";
     position: absolute;
     top: -10%;
     left: -10%;
     width: 120%;
     height: 120%;
-    background-image: linear-gradient(90deg, rgba(128, 128, 128, 0) 0%, rgba(255, 255, 255, 0.5) 50%, rgba(128, 128, 128, 0) 100%);
+    background-image: linear-gradient(
+        90deg,
+        rgba(128, 128, 128, 0) 0%,
+        rgba(255, 255, 255, 0.5) 50%,
+        rgba(128, 128, 128, 0) 100%
+    );
     background-position: 0% 0%;
     background-size: 3000px 100%;
     animation: Grad 2.5s linear infinite;
-    animation-delay:0.5s;
+    animation-delay: 0.5s;
     z-index: 2;
 }
 
 @keyframes Grad {
-	0% {
-		background-position: 0 0%;
-	}
-	100% {
-		background-position: 3000px 0%;
-	}
+    0% {
+        background-position: 0 0%;
+    }
+    100% {
+        background-position: 3000px 0%;
+    }
 }
 
 /* 画像ラッパー：回転用コンテナ */
@@ -1055,7 +1068,7 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
 /* トースト：シンプルな通知 */
 .toast {
     position: fixed;
-    bottom: calc(var(--spacing-base) * 2 + var(--size-button-md));
+    bottom: calc(var(--spacing-base) * 2 + var(--size-button-mobile));
     left: 50%;
     transform: translateX(-50%);
     background: var(--color-black);

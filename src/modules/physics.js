@@ -134,9 +134,10 @@ export function updateWalls() {
 
 /**
  * 物理モードを有効化
+ * @returns {Promise<boolean>} 有効化に成功した場合はtrue（ジャイロ許可が必要な場合は許可状態による）
  */
 export async function enablePhysics() {
-  if (isPhysicsEnabled) return;
+  if (isPhysicsEnabled) return true;
 
   isPhysicsEnabled = true;
 
@@ -175,7 +176,17 @@ export async function enablePhysics() {
   setupEventListeners();
 
   // ジャイロセンサーのチェック
-  await checkGyroAvailability();
+  const gyroGranted = await checkGyroAvailability();
+
+  // ジャイロ許可が得られなかった場合でも、固定重力（下向き）で物理モードを継続
+  if (!gyroGranted) {
+    console.log("物理モード: ジャイロなしで固定重力モードで動作します");
+    isGyroActive = false; // ジャイロを無効化（固定重力を使用）
+    const { showToast } = await import("./ui.js");
+    showToast("物理モード（固定重力）");
+  }
+
+  return true;
 }
 
 /**
@@ -824,41 +835,46 @@ function updateGravity() {
 
 /**
  * ジャイロセンサーの利用可能性をチェック（ユーザーインタラクション内で呼び出す必要あり）
+ * @returns {Promise<boolean>} 許可が得られた場合はtrue
  */
 async function checkGyroAvailability() {
   // DeviceOrientationEventが存在するかチェック
   if (!window.DeviceOrientationEvent) {
     gyroPermissionGranted = false;
     console.log("物理モード: DeviceOrientationEventが利用できません（PC環境）");
-    return;
+    return false;
   }
 
   // iOS 13以降では許可が必要（ユーザーインタラクション内で実行する必要あり）
   if (typeof DeviceOrientationEvent.requestPermission === "function") {
     try {
-      console.log("物理モード: ジャイロセンサーの許可をリクエスト中...");
+      console.log("物理モード: 方向センサーの許可をリクエスト中...");
       const permission = await DeviceOrientationEvent.requestPermission();
       gyroPermissionGranted = permission === "granted";
 
       if (gyroPermissionGranted) {
-        console.log("物理モード: ジャイロセンサーの許可が付与されました");
+        console.log("物理モード: 方向センサーの許可が付与されました");
       } else {
-        console.log("物理モード: ジャイロセンサーの許可が拒否されました");
+        console.log("物理モード: 方向センサーの許可が拒否されました");
+        // ユーザーに通知
+        const { showToast } = await import("./ui.js");
+        showToast("方向センサーの許可が必要です");
       }
+      return gyroPermissionGranted;
     } catch (error) {
-      console.warn(
-        "物理モード: ジャイロセンサーの許可リクエストに失敗:",
-        error,
-      );
+      console.warn("物理モード: 方向センサーの許可リクエストに失敗:", error);
       gyroPermissionGranted = false;
+      // ユーザーに通知
+      const { showToast } = await import("./ui.js");
+      showToast("方向センサーの許可に失敗しました");
+      return false;
     }
   } else {
     // Android/PCでは自動的に許可
     // ただし、PCではbeta/gammaがnullなので実際には動作しない
     gyroPermissionGranted = true;
-    console.log(
-      "物理モード: ジャイロセンサーは自動的に利用可能です（Android）",
-    );
+    console.log("物理モード: 方向センサーは自動的に利用可能です（Android）");
+    return true;
   }
 }
 
