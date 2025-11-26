@@ -196,259 +196,413 @@ async function init() {
 }
 
 /**
+ * IndexedDBからステッカーデータを読み込む
+ * @returns {Promise<Array>} ステッカーデータの配列
+ */
+async function loadStickerDataFromDB() {
+  const stickers = await loadAllStickersFromDB();
+  console.log(`IndexedDBから${stickers.length}個のステッカーを読み込みました`);
+  return stickers;
+}
+
+/**
+ * Blobから画像を読み込む
+ * @param {Blob} blob - 画像Blob
+ * @returns {Promise<HTMLImageElement>} 読み込まれた画像要素
+ */
+async function loadImageFromBlob(blob) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const tempBlobUrl = URL.createObjectURL(blob);
+
+    img.onload = () => {
+      URL.revokeObjectURL(tempBlobUrl);
+      resolve(img);
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(tempBlobUrl);
+      resolve(img); // エラーの場合も解決（後続処理でハンドリング）
+    };
+
+    img.src = tempBlobUrl;
+  });
+}
+
+/**
+ * 画像の透過情報を判定
+ * @param {Blob} blob - 画像Blob
+ * @returns {Promise<boolean>} 透過があればtrue
+ */
+async function checkImageTransparency(blob) {
+  return new Promise((resolve) => {
+    const testImg = new Image();
+    const testUrl = URL.createObjectURL(blob);
+
+    testImg.onload = async () => {
+      // hasTransparency関数をインポートして使用
+      const { hasTransparency: checkTransparency } = await import(
+        "./modules/sticker.js"
+      );
+      const result = checkTransparency(testImg);
+      URL.revokeObjectURL(testUrl);
+      resolve(result);
+    };
+
+    testImg.onerror = () => {
+      URL.revokeObjectURL(testUrl);
+      resolve(false); // エラー時は透過なしと判定
+    };
+
+    testImg.src = testUrl;
+  });
+}
+
+/**
+ * ステッカーの画像タイプ情報を取得
+ * @param {Object} stickerData - ステッカーデータ
+ * @param {HTMLImageElement} img - 読み込まれた画像
+ * @returns {Promise<Object>} {borderMode, originalType, transparency}
+ */
+async function getStickerImageInfo(stickerData, img) {
+  // 縁取りモードを取得（DBに保存されていればそれを使用、なければデフォルト）
+  const borderMode =
+    stickerData.borderMode !== undefined
+      ? stickerData.borderMode
+      : STICKER_DEFAULTS.BORDER_MODE;
+
+  console.log(
+    `ステッカー${stickerData.id}のリロード: モード${borderMode}の処理を実行`,
+  );
+
+  // オリジナル画像のBlobを取得
+  const originalBlob = stickerData.originalBlob || stickerData.blob;
+
+  // 画像タイプを取得（DBに保存されていればそれを優先）
+  let originalType =
+    stickerData.originalType || originalBlob.type || "image/png";
+
+  // 透過情報を取得
+  let transparency = stickerData.hasTransparency;
+
+  // DBに保存されていない場合のみ判定（後方互換性）
+  if (transparency === null || transparency === undefined) {
+    transparency = await checkImageTransparency(originalBlob);
+  }
+
+  console.log(
+    `リロード: ID=${stickerData.id}, originalType=${originalType}, transparency=${transparency}`,
+  );
+
+  return { borderMode, originalType, transparency };
+}
+
+/**
+ * リロード時の画像処理（パディング、縁取り）
+ * @param {Object} stickerData - ステッカーデータ
+ * @param {HTMLImageElement} img - 読み込まれた画像
+ * @param {number} borderMode - 縁取りモード
+ * @param {string} originalType - 画像タイプ
+ * @param {boolean} transparency - 透過の有無
+ * @returns {Promise<Object>} 画像URL情報
+ */
+async function processImageForReload(
+  stickerData,
+  img,
+  borderMode,
+  originalType,
+  transparency,
+) {
+  // モジュールをインポート
+  const { calculateBorderWidth, addPaddingToImage, applyOutlineFilter } =
+    await import("./modules/sticker.js");
+
+  // オリジナル画像のBlobとURLを準備
+  const originalBlob = stickerData.originalBlob || stickerData.blob;
+  const originalBlobUrl = URL.createObjectURL(originalBlob);
+
+  // 5%相当の最大縁取り幅を計算（モード2）
+  const maxBorderWidth = calculateBorderWidth(img.width, img.height, 2);
+
+  // 現在のモードの縁取り幅を計算
+  const borderWidth = calculateBorderWidth(img.width, img.height, borderMode);
+
+  // パディング付き画像を生成（すべてのモードで5%パディング）
+  const paddedBlob = await addPaddingToImage(originalBlob, maxBorderWidth);
+  const blobUrl = URL.createObjectURL(paddedBlob);
+
+  // 縁取り画像URLを生成（モードに応じて）
+  let blobWithBorderUrl = null;
+
+  if (borderMode === 0) {
+    // モード0: 縁取りなし
+    blobWithBorderUrl = null;
+  } else if (borderMode === 1) {
+    // モード1: 2.5%縁取り + 残りパディング
+    const { blob: borderResult } = await applyOutlineFilter(
+      originalBlob,
+      1,
+      originalType,
+      transparency,
+    );
+    const remainingPadding = maxBorderWidth - borderWidth;
+    console.log(`モード1: 残りのパディング幅 = ${remainingPadding}px`);
+
+    const paddedBorderBlob = await addPaddingToImage(
+      borderResult,
+      remainingPadding,
+    );
+    blobWithBorderUrl = URL.createObjectURL(paddedBorderBlob);
+  } else {
+    // モード2: 5%縁取り
+    const { blob: borderResult } = await applyOutlineFilter(
+      originalBlob,
+      2,
+      originalType,
+      transparency,
+    );
+    blobWithBorderUrl = URL.createObjectURL(borderResult);
+  }
+
+  return {
+    blobUrl,
+    blobWithBorderUrl,
+    originalBlobUrl,
+    borderWidth,
+    originalBlob,
+  };
+}
+
+/**
+ * 座標とサイズを検証・修正
+ * @param {number} id - ステッカーID
+ * @param {number} x - X座標
+ * @param {number} yPercent - Y座標（パーセント）
+ * @param {number} width - 幅
+ * @returns {Object} {x, yPercent, width, needsFixing}
+ */
+function validateAndFixPosition(id, x, yPercent, width) {
+  let needsFixing = false;
+
+  // X座標の検証
+  if (!isFinite(x) || Math.abs(x) > 10000) {
+    console.warn(
+      `DBから読み込んだステッカー${id}のx座標が異常: ${x} → 0に修正`,
+    );
+    x = 0;
+    needsFixing = true;
+  }
+
+  // Y座標の検証
+  if (!isFinite(yPercent) || Math.abs(yPercent) > 200) {
+    console.warn(
+      `DBから読み込んだステッカー${id}のyPercent座標が異常: ${yPercent} → 50に修正`,
+    );
+    yPercent = 50;
+    needsFixing = true;
+  }
+
+  // 幅の検証
+  if (!isFinite(width) || width < 10 || width > 5000) {
+    console.warn(
+      `DBから読み込んだステッカー${id}のwidth が異常: ${width} → デフォルトに修正`,
+    );
+    width = STICKER_DEFAULTS.WIDTH;
+    needsFixing = true;
+  }
+
+  return { x, yPercent, width, needsFixing };
+}
+
+/**
+ * 旧形式の座標を新形式に変換
+ * @param {Object} stickerData - ステッカーデータ
+ * @returns {Object} {x, yPercent, width}
+ */
+function convertLegacyPosition(stickerData) {
+  const screenWidth = window.innerWidth;
+  let x, yPercent, width;
+
+  if (
+    stickerData.xPercent !== undefined &&
+    stickerData.yPercent !== undefined
+  ) {
+    // パーセント値形式から変換
+    const absoluteX = (stickerData.xPercent / 100) * screenWidth;
+    const centerX = screenWidth / 2;
+    x = absoluteX - centerX;
+    yPercent = stickerData.yPercent;
+
+    // サイズの変換
+    if (stickerData.widthPercent !== undefined) {
+      width = (stickerData.widthPercent / 100) * screenWidth;
+    } else if (stickerData.width !== undefined) {
+      width = stickerData.width;
+    } else {
+      width = STICKER_DEFAULTS.WIDTH;
+    }
+  } else {
+    // デフォルト（中央）
+    x = 0;
+    yPercent = 50;
+    width = STICKER_DEFAULTS.WIDTH;
+  }
+
+  return { x, yPercent, width };
+}
+
+/**
+ * ステッカーの座標とサイズを変換
+ * @param {Object} stickerData - ステッカーデータ
+ * @param {boolean} needsConversion - 座標変換が必要かどうか
+ * @returns {Promise<Object>} {x, yPercent, width}
+ */
+async function convertStickerPosition(stickerData, needsConversion) {
+  let x, yPercent, width;
+
+  // 新形式のデータがある場合
+  if (
+    stickerData.x !== undefined &&
+    stickerData.yPercent !== undefined &&
+    stickerData.width !== undefined
+  ) {
+    ({ x, yPercent, width } = stickerData);
+
+    // 異常な値をチェックして修正
+    const fixed = validateAndFixPosition(stickerData.id, x, yPercent, width);
+    x = fixed.x;
+    yPercent = fixed.yPercent;
+    width = fixed.width;
+
+    // 修正が必要だった場合はDBに保存
+    if (fixed.needsFixing) {
+      await updateStickerInDB(stickerData.id, { x, yPercent, width });
+    }
+  } else if (needsConversion) {
+    // 旧形式からの変換
+    ({ x, yPercent, width } = convertLegacyPosition(stickerData));
+
+    // 変換後のデータをDBに保存
+    await updateStickerInDB(stickerData.id, { x, yPercent, width });
+  } else {
+    // デフォルト値を使用
+    x = 0;
+    yPercent = 50;
+    width = STICKER_DEFAULTS.WIDTH;
+  }
+
+  return { x, yPercent, width };
+}
+
+/**
+ * 処理済みステッカーをDOMに追加
+ * @param {Object} stickerData - ステッカーデータ
+ * @param {Object} imageUrls - 画像URL情報
+ * @param {Object} position - 位置情報
+ * @param {number} borderMode - 縁取りモード
+ */
+function addProcessedStickerToDOM(
+  stickerData,
+  imageUrls,
+  position,
+  borderMode,
+) {
+  // 状態フラグを取得
+  const hasBorder =
+    stickerData.hasBorder !== undefined
+      ? stickerData.hasBorder
+      : STICKER_DEFAULTS.HAS_BORDER;
+  const bgRemovalProcessed = stickerData.bgRemovalProcessed || false;
+
+  // 現在の表示URLを決定
+  let url;
+  if (borderMode === 0 || !hasBorder) {
+    // モード0または縁取りOFF: パディング付き画像
+    url = imageUrls.blobUrl;
+  } else {
+    // モード1,2で縁取りON: 縁取り付き画像
+    url = imageUrls.blobWithBorderUrl;
+  }
+
+  console.log(
+    `ステッカー${stickerData.id}のリロード: borderMode=${borderMode}, hasBorder=${hasBorder}`,
+  );
+
+  // DOMに追加
+  addStickerToDOM(
+    url,
+    imageUrls.blobUrl,
+    imageUrls.blobWithBorderUrl,
+    position.x,
+    position.yPercent,
+    position.width,
+    stickerData.rotation,
+    stickerData.id,
+    stickerData.zIndex,
+    stickerData.isPinned || false,
+    hasBorder,
+    imageUrls.borderWidth,
+    borderMode,
+    imageUrls.originalBlobUrl, // オリジナル画像URL
+    bgRemovalProcessed,
+    imageUrls.originalBlob, // オリジナル画像Blob
+    stickerData.originalType || null,
+    stickerData.hasTransparency !== undefined
+      ? stickerData.hasTransparency
+      : null,
+  );
+}
+
+/**
+ * 個別のステッカーデータを処理してDOMに追加
+ * @param {Object} stickerData - DBから読み込んだステッカーデータ
+ * @param {boolean} needsConversion - 座標変換が必要かどうか
+ */
+async function processStickerForReload(stickerData, needsConversion) {
+  // ステップ1: 画像情報を取得
+  const img = await loadImageFromBlob(stickerData.blob);
+
+  // ステップ2: 縁取りモードと画像タイプ情報を取得
+  const { borderMode, originalType, transparency } = await getStickerImageInfo(
+    stickerData,
+    img,
+  );
+
+  // ステップ3: 画像処理（パディング、縁取り）
+  const imageUrls = await processImageForReload(
+    stickerData,
+    img,
+    borderMode,
+    originalType,
+    transparency,
+  );
+
+  // ステップ4: 座標とサイズを変換
+  const position = await convertStickerPosition(stickerData, needsConversion);
+
+  // ステップ5: DOMに追加
+  addProcessedStickerToDOM(stickerData, imageUrls, position, borderMode);
+}
+
+/**
  * IndexedDBからシールを読み込み
  */
 async function loadStickersFromDB() {
-  const stickers = await loadAllStickersFromDB();
+  // ステップ1: IndexedDBからデータを読み込む
+  const stickers = await loadStickerDataFromDB();
 
   // データ形式の変換が必要かチェック
   const needsConversion = !localStorage.getItem("hybrid_coordinate_migrated");
-  const screenWidth = window.innerWidth;
-  const screenHeight = window.innerHeight;
 
+  // ステップ2: 各ステッカーを処理してDOMに追加
   for (const stickerData of stickers) {
-    // 画像情報を取得
-    const img = new Image();
-    const tempBlobUrl = URL.createObjectURL(stickerData.blob);
-    const imgLoadPromise = new Promise((resolve) => {
-      img.onload = () => {
-        URL.revokeObjectURL(tempBlobUrl);
-        resolve();
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(tempBlobUrl);
-        resolve();
-      };
-      img.src = tempBlobUrl;
-    });
-    await imgLoadPromise;
-
-    // モードを確認
-    const borderMode =
-      stickerData.borderMode !== undefined
-        ? stickerData.borderMode
-        : STICKER_DEFAULTS.BORDER_MODE;
-    console.log(
-      `ステッカー${stickerData.id}のリロード: モード${borderMode}の処理を実行`,
-    );
-
-    // オリジナル画像のURL（元画像を保持）
-    const originalBlobUrl = URL.createObjectURL(
-      stickerData.originalBlob || stickerData.blob,
-    );
-    const originalBlob = stickerData.originalBlob || stickerData.blob;
-
-    // 画像タイプと透過情報を取得（DBに保存されていればそれを優先、なければ判定）
-    let originalType =
-      stickerData.originalType || originalBlob.type || "image/png";
-    let transparency = stickerData.hasTransparency;
-
-    // DBに保存されていない場合のみ判定（後方互換性）
-    if (transparency === null || transparency === undefined) {
-      transparency = await new Promise((resolve) => {
-        const testImg = new Image();
-        const testUrl = URL.createObjectURL(originalBlob);
-        testImg.onload = async () => {
-          // hasTransparency関数をインポートして使用
-          const { hasTransparency: checkTransparency } = await import(
-            "./modules/sticker.js"
-          );
-          const result = checkTransparency(testImg);
-          URL.revokeObjectURL(testUrl);
-          resolve(result);
-        };
-        testImg.onerror = () => {
-          URL.revokeObjectURL(testUrl);
-          resolve(false);
-        };
-        testImg.src = testUrl;
-      });
-    }
-
-    console.log(
-      `リロード: ID=${stickerData.id}, originalType=${originalType}, transparency=${transparency}`,
-    );
-
-    // モジュールをインポート
-    const { calculateBorderWidth, addPaddingToImage, applyOutlineFilter } =
-      await import("./modules/sticker.js");
-
-    // 5%相当の幅を計算（モード2）
-    const maxBorderWidth = calculateBorderWidth(img.width, img.height, 2);
-
-    // 現在のモードの縁取り幅を計算
-    const borderWidth = calculateBorderWidth(img.width, img.height, borderMode);
-
-    // モードに応じてパディング付き画像と縁取り画像を生成（常に新規生成）
-    let paddedBlob, borderBlob, blobUrl, blobWithBorderUrl;
-
-    // パディング付き画像を生成（すべてのモードで5%パディング）
-    paddedBlob = await addPaddingToImage(originalBlob, maxBorderWidth);
-    // 注意: この時点ではimg要素がまだ作成されていないため、後でaddStickerToDOMで関連付ける
-    blobUrl = URL.createObjectURL(paddedBlob);
-
-    if (borderMode === 0) {
-      // モード0: 縁取りなし（blobWithBorderUrlはnull）
-      blobWithBorderUrl = null;
-    } else if (borderMode === 1) {
-      // モード1: 2.5%縁取り + 残りパディング
-      const { blob: borderResult } = await applyOutlineFilter(
-        originalBlob,
-        1,
-        originalType,
-        transparency,
-      );
-      // 残りのパディング幅を計算
-      const remainingPadding = maxBorderWidth - borderWidth;
-      console.log(`モード1: 残りのパディング幅 = ${remainingPadding}px`);
-      const paddedBorderBlob = await addPaddingToImage(
-        borderResult,
-        remainingPadding,
-      );
-      blobWithBorderUrl = URL.createObjectURL(paddedBorderBlob);
-    } else {
-      // モード2: 5%縁取り
-      const { blob: borderResult } = await applyOutlineFilter(
-        originalBlob,
-        2,
-        originalType,
-        transparency,
-      );
-      blobWithBorderUrl = URL.createObjectURL(borderResult);
-    }
-
-    // 状態フラグ
-    const hasBorder =
-      stickerData.hasBorder !== undefined
-        ? stickerData.hasBorder
-        : STICKER_DEFAULTS.HAS_BORDER;
-    const bgRemovalProcessed = stickerData.bgRemovalProcessed || false;
-
-    // 現在の表示URLを決定
-    let url;
-    console.log(
-      `ステッカー${stickerData.id}のリロード: borderMode=${borderMode}, hasBorder=${hasBorder}`,
-    );
-
-    if (borderMode === 0 || !hasBorder) {
-      // モード0または縁取りOFF: パディング付き画像
-      url = blobUrl;
-    } else {
-      // モード1,2で縁取りON: 縁取り付き画像
-      url = blobWithBorderUrl;
-    }
-
-    let x, yPercent, width;
-
-    // X座標の変換（画面中央からのオフセット px）
-    if (
-      stickerData.x !== undefined &&
-      stickerData.yPercent !== undefined &&
-      stickerData.width !== undefined
-    ) {
-      // 新形式（X:px, Y:%, width:px）
-      x = stickerData.x;
-      yPercent = stickerData.yPercent;
-      width = stickerData.width;
-
-      // 異常な値をチェックして修正
-      let needsFixing = false;
-
-      if (!isFinite(x) || Math.abs(x) > 10000) {
-        console.warn(
-          `DBから読み込んだステッカー${stickerData.id}のx座標が異常: ${x} → 0に修正`,
-        );
-        x = 0;
-        needsFixing = true;
-      }
-
-      if (!isFinite(yPercent) || Math.abs(yPercent) > 200) {
-        console.warn(
-          `DBから読み込んだステッカー${stickerData.id}のyPercent座標が異常: ${yPercent} → 50に修正`,
-        );
-        yPercent = 50;
-        needsFixing = true;
-      }
-
-      if (!isFinite(width) || width < 10 || width > 5000) {
-        console.warn(
-          `DBから読み込んだステッカー${stickerData.id}のwidth が異常: ${width} → デフォルトに修正`,
-        );
-        width = STICKER_DEFAULTS.WIDTH;
-        needsFixing = true;
-      }
-
-      // 修正した場合はDBにも保存
-      if (needsFixing) {
-        await updateStickerInDB(stickerData.id, { x, yPercent, width });
-      }
-    } else if (needsConversion) {
-      // 旧形式からの変換
-      if (
-        stickerData.xPercent !== undefined &&
-        stickerData.yPercent !== undefined
-      ) {
-        // パーセント値形式から変換
-        const absoluteX = (stickerData.xPercent / 100) * screenWidth;
-        const centerX = screenWidth / 2;
-        x = absoluteX - centerX;
-        yPercent = stickerData.yPercent;
-
-        // サイズの変換
-        if (stickerData.widthPercent !== undefined) {
-          width = (stickerData.widthPercent / 100) * screenWidth;
-        } else if (stickerData.width !== undefined) {
-          width = stickerData.width;
-        } else {
-          width = STICKER_DEFAULTS.WIDTH;
-        }
-      } else {
-        // デフォルト（中央）
-        x = 0;
-        yPercent = 50;
-        width = STICKER_DEFAULTS.WIDTH;
-      }
-
-      // 変換後のデータをDBに保存
-      await updateStickerInDB(stickerData.id, {
-        x,
-        yPercent,
-        width,
-      });
-    } else {
-      // デフォルト
-      x = 0;
-      yPercent = 50;
-      width = STICKER_DEFAULTS.WIDTH;
-    }
-
-    addStickerToDOM(
-      url,
-      blobUrl,
-      blobWithBorderUrl,
-      x,
-      yPercent,
-      width,
-      stickerData.rotation,
-      stickerData.id,
-      stickerData.zIndex,
-      stickerData.isPinned || false,
-      hasBorder,
-      borderWidth,
-      stickerData.borderMode,
-      originalBlobUrl, // オリジナル画像URL
-      bgRemovalProcessed, // この値が背景除去ボタンの表示/非表示を決定する
-      originalBlob, // オリジナル画像Blob（優先使用）
-      stickerData.originalType || null, // 元の画像タイプ
-      stickerData.hasTransparency !== undefined
-        ? stickerData.hasTransparency
-        : null, // 透過の有無
-    );
+    await processStickerForReload(stickerData, needsConversion);
   }
 
   // 変換完了フラグを保存
   if (needsConversion && stickers.length > 0) {
     localStorage.setItem("hybrid_coordinate_migrated", "true");
+    console.log("座標変換が完了しました");
   }
 }
 

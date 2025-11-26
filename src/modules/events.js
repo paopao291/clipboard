@@ -886,8 +886,179 @@ function handleTouchOnUnselectedSticker(sticker, touches, targetSticker) {
 }
 
 /**
+ * キャンバスタップ待機中の移動処理
+ * - タップ判定のための移動距離を検出
+ * - 閾値を超えたらタップをキャンセル
+ * @param {TouchEvent} e - タッチイベント
+ */
+function handleCanvasTapMove(e) {
+  const touches = e.touches;
+
+  // キャンバスタップ待機中でない場合は何もしない
+  if (!state.canvasTapPending || touches.length !== 1) {
+    return;
+  }
+
+  // タップ開始位置からの移動距離を計算
+  const moveDistance = Math.sqrt(
+    Math.pow(touches[0].clientX - state.canvasTapX, 2) +
+      Math.pow(touches[0].clientY - state.canvasTapY, 2),
+  );
+
+  // 閾値を超えたらタップではないと判定
+  if (moveDistance > INTERACTION_CONFIG.TAP_THRESHOLD_PX) {
+    state.canvasTapPending = false;
+  }
+}
+
+/**
+ * ステッカードラッグ移動処理
+ * - 通常モード：ゴミ箱判定とオーバーレイ表示を含む
+ * - 物理モード：物理ボディの更新と速度追跡を含む
+ * @param {TouchEvent} e - タッチイベント
+ * @param {Object} sticker - ドラッグ中のステッカー
+ */
+function handleStickerDragMove(e, sticker) {
+  const touches = e.touches;
+
+  // 1本指でドラッグ中でない場合は何もしない
+  if (!state.isDragging || touches.length !== 1) {
+    return;
+  }
+
+  // passive: trueで登録されているため、e.preventDefault()は呼ばない
+  // （iOSのスクロール最適化を維持）
+
+  const touch = touches[0];
+  const coords = absoluteToHybrid(touch.clientX, touch.clientY);
+  const newX = coords.x - state.dragStartX;
+  const newYPercent = coords.yPercent - state.dragStartYPercent;
+
+  // 物理モード中はゴミ箱判定とオーバーレイを無効化
+  if (!isPhysicsActive()) {
+    // 通常モード：ゴミ箱との重なり判定
+    const isOver = isOverTrashBtn(touch.clientX, touch.clientY);
+    setTrashDragOver(isOver);
+    setOverlayDeleteMode(isOver);
+
+    // ゴミ箱に重なっていない時だけ位置を更新
+    if (!isOver) {
+      updateStickerPosition(sticker, newX, newYPercent);
+    }
+  } else {
+    // 物理モード：ゴミ箱判定なしで常に位置を更新
+    updateStickerPosition(sticker, newX, newYPercent);
+
+    // 物理ボディも更新（速度は保持して重力を維持）
+    const now = Date.now();
+    const rect = sticker.element.getBoundingClientRect();
+    const physicsX = rect.left + rect.width / 2;
+    const physicsY = rect.top + rect.height / 2;
+
+    updateStickerPhysicsPositionDuringDrag(sticker.id, physicsX, physicsY);
+
+    // 速度を追跡（投げる動作用）
+    lastDragX = touch.clientX;
+    lastDragY = touch.clientY;
+    lastDragTime = now;
+  }
+}
+
+/**
+ * ステッカーピンチ移動処理（拡大縮小）
+ * - 2本指の距離変化からスケール変化を計算
+ * - 前フレームからの相対変化を適用
+ * @param {TouchEvent} e - タッチイベント
+ * @param {Object} sticker - ピンチ中のステッカー
+ */
+function handleStickerPinchMove(e, sticker) {
+  const touches = e.touches;
+
+  // 2本指でピンチ中でない場合は何もしない
+  if (!state.isRotating || touches.length !== 2) {
+    return;
+  }
+
+  // 物理モード中はピンチ操作を無効化
+  if (isPhysicsActive()) {
+    return;
+  }
+
+  // 固定されたステッカーはピンチ操作を無効化
+  if (sticker.isPinned) {
+    return;
+  }
+
+  const touch1 = touches[0];
+  const touch2 = touches[1];
+
+  // リサイズ中クラスを追加（CSSトランジション無効化用）
+  sticker.element.classList.add("resizing");
+
+  // 2本指間の距離を計算
+  const dx = touch2.clientX - touch1.clientX;
+  const dy = touch2.clientY - touch1.clientY;
+  const currentDistance = Math.sqrt(dx * dx + dy * dy);
+
+  // 前フレームからのスケール変化を現在のサイズに適用
+  const deltaScale = currentDistance / state.lastPinchDistance;
+  const newWidth = sticker.width * deltaScale;
+  updateStickerSize(sticker, newWidth);
+
+  // 次のフレームのために距離を更新
+  state.updatePinchDistance(currentDistance);
+}
+
+/**
+ * ステッカー回転移動処理
+ * - 2本指の角度変化から回転角度を計算
+ * - 開始角度からの相対角度を適用
+ * @param {TouchEvent} e - タッチイベント
+ * @param {Object} sticker - 回転中のステッカー
+ */
+function handleStickerRotationMove(e, sticker) {
+  const touches = e.touches;
+
+  // 2本指でピンチ中でない場合は何もしない
+  if (!state.isRotating || touches.length !== 2) {
+    return;
+  }
+
+  // 物理モード中は回転操作を無効化
+  if (isPhysicsActive()) {
+    return;
+  }
+
+  // 固定されたステッカーは回転操作を無効化
+  if (sticker.isPinned) {
+    return;
+  }
+
+  const touch1 = touches[0];
+  const touch2 = touches[1];
+
+  // 回転中クラスを追加（CSSトランジション無効化用）
+  sticker.element.classList.add("rotating");
+
+  // 2本指の角度を計算
+  const angle =
+    Math.atan2(
+      touch2.clientY - touch1.clientY,
+      touch2.clientX - touch1.clientX,
+    ) *
+    (180 / Math.PI);
+
+  // 開始角度からの回転量を計算して適用
+  const rotation = angle - state.startAngle;
+  updateStickerRotation(sticker, rotation);
+}
+
+/**
  * タッチ移動イベント
- * @param {TouchEvent} e
+ * - キャンバスタップの移動検出
+ * - ステッカードラッグの処理
+ * - ピンチリサイズと回転の処理
+ * @param {TouchEvent} e - タッチイベント
  */
 export function handleTouchMove(e) {
   const touches = e.touches;
@@ -913,15 +1084,7 @@ export function handleTouchMove(e) {
   }
 
   // キャンバスタップ待機中の移動検出
-  if (state.canvasTapPending && touches.length === 1) {
-    const moveDistance = Math.sqrt(
-      Math.pow(touches[0].clientX - state.canvasTapX, 2) +
-        Math.pow(touches[0].clientY - state.canvasTapY, 2),
-    );
-    if (moveDistance > INTERACTION_CONFIG.TAP_THRESHOLD_PX) {
-      state.canvasTapPending = false;
-    }
-  }
+  handleCanvasTapMove(e);
 
   if (!state.selectedSticker) return;
 
@@ -943,95 +1106,15 @@ export function handleTouchMove(e) {
   }
 
   // ドラッグ中の処理
-  if (state.isDragging && touches.length === 1) {
-    // passive: trueで登録されているため、e.preventDefault()は呼ばない
-    // （iOSのスクロール最適化を維持）
+  handleStickerDragMove(e, state.selectedSticker);
 
-    // 物理モード中はゴミ箱判定とオーバーレイを無効化
-    if (!isPhysicsActive()) {
-      const isOver = isOverTrashBtn(touches[0].clientX, touches[0].clientY);
-      setTrashDragOver(isOver);
-      setOverlayDeleteMode(isOver);
-
-      // ゴミ箱に重なっていない時だけ位置を更新
-      if (!isOver) {
-        const coords = absoluteToHybrid(touches[0].clientX, touches[0].clientY);
-        const newX = coords.x - state.dragStartX;
-        const newYPercent = coords.yPercent - state.dragStartYPercent;
-        updateStickerPosition(state.selectedSticker, newX, newYPercent);
-      }
-    } else {
-      // 物理モード中：ゴミ箱判定なしで常に位置を更新
-      const coords = absoluteToHybrid(touches[0].clientX, touches[0].clientY);
-      const newX = coords.x - state.dragStartX;
-      const newYPercent = coords.yPercent - state.dragStartYPercent;
-      updateStickerPosition(state.selectedSticker, newX, newYPercent);
-
-      // 物理ボディも更新（速度は保持して重力を維持）
-      const now = Date.now();
-      const rect = state.selectedSticker.element.getBoundingClientRect();
-      const physicsX = rect.left + rect.width / 2;
-      const physicsY = rect.top + rect.height / 2;
-
-      updateStickerPhysicsPositionDuringDrag(
-        state.selectedSticker.id,
-        physicsX,
-        physicsY,
-      );
-
-      // 速度を追跡（投げる動作用）
-      lastDragX = touches[0].clientX;
-      lastDragY = touches[0].clientY;
-      lastDragTime = now;
-    }
-  }
-
-  // ピンチ中の処理
+  // ピンチ中の処理（拡大縮小と回転）
   if (state.isRotating && touches.length === 2) {
     // passive: trueで登録されているため、e.preventDefault()は呼ばない
     // （iOSのスクロール最適化を維持）
 
-    // 物理モード中はピンチ操作を無効化
-    if (isPhysicsActive()) {
-      return;
-    }
-
-    // 固定されたステッカーはピンチ操作を無効化
-    if (state.selectedSticker && state.selectedSticker.isPinned) {
-      return;
-    }
-
-    const touch1 = touches[0];
-    const touch2 = touches[1];
-
-    if (!state.selectedSticker) return;
-
-    // リサイズ中クラスを追加（CSSトランジション無効化用）
-    state.selectedSticker.element.classList.add("resizing");
-    state.selectedSticker.element.classList.add("rotating");
-
-    // 拡大縮小：前フレームからの相対的な変化を計算
-    const dx = touch2.clientX - touch1.clientX;
-    const dy = touch2.clientY - touch1.clientY;
-    const currentDistance = Math.sqrt(dx * dx + dy * dy);
-
-    // 前フレームからのスケール変化を現在のサイズに適用
-    const deltaScale = currentDistance / state.lastPinchDistance;
-    const newWidth = state.selectedSticker.width * deltaScale;
-    updateStickerSize(state.selectedSticker, newWidth);
-
-    // 次のフレームのために距離を更新
-    state.updatePinchDistance(currentDistance);
-
-    // 回転
-    const angle =
-      Math.atan2(
-        touch2.clientY - touch1.clientY,
-        touch2.clientX - touch1.clientX,
-      ) *
-      (180 / Math.PI);
-    const rotation = angle - state.startAngle;
-    updateStickerRotation(state.selectedSticker, rotation);
+    handleStickerPinchMove(e, state.selectedSticker);
+    handleStickerRotationMove(e, state.selectedSticker);
   }
 }
 

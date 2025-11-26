@@ -3,6 +3,7 @@ import {
   STICKER_DEFAULTS,
   HELP_STICKER_CONFIG,
   BORDER_WIDTHS,
+  IMAGE_PROCESSING_CONFIG,
 } from "./constants.js";
 import {
   saveStickerToDB,
@@ -737,117 +738,152 @@ function applyStickerTransform(sticker) {
 }
 
 /**
- * Blobからシールを追加
- * @param {Blob} blob - 画像Blob
- * @param {number} x - 画面中央からのX座標オフセット（px）
- * @param {number} yPercent - 画面高さに対するY座標の割合（0-100）
- * @param {number} width - 幅（px）
- * @param {number} rotation - 回転角度
- * @param {number|null} id - シールID
- * @param {number|null} zIndex - z-index
- * @param {boolean} hasBorder - 縁取りあり
- * @param {number} borderMode - 縁取りモード（0:なし, 1:4px, 2:8px）
+ * 画像Blobの準備とリサイズ、検証を実行
+ * @param {Blob} blob - 元の画像Blob
+ * @param {number} maxSize - リサイズ後の最大サイズ（constants.jsから取得）
+ * @returns {Promise<{blob: Blob, originalType: string, hasTransparency: boolean}>}
  */
-export async function addStickerFromBlob(
+async function prepareImageBlob(
   blob,
-  x,
-  yPercent,
-  width = STICKER_DEFAULTS.WIDTH,
-  rotation = STICKER_DEFAULTS.ROTATION,
-  id = null,
-  zIndex = null,
-  hasBorder = STICKER_DEFAULTS.HAS_BORDER,
-  borderMode = STICKER_DEFAULTS.BORDER_MODE,
+  maxSize = IMAGE_PROCESSING_CONFIG.MAX_SIZE,
 ) {
-  // まずリサイズだけ実行（高速）
+  // 画像をリサイズして最適化（WebP変換含む）
   const {
     blob: resizedBlob,
     originalType,
     hasTransparency,
-  } = await resizeImageBlob(blob, 1000);
+  } = await resizeImageBlob(blob, maxSize);
 
-  const stickerId = id || Date.now();
-
-  // 画像サイズを取得して縁取り幅を計算
-  const imageDimensions = await new Promise((resolve) => {
-    const img = new Image();
-    const tempBlobUrl = blobURLManager.createURL(resizedBlob); // 一時的なURL
-    img.onload = () => {
-      blobURLManager.revokeURL(tempBlobUrl);
-      resolve({ width: img.width, height: img.height });
-    };
-    img.onerror = () => {
-      blobURLManager.revokeURL(tempBlobUrl);
-      resolve({ width: 800, height: 800 }); // エラー時のフォールバック値
-    };
-    img.src = tempBlobUrl;
-  });
-
-  // モード2（5%）の最大縁取り幅を計算
-  const maxBorderWidth = Math.max(
-    8, // 最小値
-    Math.round(
-      Math.max(imageDimensions.width, imageDimensions.height) *
-        BORDER_WIDTHS[2],
-    ),
-  );
-
-  // 現在のモードの縁取り幅（初期値、後で processBorderAndPadding の結果で上書き）
-  let borderWidth =
-    borderMode === 0
-      ? 0
-      : Math.max(
-          8,
-          Math.round(
-            Math.max(imageDimensions.width, imageDimensions.height) *
-              BORDER_WIDTHS[borderMode],
-          ),
-        );
-
-  // リサイズ済み画像をベース画像として保存（パディングや縁取りを適用する前の状態）
-  // これが全ての処理の基準となる「元画像」
-  // 注意: この時点ではimg要素がまだ作成されていないため、後で関連付ける
-  const originalBlobUrl = blobURLManager.createURL(resizedBlob);
-
-  // borderModeが未定義の場合はデフォルト値を使用
-  if (borderMode === undefined) {
-    borderMode = STICKER_DEFAULTS.BORDER_MODE;
+  // リサイズ結果を検証
+  if (!resizedBlob || resizedBlob.size === 0) {
+    throw new Error("画像のリサイズに失敗しました");
   }
 
-  console.log(`アップロード: 使用する縁取りモード = ${borderMode}`);
+  console.log(
+    `画像準備完了: ${Math.round(resizedBlob.size / 1024)}KB, タイプ=${originalType}, 透過=${hasTransparency}`,
+  );
 
-  let url, blobUrl, blobWithBorderUrl, paddedBlobUrl;
+  return { blob: resizedBlob, originalType, hasTransparency };
+}
 
-  // 元画像URLを保持
-  blobUrl = originalBlobUrl;
+/**
+ * 縁取り設定を計算（幅とモード）
+ * @param {string} originalType - 元の画像タイプ
+ * @param {boolean} hasTransparency - 透過の有無
+ * @param {number} borderMode - 縁取りモード（0:なし, 1:2.5%, 2:5%）
+ * @param {number} imageWidth - 画像の幅
+ * @param {number} imageHeight - 画像の高さ
+ * @returns {{borderWidth: number, maxBorderWidth: number, borderMode: number}}
+ */
+function calculateBorderSettings(
+  originalType,
+  hasTransparency,
+  borderMode,
+  imageWidth,
+  imageHeight,
+) {
+  // borderModeが未定義の場合はデフォルト値を使用
+  const actualBorderMode = borderMode ?? STICKER_DEFAULTS.BORDER_MODE;
 
-  // アップロード時の処理（全モード統一）
-  // processBorderAndPadding関数を使用して統一的に処理
-  console.log(`アップロード: モード${borderMode} - 画像処理開始`);
+  // モード2（5%）の最大縁取り幅を計算（constants.jsのBORDER_WIDTHS[2]を使用）
+  const maxBorderWidth = Math.max(
+    OUTLINE_CONFIG.MIN_WIDTH,
+    Math.round(Math.max(imageWidth, imageHeight) * BORDER_WIDTHS[2]),
+  );
 
-  // imageDimensionsは既に上で取得済みなので再利用
+  // 現在のモードの縁取り幅を計算
+  let borderWidth = 0;
+  if (actualBorderMode > 0) {
+    borderWidth = Math.max(
+      OUTLINE_CONFIG.MIN_WIDTH,
+      Math.round(
+        Math.max(imageWidth, imageHeight) * BORDER_WIDTHS[actualBorderMode],
+      ),
+    );
+  }
+
+  console.log(
+    `縁取り設定: モード=${actualBorderMode}, 幅=${borderWidth}px, 最大=${maxBorderWidth}px`,
+  );
+
+  return {
+    borderWidth,
+    maxBorderWidth,
+    borderMode: actualBorderMode,
+  };
+}
+
+/**
+ * Blobの処理（パディング、縁取りの適用）
+ * @param {Blob} blob - 処理対象のBlob
+ * @param {number} borderMode - 縁取りモード
+ * @param {string} originalType - 元の画像タイプ
+ * @param {boolean} hasTransparency - 透過の有無
+ * @param {number} imageWidth - 画像の幅
+ * @param {number} imageHeight - 画像の高さ
+ * @returns {Promise<{resultBlob: Blob, paddedBlob: Blob, borderWidth: number, blobWithBorderUrl: string, paddedBlobUrl: string}>}
+ */
+async function processBlobForSticker(
+  blob,
+  borderMode,
+  originalType,
+  hasTransparency,
+  imageWidth,
+  imageHeight,
+) {
+  console.log(`画像処理開始: モード=${borderMode}`);
+
+  // 縁取りとパディングを統一的に処理
   const result = await processBorderAndPadding(
-    resizedBlob,
+    blob,
     borderMode,
-    imageDimensions.width,
-    imageDimensions.height,
+    imageWidth,
+    imageHeight,
     originalType,
     hasTransparency,
   );
 
-  // 全モードで統一的にURLを生成
-  // モード0: resultBlob と paddedBlob は同じ（縁取り幅0%）
-  // モード1,2: resultBlob（縁取りあり）と paddedBlob（縁取りなし）は異なる
-  blobWithBorderUrl = blobURLManager.createURL(result.resultBlob);
-  paddedBlobUrl = blobURLManager.createURL(result.paddedBlob);
-  borderWidth = result.borderWidth; // processBorderAndPaddingから取得
-
-  // hasBorderフラグに応じて表示する画像を決定
-  url = hasBorder ? blobWithBorderUrl : paddedBlobUrl;
+  // 処理結果からBlob URLを生成
+  const blobWithBorderUrl = blobURLManager.createURL(result.resultBlob);
+  const paddedBlobUrl = blobURLManager.createURL(result.paddedBlob);
 
   console.log(
-    `アップロード: borderWidth=${borderWidth}px, 表示=${hasBorder ? "縁取りあり" : "縁取りなし"}`,
+    `画像処理完了: 縁取り幅=${result.borderWidth}px, モード=${borderMode}`,
   );
+
+  return {
+    resultBlob: result.resultBlob,
+    paddedBlob: result.paddedBlob,
+    borderWidth: result.borderWidth,
+    blobWithBorderUrl,
+    paddedBlobUrl,
+  };
+}
+
+/**
+ * ステッカーのDOM要素を作成してキャンバスに追加
+ * @param {Object} params - DOM作成パラメータ
+ * @returns {number} 実際のz-index
+ */
+function createStickerDOM(params) {
+  const {
+    url,
+    blobUrl,
+    blobWithBorderUrl,
+    x,
+    yPercent,
+    width,
+    rotation,
+    stickerId,
+    zIndex,
+    hasBorder,
+    borderWidth,
+    borderMode,
+    originalBlobUrl,
+    resizedBlob,
+    originalType,
+    hasTransparency,
+  } = params;
 
   // DOMに追加（即座に表示）
   const actualZIndex = addStickerToDOM(
@@ -862,86 +898,232 @@ export async function addStickerFromBlob(
     zIndex,
     false, // isPinned（新規追加時は常に未固定）
     hasBorder,
-    borderWidth, // borderWidthを渡す
-    borderMode, // borderModeを渡す
-    originalBlobUrl, // オリジナル画像URL
+    borderWidth,
+    borderMode,
+    originalBlobUrl,
     false, // bgRemovalProcessed
-    resizedBlob, // originalBlob（Blobオブジェクト）
-    originalType, // 元の画像タイプ
-    hasTransparency, // 透過の有無
+    resizedBlob,
+    originalType,
+    hasTransparency,
   );
 
-  // バックグラウンド処理は不要（既に生成済み）
-  // 少し待機してから状態の確認と保存を行う
-  setTimeout(async () => {
+  console.log(`DOM作成完了: ID=${stickerId}, z-index=${actualZIndex}`);
+
+  return actualZIndex;
+}
+
+/**
+ * ステッカーの詳細データを保存（縁取り版画像を含む）
+ * @param {number} stickerId - ステッカーID
+ * @param {Blob} resizedBlob - リサイズ済みBlob
+ * @param {string} blobWithBorderUrl - 縁取り版画像URL
+ * @param {string} originalType - 元の画像タイプ
+ * @param {boolean} hasTransparency - 透過の有無
+ * @returns {Promise<void>}
+ */
+async function saveDetailedStickerData(
+  stickerId,
+  resizedBlob,
+  blobWithBorderUrl,
+  originalType,
+  hasTransparency,
+) {
+  const addedSticker = state.getStickerById(stickerId);
+  if (!addedSticker) return;
+
+  // 縁取り画像を取得
+  let blobForBorder = null;
+  if (blobWithBorderUrl) {
     try {
-      const addedSticker = state.getStickerById(stickerId);
-      if (addedSticker) {
-        // モード0やモード1での追加パディングを保持するため、現在のURLを保存
-        addedSticker.borderWidth = borderWidth;
-        addedSticker.borderMode = borderMode;
-
-        // すでに適切な画像が表示されているので、変更しない
-        // サーバー保存とDBへの追加のみ行う
-
-        // 現在表示中の画像を取得
-        let blobForBorder = null;
-        if (blobWithBorderUrl) {
-          try {
-            blobForBorder = await fetch(blobWithBorderUrl).then((r) =>
-              r.blob(),
-            );
-          } catch (fetchErr) {
-            console.warn("画像取得エラー:", fetchErr);
-          }
-        }
-
-        // 元画像と現在表示中の画像をDBに保存
-        await saveStickerToDB({
-          id: stickerId,
-          blob: resizedBlob, // 表示用の画像
-          originalBlob: resizedBlob, // リサイズ済み・縁取り/パディング前の元画像
-          blobWithBorder: blobForBorder, // 現在表示中の画像
-          x: addedSticker.x,
-          yPercent: addedSticker.yPercent,
-          width: addedSticker.width,
-          rotation: addedSticker.rotation,
-          zIndex: addedSticker.zIndex,
-          isPinned: addedSticker.isPinned,
-          hasBorder: addedSticker.hasBorder,
-          borderMode: addedSticker.borderMode, // 縁取りモードを保存
-          originalType: originalType, // 元の画像タイプを保存
-          hasTransparency: hasTransparency, // 透過情報を保存
-          timestamp: Date.now(),
-        });
-      }
-    } catch (err) {
-      console.warn("ステッカー保存エラー:", err);
+      blobForBorder = await fetch(blobWithBorderUrl).then((r) => r.blob());
+    } catch (fetchErr) {
+      console.warn("縁取り画像取得エラー:", fetchErr);
     }
-  }, 100); // 少し待ってから処理
+  }
 
-  // 初期データをIndexedDBに保存（詳細なバージョンは後でsetTimeout内で保存）
+  // 詳細データをDBに保存
   await saveStickerToDB({
     id: stickerId,
     blob: resizedBlob,
-    originalBlob: resizedBlob, // リサイズ済み・縁取り/パディング前の元画像
-    x: x,
-    yPercent: yPercent,
-    width: width,
-    rotation: rotation,
-    zIndex: actualZIndex,
-    isPinned: false,
-    hasBorder: hasBorder,
-    borderMode: borderMode, // 縁取りモードを保存
-    originalType: originalType, // 元の画像タイプを保存
-    hasTransparency: hasTransparency, // 透過情報を保存
+    originalBlob: resizedBlob,
+    blobWithBorder: blobForBorder,
+    x: addedSticker.x,
+    yPercent: addedSticker.yPercent,
+    width: addedSticker.width,
+    rotation: addedSticker.rotation,
+    zIndex: addedSticker.zIndex,
+    isPinned: addedSticker.isPinned,
+    hasBorder: addedSticker.hasBorder,
+    borderMode: addedSticker.borderMode,
+    originalType: originalType,
+    hasTransparency: hasTransparency,
     timestamp: Date.now(),
-    // この時点では縁取り版のBlobは保存しない（後で追加される）
   });
 
-  console.log(`ステッカー初期保存: borderMode = ${borderMode}`);
+  console.log(`ステッカー詳細保存完了: ID=${stickerId}`);
+}
 
-  // 追加したステッカーを選択状態にする
+/**
+ * 新しいステッカーをIndexedDBに永続化
+ * @param {Object} stickerData - 保存するステッカーデータ
+ * @returns {Promise<void>}
+ */
+async function persistNewSticker(stickerData) {
+  const {
+    stickerId,
+    resizedBlob,
+    x,
+    yPercent,
+    width,
+    rotation,
+    actualZIndex,
+    hasBorder,
+    borderMode,
+    originalType,
+    hasTransparency,
+    blobWithBorderUrl,
+  } = stickerData;
+
+  // 初期データをIndexedDBに保存
+  await saveStickerToDB({
+    id: stickerId,
+    blob: resizedBlob,
+    originalBlob: resizedBlob,
+    x,
+    yPercent,
+    width,
+    rotation,
+    zIndex: actualZIndex,
+    isPinned: false,
+    hasBorder,
+    borderMode,
+    originalType,
+    hasTransparency,
+    timestamp: Date.now(),
+  });
+
+  console.log(`ステッカー初期保存完了: borderMode=${borderMode}`);
+
+  // 遅延して詳細データを保存（縁取り版の画像を含む）
+  setTimeout(async () => {
+    try {
+      await saveDetailedStickerData(
+        stickerId,
+        resizedBlob,
+        blobWithBorderUrl,
+        originalType,
+        hasTransparency,
+      );
+    } catch (err) {
+      console.warn("ステッカー詳細保存エラー:", err);
+    }
+  }, 100);
+}
+
+/**
+ * Blobからシールを追加（リファクタリング版）
+ * @param {Blob} blob - 画像Blob
+ * @param {number} x - 画面中央からのX座標オフセット（px）
+ * @param {number} yPercent - 画面高さに対するY座標の割合（0-100）
+ * @param {number} width - 幅（px）
+ * @param {number} rotation - 回転角度
+ * @param {number|null} id - シールID
+ * @param {number|null} zIndex - z-index
+ * @param {boolean} hasBorder - 縁取りあり
+ * @param {number} borderMode - 縁取りモード（0:なし, 1:2.5%, 2:5%）
+ */
+export async function addStickerFromBlob(
+  blob,
+  x,
+  yPercent,
+  width = STICKER_DEFAULTS.WIDTH,
+  rotation = STICKER_DEFAULTS.ROTATION,
+  id = null,
+  zIndex = null,
+  hasBorder = STICKER_DEFAULTS.HAS_BORDER,
+  borderMode = STICKER_DEFAULTS.BORDER_MODE,
+) {
+  // ステップ1: 画像のリサイズと検証
+  const {
+    blob: resizedBlob,
+    originalType,
+    hasTransparency,
+  } = await prepareImageBlob(blob, IMAGE_PROCESSING_CONFIG.MAX_SIZE);
+
+  const stickerId = id || Date.now();
+
+  // ステップ2: 画像サイズを取得
+  const imageDimensions = await getImageDimensions(resizedBlob);
+
+  // ステップ3: 縁取り設定を計算
+  const borderSettings = calculateBorderSettings(
+    originalType,
+    hasTransparency,
+    borderMode,
+    imageDimensions.width,
+    imageDimensions.height,
+  );
+
+  // ステップ4: Blobを処理（パディング、縁取り）
+  const processedBlobs = await processBlobForSticker(
+    resizedBlob,
+    borderSettings.borderMode,
+    originalType,
+    hasTransparency,
+    imageDimensions.width,
+    imageDimensions.height,
+  );
+
+  // リサイズ済み画像の元URL（縁取り/パディング前）
+  const originalBlobUrl = blobURLManager.createURL(resizedBlob);
+
+  // 表示する画像URLを決定（縁取りあり/なし）
+  const displayUrl = hasBorder
+    ? processedBlobs.blobWithBorderUrl
+    : processedBlobs.paddedBlobUrl;
+
+  console.log(
+    `表示設定: 縁取り幅=${processedBlobs.borderWidth}px, ` +
+      `表示=${hasBorder ? "縁取りあり" : "縁取りなし"}`,
+  );
+
+  // ステップ5: DOM要素を作成
+  const actualZIndex = createStickerDOM({
+    url: displayUrl,
+    blobUrl: originalBlobUrl,
+    blobWithBorderUrl: processedBlobs.blobWithBorderUrl,
+    x,
+    yPercent,
+    width,
+    rotation,
+    stickerId,
+    zIndex,
+    hasBorder,
+    borderWidth: processedBlobs.borderWidth,
+    borderMode: borderSettings.borderMode,
+    originalBlobUrl,
+    resizedBlob,
+    originalType,
+    hasTransparency,
+  });
+
+  // ステップ6: IndexedDBに永続化
+  await persistNewSticker({
+    stickerId,
+    resizedBlob,
+    x,
+    yPercent,
+    width,
+    rotation,
+    actualZIndex,
+    hasBorder,
+    borderMode: borderSettings.borderMode,
+    originalType,
+    hasTransparency,
+    blobWithBorderUrl: processedBlobs.blobWithBorderUrl,
+  });
+
+  // ステップ7: 追加したステッカーを選択状態にする
   const addedSticker = state.getStickerById(stickerId);
   if (addedSticker) {
     state.selectSticker(addedSticker);

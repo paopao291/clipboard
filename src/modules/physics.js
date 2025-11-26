@@ -503,12 +503,78 @@ let batchUpdateScheduled = false;
 const domUpdateCache = new Map();
 
 /**
- * 補間を使ってDOMを更新（バッチ処理最適化）
- * @param {number} alpha - 補間係数（0.0〜1.0）
+ * ボディの更新をスキップすべきか判定
+ * @param {Object} body - 物理ボディ
+ * @param {Object} prevState - 前回の物理状態 {position: {x, y}, angle: number}
+ * @returns {Object} { shouldSkip: boolean, reason: string }
  */
-function renderWithInterpolation(alpha) {
-  // 更新が必要なステッカーを特定（読み取りフェーズ）
+function shouldSkipBodyUpdate(body, prevState) {
+  // 速度が閾値以下なら更新スキップ（ほぼ静止）
+  const speed = Math.sqrt(body.velocity.x ** 2 + body.velocity.y ** 2);
+  const angularSpeed = Math.abs(body.angularVelocity);
+
+  if (
+    speed < PHYSICS_CONFIG.VELOCITY_THRESHOLD &&
+    angularSpeed < PHYSICS_CONFIG.ANGLE_THRESHOLD
+  ) {
+    return { shouldSkip: true, reason: "velocity_low" };
+  }
+
+  // 前回の状態がない場合は更新が必要（初回）
+  if (!prevState) {
+    return { shouldSkip: false, reason: "first_render" };
+  }
+
+  // 位置と角度の変化をチェック
+  const deltaX = Math.abs(body.position.x - prevState.position.x);
+  const deltaY = Math.abs(body.position.y - prevState.position.y);
+  const deltaAngle = Math.abs(body.angle - prevState.angle);
+
+  // 変化が閾値以下なら更新スキップ
+  if (
+    deltaX < PHYSICS_CONFIG.POSITION_THRESHOLD &&
+    deltaY < PHYSICS_CONFIG.POSITION_THRESHOLD &&
+    deltaAngle < PHYSICS_CONFIG.ANGLE_THRESHOLD
+  ) {
+    return { shouldSkip: true, reason: "change_low" };
+  }
+
+  return { shouldSkip: false, reason: "needs_update" };
+}
+
+/**
+ * 補間された状態を計算
+ * @param {Object} body - 物理ボディ
+ * @param {Object} prevState - 前回の物理状態 {position: {x, y}, angle: number}
+ * @param {number} alpha - 補間係数（0.0〜1.0）
+ * @returns {Object} { interpX: number, interpY: number, interpAngle: number }
+ */
+function calculateInterpolatedState(body, prevState, alpha) {
+  // 前回の状態がない場合は現在の値をそのまま返す
+  if (!prevState) {
+    return {
+      interpX: body.position.x,
+      interpY: body.position.y,
+      interpAngle: body.angle,
+    };
+  }
+
+  // 位置と角度を補間
+  const interpX = lerp(prevState.position.x, body.position.x, alpha);
+  const interpY = lerp(prevState.position.y, body.position.y, alpha);
+  const interpAngle = lerpAngle(prevState.angle, body.angle, alpha);
+
+  return { interpX, interpY, interpAngle };
+}
+
+/**
+ * 更新が必要なステッカーを収集
+ * @param {number} alpha - 補間係数（0.0〜1.0）
+ * @returns {Array} 更新候補の配列 [{sticker, body, isFirst} または {sticker, interpX, interpY, interpAngle}]
+ */
+function collectUpdateCandidates(alpha) {
   const updatesNeeded = [];
+  const cacheThreshold = 0.1; // キャッシュ比較の閾値
 
   stickerBodyMap.forEach((body, stickerId) => {
     const sticker = state.getStickerById(stickerId);
@@ -523,50 +589,33 @@ function renderWithInterpolation(alpha) {
       return;
     }
 
-    // 速度が閾値以下なら更新スキップ（ほぼ静止）
-    const speed = Math.sqrt(body.velocity.x ** 2 + body.velocity.y ** 2);
-    const angularSpeed = Math.abs(body.angularVelocity);
-    if (speed < VELOCITY_THRESHOLD && angularSpeed < ANGLE_THRESHOLD) {
-      return;
-    }
-
     // 前回の状態を取得
     const prevState = previousBodyStates.get(stickerId);
-    if (!prevState) {
-      // 初回は補間なしで描画
+
+    // 更新をスキップすべきか判定
+    const { shouldSkip, reason } = shouldSkipBodyUpdate(body, prevState);
+
+    if (shouldSkip && reason !== "first_render") {
+      return; // 更新不要
+    }
+
+    // 初回レンダリング（前回の状態がない場合）
+    if (reason === "first_render") {
       updatesNeeded.push({ sticker, body, isFirst: true });
       return;
     }
 
-    // 位置と角度の変化をチェック
-    const deltaX = Math.abs(body.position.x - prevState.position.x);
-    const deltaY = Math.abs(body.position.y - prevState.position.y);
-    const deltaAngle = Math.abs(body.angle - prevState.angle);
-
-    // SVGフィルターを削除したため、全ブラウザで同じ閾値を使用
-    const posThreshold = POSITION_THRESHOLD;
-
-    // 変化が閾値以下なら更新スキップ
-    if (
-      deltaX < posThreshold &&
-      deltaY < posThreshold &&
-      deltaAngle < ANGLE_THRESHOLD
-    ) {
-      return;
-    }
+    // 補間された状態を計算
+    const { interpX, interpY, interpAngle } = calculateInterpolatedState(
+      body,
+      prevState,
+      alpha,
+    );
 
     // キャッシュをチェック
     const cachedValues = domUpdateCache.get(stickerId);
     if (cachedValues) {
       const [lastX, lastY, lastRotation] = cachedValues;
-
-      // 位置と角度を補間
-      const interpX = lerp(prevState.position.x, body.position.x, alpha);
-      const interpY = lerp(prevState.position.y, body.position.y, alpha);
-      const interpAngle = lerpAngle(prevState.angle, body.angle, alpha);
-
-      // SVGフィルターを削除したため、全ブラウザで同じ閾値を使用
-      const cacheThreshold = 0.1;
 
       // キャッシュ値と近ければスキップ
       if (
@@ -576,54 +625,63 @@ function renderWithInterpolation(alpha) {
       ) {
         return;
       }
-
-      // キャッシュ更新
-      domUpdateCache.set(stickerId, [interpX, interpY, interpAngle]);
-
-      // 更新リストに追加
-      updatesNeeded.push({
-        sticker,
-        interpX,
-        interpY,
-        interpAngle,
-      });
-    } else {
-      // 位置と角度を補間
-      const interpX = lerp(prevState.position.x, body.position.x, alpha);
-      const interpY = lerp(prevState.position.y, body.position.y, alpha);
-      const interpAngle = lerpAngle(prevState.angle, body.angle, alpha);
-
-      // 初回はキャッシュを作成
-      domUpdateCache.set(stickerId, [interpX, interpY, interpAngle]);
-
-      // 更新リストに追加
-      updatesNeeded.push({
-        sticker,
-        interpX,
-        interpY,
-        interpAngle,
-      });
     }
+
+    // キャッシュ更新
+    domUpdateCache.set(stickerId, [interpX, interpY, interpAngle]);
+
+    // 更新リストに追加
+    updatesNeeded.push({
+      sticker,
+      interpX,
+      interpY,
+      interpAngle,
+    });
   });
 
-  // 更新があるときだけ処理
+  return updatesNeeded;
+}
+
+/**
+ * DOM一括更新（バッチ処理）
+ * @param {Array} updatesNeeded - 更新候補の配列
+ */
+function batchUpdateDOM(updatesNeeded) {
+  // 更新がない場合は早期リターン
   if (updatesNeeded.length === 0) return;
 
-  // 一括でDOMを更新（バッチ処理）
+  // 一括でDOMを更新
   updatesNeeded.forEach((update) => {
-    if (update.isFirst) {
-      // 初回は補間なしで描画
-      syncStickerFromPhysics(update.sticker, update.body);
-    } else {
-      // 補間した値でDOMを更新
-      syncStickerFromPhysicsInterpolated(
-        update.sticker,
-        update.interpX,
-        update.interpY,
-        update.interpAngle,
-      );
+    try {
+      if (update.isFirst) {
+        // 初回は補間なしで描画
+        syncStickerFromPhysics(update.sticker, update.body);
+      } else {
+        // 補間した値でDOMを更新
+        syncStickerFromPhysicsInterpolated(
+          update.sticker,
+          update.interpX,
+          update.interpY,
+          update.interpAngle,
+        );
+      }
+    } catch (error) {
+      // DOM更新エラーをログに記録（処理は継続）
+      console.warn(`DOM更新エラー: ステッカーID ${update.sticker.id}`, error);
     }
   });
+}
+
+/**
+ * 補間を使ってDOMを更新（バッチ処理最適化）
+ * @param {number} alpha - 補間係数（0.0〜1.0）
+ */
+function renderWithInterpolation(alpha) {
+  // 更新が必要なステッカーを収集
+  const updatesNeeded = collectUpdateCandidates(alpha);
+
+  // DOM一括更新
+  batchUpdateDOM(updatesNeeded);
 }
 
 /**
