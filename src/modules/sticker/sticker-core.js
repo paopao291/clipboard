@@ -25,6 +25,7 @@ import {
   removePhysicsBody,
 } from "../physics.js";
 import { blobURLManager } from "../blob-url-manager.js";
+import { applyStickerTransform } from "./sticker-transforms.js";
 
 /**
  * ステッカーの基準幅を取得
@@ -177,6 +178,9 @@ export function addStickerToDOM(
 
   // 縁取りモードを反映（CSSクラスで識別）
   stickerDiv.classList.add(`border-mode-${borderMode}`);
+
+  // transformを適用（scaleと回転）- FOUCを防ぐため同期的に適用
+  applyStickerTransform(stickerObject);
 
   // 物理モードが有効な場合は物理ボディを追加
   if (isPhysicsActive()) {
