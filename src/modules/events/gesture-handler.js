@@ -92,22 +92,15 @@ export function startDragWithoutSelection(clientX, clientY, sticker) {
 export function handleDragMove(clientX, clientY) {
   if (!state.isDragging || !state.selectedSticker) return;
 
-  // 物理モード中はゴミ箱判定とオーバーレイを無効化
-  if (!isPhysicsActive()) {
-    const isOver = isOverTrashBtn(clientX, clientY);
-    setTrashDragOver(isOver);
-    setOverlayDeleteMode(isOver);
+  // 未選択のステッカーをドラッグ中はゴミ箱判定をスキップ（削除できない）
+  const isUnselectedDrag = state.shouldClearSelectionOnDragEnd;
 
-    if (!isOver) {
-      const coords = absoluteToHybrid(clientX, clientY);
-      const newX = coords.x - state.dragStartX;
-      const newYPercent = coords.yPercent - state.dragStartYPercent;
-      updateStickerPosition(state.selectedSticker, newX, newYPercent);
-    }
-  } else {
-    const coords = absoluteToHybrid(clientX, clientY);
-    const newX = coords.x - state.dragStartX;
-    const newYPercent = coords.yPercent - state.dragStartYPercent;
+  const coords = absoluteToHybrid(clientX, clientY);
+  const newX = coords.x - state.dragStartX;
+  const newYPercent = coords.yPercent - state.dragStartYPercent;
+
+  // 物理モード中はゴミ箱判定とオーバーレイを無効化
+  if (isPhysicsActive()) {
     updateStickerPosition(state.selectedSticker, newX, newYPercent);
 
     const now = Date.now();
@@ -124,6 +117,20 @@ export function handleDragMove(clientX, clientY) {
     lastDragX = clientX;
     lastDragY = clientY;
     lastDragTime = now;
+  } else {
+    // 未選択のドラッグの場合はゴミ箱判定をスキップ
+    if (!isUnselectedDrag) {
+      const isOver = isOverTrashBtn(clientX, clientY);
+      setTrashDragOver(isOver);
+      setOverlayDeleteMode(isOver);
+
+      if (!isOver) {
+        updateStickerPosition(state.selectedSticker, newX, newYPercent);
+      }
+    } else {
+      // 未選択のドラッグの場合は位置更新のみ
+      updateStickerPosition(state.selectedSticker, newX, newYPercent);
+    }
   }
 }
 

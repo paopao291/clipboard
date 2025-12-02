@@ -122,6 +122,11 @@ async function handlePinnedStickerInteraction(sticker, id, isTouch = false) {
  * @returns {Promise<boolean>} 削除した場合true
  */
 async function handleTrashDrop(clientX, clientY) {
+  // 未選択のステッカーをドラッグ中は削除できない
+  if (state.shouldClearSelectionOnDragEnd) {
+    return false;
+  }
+
   if (state.isDragging && isOverTrashBtn(clientX, clientY)) {
     const stickerToDelete = state.selectedSticker;
     state.deselectAll();
