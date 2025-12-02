@@ -678,7 +678,6 @@ body.has-background-image .background-btn .background-icon-remove {
     font-size: var(--font-md);
     font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: 8px;
     margin-top: var(--spacing-sm);
     letter-spacing: -0.3px;
 }
