@@ -19,8 +19,8 @@
     --color-white-translucent: rgba(255, 255, 255, 0.95);
     --color-white-overlay: rgba(255, 255, 255, 0.15);
     --color-white-overlay-hover: rgba(255, 255, 255, 0.25);
-    --color-overlay-dark: rgba(0, 0, 0, 0.35);
-    --color-overlay-darker: rgba(0, 0, 0, 0.4);
+    --color-overlay-dark: rgba(0, 0, 0, 0.45);
+    --color-overlay-darker: rgba(0, 0, 0, 0.5);
     --color-physics: rgb(0, 80, 58); /* 重力ボタン：深い緑 */
     --color-layout: rgb(240, 90, 36); /* 斥力ボタン：オレンジ */
     --color-cream: #fffbf0; /* クリーム色 */

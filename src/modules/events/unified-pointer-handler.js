@@ -25,11 +25,14 @@ import { isPhysicsActive } from "../physics.js";
 import { stopAutoLayout } from "../layout.js";
 import {
   startDrag,
+  startDragWithoutSelection,
   handleDragMove,
   applyDragVelocity,
   startRotation,
   handleRotateMove,
   startPinchGesture,
+  handlePinchMove,
+  handlePinchRotationMove,
   checkAndFixOutOfBounds,
   handleTapOrClick,
   checkDragThreshold,
@@ -37,6 +40,56 @@ import {
 
 let wheelTimeout = null;
 let lastTouchTime = 0;
+
+/**
+ * タップ/クリック判定の準備を行う
+ * @param {number} clientX - X座標
+ * @param {number} clientY - Y座標
+ * @param {boolean} isTouch - タッチイベントかどうか
+ * @param {number} stickerId - ステッカーID（オプション）
+ */
+function prepareTapOrClick(clientX, clientY, isTouch, stickerId = null) {
+  if (isTouch) {
+    state.possibleTap = true;
+    state.tapStartTime = Date.now();
+    state.touchPrepareX = clientX;
+    state.touchPrepareY = clientY;
+  } else {
+    state.possibleClick = true;
+    state.clickStartTime = Date.now();
+    state.dragPrepareX = clientX;
+    state.dragPrepareY = clientY;
+  }
+  
+  if (stickerId !== null) {
+    state.pendingStickerId = stickerId;
+  }
+}
+
+/**
+ * タップ/クリック状態をクリアする
+ * @param {boolean} isTouch - タッチイベントかどうか
+ */
+function clearTapOrClickState(isTouch) {
+  if (isTouch) {
+    state.possibleTap = false;
+    state.touchPrepareX = undefined;
+    state.touchPrepareY = undefined;
+  } else {
+    state.possibleClick = false;
+    state.dragPrepareX = undefined;
+    state.dragPrepareY = undefined;
+  }
+}
+
+/**
+ * ピンチ操作が可能かどうかを判定
+ * @param {Object} sticker - ステッカーオブジェクト
+ * @returns {boolean} ピンチ可能な場合true
+ */
+function canPinch(sticker) {
+  return !sticker.isPinned && !isPhysicsActive();
+}
 
 /**
  * 固定されたステッカーの操作処理（通常モード）
@@ -57,13 +110,7 @@ async function handlePinnedStickerInteraction(sticker, id, isTouch = false) {
     updateInfoButtonVisibility();
     await bringToFront(sticker);
   } else {
-    if (isTouch) {
-      state.possibleTap = true;
-      state.tapStartTime = Date.now();
-    } else {
-      state.possibleClick = true;
-      state.clickStartTime = Date.now();
-    }
+    prepareTapOrClick(0, 0, isTouch);
   }
   return true;
 }
@@ -99,6 +146,12 @@ async function finishInteraction() {
   if (state.isDragging) {
     await checkAndFixOutOfBounds(state.selectedSticker);
   }
+  
+  // ドラッグで選択しなかった場合、選択状態をクリア
+  if (state.shouldClearSelectionOnDragEnd) {
+    state.selectedSticker = null;
+    state.shouldClearSelectionOnDragEnd = false;
+  }
 }
 
 /**
@@ -118,8 +171,8 @@ function handleCanvasPointerDown(clientX, clientY, isTouch = false, touches = nu
     lastTouchTime = Date.now();
   }
 
-  if (isTouch && touches && touches.length === 2 && state.selectedSticker && !state.selectedSticker.isPinned && !isPhysicsActive()) {
-    startPinchGesture(touches[0], touches[1], state.selectedSticker);
+  if (isTouch && touches && touches.length === 2 && state.selectedSticker && canPinch(state.selectedSticker)) {
+    startPinchGesture(touches[0], touches[1], state.selectedSticker, true);
     return;
   }
 
@@ -131,17 +184,10 @@ function handleCanvasPointerDown(clientX, clientY, isTouch = false, touches = nu
     elements.pasteArea.style.width = `${PASTE_AREA_CONFIG.TOUCH_SIZE}px`;
     elements.pasteArea.style.height = `${PASTE_AREA_CONFIG.TOUCH_SIZE}px`;
 
-    if (!state.selectedSticker) {
-      state.canvasTapPending = true;
-      state.canvasTapStartTime = Date.now();
-      state.canvasTapX = clientX;
-      state.canvasTapY = clientY;
-    } else {
-      state.canvasTapPending = true;
-      state.canvasTapStartTime = Date.now();
-      state.canvasTapX = clientX;
-      state.canvasTapY = clientY;
-    }
+    state.canvasTapPending = true;
+    state.canvasTapStartTime = Date.now();
+    state.canvasTapX = clientX;
+    state.canvasTapY = clientY;
   } else if (!isTouch) {
     if (state.hasSelection()) {
       state.deselectAll();
@@ -176,8 +222,9 @@ async function handleStickerPointerDown(id, clientX, clientY, isTouch = false, s
   }
 
   // 2本指タッチでピンチ開始
-  if (isTouch && touches && touches.length === 2 && state.selectedSticker && state.selectedSticker.id === id && !state.selectedSticker.isPinned && !isPhysicsActive()) {
-    startPinchGesture(touches[0], touches[1], state.selectedSticker);
+  if (isTouch && touches && touches.length === 2 && canPinch(sticker)) {
+    const isSelected = state.selectedSticker && state.selectedSticker.id === id;
+    startPinchGesture(touches[0], touches[1], sticker, isSelected);
     return;
   }
 
@@ -198,48 +245,44 @@ async function handleStickerPointerDown(id, clientX, clientY, isTouch = false, s
   }
 
   if (state.selectedSticker && state.selectedSticker.id !== id) {
+    // 別のステッカーが選択中の場合、選択解除してからタップ判定の準備
     state.deselectAll();
     state.showUI();
     updateInfoButtonVisibility();
+    prepareTapOrClick(clientX, clientY, isTouch, id);
     return;
   }
 
   if (state.selectedSticker && state.selectedSticker.id === id) {
+    // 選択状態のステッカーをタッチ/クリック
+    // Shift+クリックで回転開始（選択状態を維持）
     if (shiftKey && !isTouch) {
       const rect = sticker.element.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
       const angle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
-      startRotation(angle, sticker);
+      startRotation(angle, sticker, true);
       return;
     }
 
-    if (isTouch) {
-      state.possibleTap = true;
-      state.tapStartTime = Date.now();
-    } else {
-      state.possibleClick = true;
-      state.clickStartTime = Date.now();
-    }
-
-    state.dragPrepareX = clientX;
-    state.dragPrepareY = clientY;
+    // タップ判定の準備（選択解除の可能性）
+    prepareTapOrClick(clientX, clientY, isTouch);
     return;
   }
 
-  state.selectSticker(sticker);
-  updateInfoButtonVisibility();
-  bringToFront(sticker);
-
+  // 未選択のステッカーをタッチ/クリック
+  // Shift+クリックで回転開始（選択状態にしない）
   if (shiftKey && !isTouch) {
     const rect = sticker.element.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
     const angle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
-    startRotation(angle, sticker);
-  } else {
-    state.startDragging(clientX, clientY);
+    startRotation(angle, sticker, false);
+    return;
   }
+  
+  // タップ判定の準備（ドラッグでは選択しない）
+  prepareTapOrClick(clientX, clientY, isTouch, id);
 }
 
 /**
@@ -247,21 +290,45 @@ async function handleStickerPointerDown(id, clientX, clientY, isTouch = false, s
  * @param {number} clientX - X座標
  * @param {number} clientY - Y座標
  * @param {boolean} isTouch - タッチイベントかどうか
+ * @param {TouchList} touches - タッチリスト（タッチイベントの場合）
  */
-function handlePointerMove(clientX, clientY, isTouch = false) {
+function handlePointerMove(clientX, clientY, isTouch = false, touches = null) {
   if (!isTouch) {
     state.setLastMousePosition(clientX, clientY);
   }
 
+  // pendingStickerIdがある場合（未選択のステッカーをドラッグ開始）
+  if (state.pendingStickerId && !state.selectedSticker) {
+    if (checkDragThreshold(clientX, clientY, isTouch)) {
+      // ドラッグ開始（選択しない）
+      const sticker = state.getStickerById(state.pendingStickerId);
+      if (sticker) {
+        startDragWithoutSelection(clientX, clientY, sticker);
+        state.pendingStickerId = null; // クリア
+      }
+    }
+  }
+
   if (!state.selectedSticker) return;
 
-  if (checkDragThreshold(clientX, clientY)) {
+  // 2本指タッチの場合、ピンチ処理
+  if (isTouch && touches && touches.length === 2 && state.isRotating) {
+    handlePinchMove(touches[0], touches[1], state.selectedSticker);
+    handlePinchRotationMove(touches[0], touches[1], state.selectedSticker);
+    return;
+  }
+
+  // 1本指またはマウスの場合
+  if (checkDragThreshold(clientX, clientY, isTouch)) {
     state.startDragging(clientX, clientY);
+    // pendingStickerIdをクリア（ドラッグ開始したので選択しない）
+    state.pendingStickerId = null;
   }
 
   if (state.isDragging) {
     handleDragMove(clientX, clientY);
-  } else if (state.isRotating) {
+  } else if (state.isRotating && !isTouch) {
+    // マウスでの回転（Shift+ドラッグ）
     handleRotateMove(clientX, clientY);
   }
 }
@@ -276,28 +343,34 @@ async function handlePointerUp(clientX, clientY, isTouch = false) {
   const possibleTapOrClick = isTouch ? state.possibleTap : state.possibleClick;
   const startTime = isTouch ? state.tapStartTime : state.clickStartTime;
 
+  // タップ/クリック判定
   if (handleTapOrClick(possibleTapOrClick, startTime)) {
-    state.deselectAll();
-    state.showUI();
-    updateInfoButtonVisibility();
-
-    if (isTouch) {
-      state.possibleTap = false;
-    } else {
-      state.possibleClick = false;
-      state.dragPrepareX = undefined;
-      state.dragPrepareY = undefined;
+    // pendingStickerIdがある場合（未選択のステッカーをタップ）
+    if (state.pendingStickerId) {
+      const sticker = state.getStickerById(state.pendingStickerId);
+      if (sticker) {
+        state.selectSticker(sticker);
+        updateInfoButtonVisibility();
+        bringToFront(sticker);
+      }
+      state.pendingStickerId = null;
+    } else if (state.selectedSticker) {
+      // 選択状態のステッカーをタップ → 選択解除
+      state.deselectAll();
+      state.showUI();
+      updateInfoButtonVisibility();
     }
+
+    clearTapOrClickState(isTouch);
     return;
   }
 
-  if (isTouch) {
-    state.possibleTap = false;
-  } else {
-    state.possibleClick = false;
-    state.dragPrepareX = undefined;
-    state.dragPrepareY = undefined;
+  // ドラッグが開始されなかった場合、pendingStickerIdをクリア
+  if (state.pendingStickerId && !state.isDragging) {
+    state.pendingStickerId = null;
   }
+
+  clearTapOrClickState(isTouch);
 
   if (state.isDragging || state.isRotating) {
     const wasDeleted = await handleTrashDrop(clientX, clientY);
@@ -353,8 +426,30 @@ export function handleMouseMove(e) {
 
 export function handleTouchMove(e) {
   const touches = e.touches;
+  
+  // 2本指タッチの場合、ピンチ操作を開始または継続
+  if (touches.length === 2) {
+    // ピンチ中の処理
+    if (state.isRotating && state.selectedSticker && canPinch(state.selectedSticker)) {
+      handlePinchMove(touches[0], touches[1], state.selectedSticker);
+      handlePinchRotationMove(touches[0], touches[1], state.selectedSticker);
+      return;
+    }
+    
+    // まだピンチが開始されていない場合
+    // 選択状態のステッカーがある場合、どこをピンチしてもそのステッカーを拡大縮小できる
+    if (state.selectedSticker && canPinch(state.selectedSticker) && !state.isDragging) {
+      startPinchGesture(touches[0], touches[1], state.selectedSticker, true);
+      return;
+    }
+    
+    // 未選択のステッカーの場合は、handleStickerPointerDownで処理される
+    return;
+  }
+
+  // 1本指タッチの場合
   if (touches.length > 0) {
-    handlePointerMove(touches[0].clientX, touches[0].clientY, true);
+    handlePointerMove(touches[0].clientX, touches[0].clientY, true, touches);
   }
 }
 
@@ -367,6 +462,22 @@ export async function handleTouchEnd(e) {
   if (touches.length > 0) {
     await handlePointerUp(touches[0].clientX, touches[0].clientY, true);
   }
+}
+
+/**
+ * ホイールでステッカーのサイズを変更
+ * @param {Object} sticker - 対象のステッカー
+ * @param {number} deltaY - ホイールのdeltaY値
+ */
+function resizeStickerWithWheel(sticker, deltaY) {
+  const delta = deltaY > 0 ? -RESIZE_CONFIG.WHEEL_DELTA : RESIZE_CONFIG.WHEEL_DELTA;
+  const newWidth = sticker.width + delta;
+  updateStickerSize(sticker, newWidth);
+
+  if (wheelTimeout) clearTimeout(wheelTimeout);
+  wheelTimeout = setTimeout(async () => {
+    await saveStickerChanges(sticker);
+  }, RESIZE_CONFIG.DEBOUNCE_MS);
 }
 
 export async function handleWheel(e, id) {
@@ -386,39 +497,22 @@ export async function handleWheel(e, id) {
 
   const targetSticker = state.selectedSticker || sticker;
 
+  // 未選択のステッカーの場合、選択状態にしない（内部的にはselectedStickerを設定）
   if (!state.selectedSticker) {
-    state.selectSticker(sticker);
-    updateInfoButtonVisibility();
+    state.selectedSticker = sticker;
     bringToFront(sticker);
   }
 
-  const delta = e.deltaY > 0 ? -RESIZE_CONFIG.WHEEL_DELTA : RESIZE_CONFIG.WHEEL_DELTA;
-  const newWidth = targetSticker.width + delta;
-  updateStickerSize(targetSticker, newWidth);
-
-  if (wheelTimeout) clearTimeout(wheelTimeout);
-  wheelTimeout = setTimeout(async () => {
-    await saveStickerChanges(targetSticker);
-  }, RESIZE_CONFIG.DEBOUNCE_MS);
+  resizeStickerWithWheel(targetSticker, e.deltaY);
 }
 
 export async function handleCanvasWheel(e) {
-  if (isPhysicsActive()) {
+  if (isPhysicsActive() || !state.selectedSticker) {
     return;
   }
 
-  if (!state.selectedSticker) return;
-
   e.preventDefault();
-
-  const delta = e.deltaY > 0 ? -RESIZE_CONFIG.WHEEL_DELTA : RESIZE_CONFIG.WHEEL_DELTA;
-  const newWidth = state.selectedSticker.width + delta;
-  updateStickerSize(state.selectedSticker, newWidth);
-
-  if (wheelTimeout) clearTimeout(wheelTimeout);
-  wheelTimeout = setTimeout(async () => {
-    await saveStickerChanges(state.selectedSticker);
-  }, RESIZE_CONFIG.DEBOUNCE_MS);
+  resizeStickerWithWheel(state.selectedSticker, e.deltaY);
 }
 
 /**

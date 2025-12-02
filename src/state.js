@@ -36,6 +36,10 @@ class AppState {
     // タッチドラッグ準備座標
     this.touchPrepareX = undefined;
     this.touchPrepareY = undefined;
+    // タップ判定待ちのステッカーID（未選択のステッカーをタップした場合）
+    this.pendingStickerId = null;
+    // ドラッグ終了時に選択状態をクリアするフラグ
+    this.shouldClearSelectionOnDragEnd = false;
     // 物理モード
     this.isPhysicsMode = false;
     // UI表示状態（重力・斥力・追加ボタン）
@@ -218,6 +222,8 @@ class AppState {
   endInteraction() {
     this.isDragging = false;
     this.isRotating = false;
+    // ドラッグ終了時の選択状態クリアフラグをリセット
+    this.shouldClearSelectionOnDragEnd = false;
   }
 
   /**

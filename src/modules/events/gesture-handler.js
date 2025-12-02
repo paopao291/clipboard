@@ -8,6 +8,7 @@ import { INTERACTION_CONFIG } from "../constants.js";
 import {
   updateStickerPosition,
   updateStickerRotation,
+  updateStickerSize,
   saveStickerChanges,
 } from "../sticker.js";
 import {
@@ -30,13 +31,48 @@ let lastDragY = 0;
 let lastDragTime = 0;
 
 /**
- * ドラッグを開始
+ * ステッカーを選択状態に設定する（UI的には選択しない場合も可）
+ * @param {Object} sticker - ステッカーオブジェクト
+ * @param {boolean} selectSticker - 選択状態にするかどうか
+ */
+function setStickerSelection(sticker, selectSticker) {
+  if (selectSticker && state.selectedSticker !== sticker) {
+    state.selectSticker(sticker);
+  } else if (!selectSticker) {
+    // 選択状態にしない場合、内部的にはselectedStickerを設定するが、UI的には選択しない
+    state.selectedSticker = sticker;
+    state.shouldClearSelectionOnDragEnd = true;
+  }
+}
+
+/**
+ * ドラッグを開始（選択状態にする）
  * @param {number} clientX - X座標
  * @param {number} clientY - Y座標
  * @param {Object} sticker - ステッカーオブジェクト
  */
 export function startDrag(clientX, clientY, sticker) {
   state.selectedSticker = sticker;
+  state.isDragging = true;
+  const coords = absoluteToHybrid(clientX, clientY);
+  state.dragStartX = coords.x - sticker.x;
+  state.dragStartYPercent = coords.yPercent - sticker.yPercent;
+
+  // 速度追跡の初期化
+  lastDragX = clientX;
+  lastDragY = clientY;
+  lastDragTime = Date.now();
+}
+
+/**
+ * ドラッグを開始（選択状態にしない）
+ * @param {number} clientX - X座標
+ * @param {number} clientY - Y座標
+ * @param {Object} sticker - ステッカーオブジェクト
+ */
+export function startDragWithoutSelection(clientX, clientY, sticker) {
+  // 選択状態にせずにドラッグ開始
+  setStickerSelection(sticker, false);
   state.isDragging = true;
   const coords = absoluteToHybrid(clientX, clientY);
   state.dragStartX = coords.x - sticker.x;
@@ -127,8 +163,10 @@ export function applyDragVelocity(clientX, clientY) {
  * 回転を開始
  * @param {number} angle - 初期角度
  * @param {Object} sticker - ステッカーオブジェクト
+ * @param {boolean} selectSticker - 選択状態にするかどうか（デフォルト: true）
  */
-export function startRotation(angle, sticker) {
+export function startRotation(angle, sticker, selectSticker = true) {
+  setStickerSelection(sticker, selectSticker);
   state.startRotating(angle);
   if (sticker && sticker.element) {
     sticker.element.classList.add("rotating");
@@ -160,27 +198,112 @@ export function handleRotateMove(clientX, clientY) {
  * @param {Object} touch1 - 1本目の指
  * @param {Object} touch2 - 2本目の指
  * @param {Object} targetSticker - 対象のステッカー
+ * @param {boolean} selectSticker - 選択状態にするかどうか（デフォルト: true）
  * @returns {boolean} ピンチを開始したかどうか
  */
-export function startPinchGesture(touch1, touch2, targetSticker) {
+export function startPinchGesture(touch1, touch2, targetSticker, selectSticker = true) {
   if (targetSticker.isPinned) {
     return false;
   }
 
+  setStickerSelection(targetSticker, selectSticker);
+
+  // 2本指間の距離と角度を計算
   const dx = touch2.clientX - touch1.clientX;
   const dy = touch2.clientY - touch1.clientY;
   const distance = Math.sqrt(dx * dx + dy * dy);
-  state.startPinch(distance, targetSticker.width);
+  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
 
+  state.startPinch(distance, targetSticker.width);
+  state.startRotating(angle);
+
+  // ピンチ中クラスを追加（CSSトランジション無効化用）
+  if (targetSticker.element) {
+    targetSticker.element.classList.add("resizing", "rotating");
+  }
+
+  return true;
+}
+
+/**
+ * ピンチ移動処理（2本指での拡大縮小）
+ * @param {Object} touch1 - 1本目の指
+ * @param {Object} touch2 - 2本目の指
+ * @param {Object} sticker - ピンチ中のステッカー
+ */
+export function handlePinchMove(touch1, touch2, sticker) {
+  if (!state.isRotating || !sticker) {
+    return;
+  }
+
+  // 物理モード中はピンチ操作を無効化
+  if (isPhysicsActive()) {
+    return;
+  }
+
+  // 固定されたステッカーはピンチ操作を無効化
+  if (sticker.isPinned) {
+    return;
+  }
+
+  // リサイズ中クラスを追加（CSSトランジション無効化用）
+  if (sticker.element) {
+    sticker.element.classList.add("resizing");
+  }
+
+  // 2本指間の距離を計算
+  const dx = touch2.clientX - touch1.clientX;
+  const dy = touch2.clientY - touch1.clientY;
+  const currentDistance = Math.sqrt(dx * dx + dy * dy);
+
+  // 前フレームからのスケール変化を現在のサイズに適用
+  if (state.lastPinchDistance && state.lastPinchDistance > 0) {
+    const deltaScale = currentDistance / state.lastPinchDistance;
+    const newWidth = sticker.width * deltaScale;
+    updateStickerSize(sticker, newWidth);
+  }
+
+  // 次のフレームのために距離を更新
+  state.updatePinchDistance(currentDistance);
+}
+
+/**
+ * 2本指での回転移動処理
+ * @param {Object} touch1 - 1本目の指
+ * @param {Object} touch2 - 2本目の指
+ * @param {Object} sticker - 回転中のステッカー
+ */
+export function handlePinchRotationMove(touch1, touch2, sticker) {
+  if (!state.isRotating || !sticker) {
+    return;
+  }
+
+  // 物理モード中は回転操作を無効化
+  if (isPhysicsActive()) {
+    return;
+  }
+
+  // 固定されたステッカーは回転操作を無効化
+  if (sticker.isPinned) {
+    return;
+  }
+
+  // 回転中クラスを追加（CSSトランジション無効化用）
+  if (sticker.element) {
+    sticker.element.classList.add("rotating");
+  }
+
+  // 2本指の角度を計算
   const angle =
     Math.atan2(
       touch2.clientY - touch1.clientY,
       touch2.clientX - touch1.clientX,
     ) *
     (180 / Math.PI);
-  state.startRotating(angle);
 
-  return true;
+  // 開始角度からの回転量を計算して適用
+  const rotation = angle - state.startAngle;
+  updateStickerRotation(sticker, rotation);
 }
 
 /**
@@ -256,13 +379,16 @@ export async function checkAndFixOutOfBounds(sticker) {
  * @returns {boolean} タップとして処理した場合true
  */
 export function handleTapOrClick(possibleTap, startTime) {
-  if (possibleTap && state.selectedSticker) {
-    const duration = Date.now() - (startTime || 0);
-    if (
-      duration < INTERACTION_CONFIG.TAP_MAX_DURATION_MS &&
-      !state.isDragging &&
-      !state.isRotating
-    ) {
+  if (!possibleTap) return false;
+  
+  const duration = Date.now() - (startTime || 0);
+  if (
+    duration < INTERACTION_CONFIG.TAP_MAX_DURATION_MS &&
+    !state.isDragging &&
+    !state.isRotating
+  ) {
+    // 選択状態のステッカーがある場合、またはpendingStickerIdがある場合（未選択のステッカーをタップ）
+    if (state.selectedSticker || state.pendingStickerId) {
       return true;
     }
   }
@@ -273,18 +399,35 @@ export function handleTapOrClick(possibleTap, startTime) {
  * ドラッグ準備状態からドラッグ開始への移行判定
  * @param {number} currentX - 現在のX座標
  * @param {number} currentY - 現在のY座標
+ * @param {boolean} isTouch - タッチイベントかどうか
  * @returns {boolean} ドラッグを開始した場合true
  */
-export function checkDragThreshold(currentX, currentY) {
-  if (state.possibleClick && state.dragPrepareX !== undefined) {
-    const moveDistance = Math.sqrt(
-      Math.pow(currentX - state.dragPrepareX, 2) +
-        Math.pow(currentY - state.dragPrepareY, 2),
-    );
+export function checkDragThreshold(currentX, currentY, isTouch = false) {
+  if (isTouch) {
+    // タッチイベントの場合
+    if (state.possibleTap && state.touchPrepareX !== undefined) {
+      const moveDistance = Math.sqrt(
+        Math.pow(currentX - state.touchPrepareX, 2) +
+          Math.pow(currentY - state.touchPrepareY, 2),
+      );
 
-    if (moveDistance > INTERACTION_CONFIG.DRAG_THRESHOLD_PX) {
-      state.possibleClick = false;
-      return true;
+      if (moveDistance > INTERACTION_CONFIG.DRAG_THRESHOLD_PX) {
+        state.possibleTap = false;
+        return true;
+      }
+    }
+  } else {
+    // マウスイベントの場合
+    if (state.possibleClick && state.dragPrepareX !== undefined) {
+      const moveDistance = Math.sqrt(
+        Math.pow(currentX - state.dragPrepareX, 2) +
+          Math.pow(currentY - state.dragPrepareY, 2),
+      );
+
+      if (moveDistance > INTERACTION_CONFIG.DRAG_THRESHOLD_PX) {
+        state.possibleClick = false;
+        return true;
+      }
     }
   }
   return false;

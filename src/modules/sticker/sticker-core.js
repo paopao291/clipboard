@@ -4,7 +4,7 @@
  */
 
 import { state } from "../../state.js";
-import { STICKER_DEFAULTS } from "../constants.js";
+import { STICKER_DEFAULTS, HELP_STICKER_CONFIG } from "../constants.js";
 import {
   saveStickerToDB,
   updateStickerInDB,
@@ -34,7 +34,7 @@ import { applyStickerTransform } from "./sticker-transforms.js";
  */
 export function getBaseWidth(sticker) {
   return sticker.isHelpSticker
-    ? STICKER_DEFAULTS.HELP_BASE_WIDTH || 300
+    ? HELP_STICKER_CONFIG.BASE_WIDTH
     : STICKER_DEFAULTS.BASE_WIDTH;
 }
 
