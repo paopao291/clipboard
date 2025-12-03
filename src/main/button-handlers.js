@@ -6,6 +6,7 @@
 import { state } from "../state.js";
 import { elements, updateInfoButtonVisibility } from "../modules/ui.js";
 import { showConfirmDialog } from "../modules/dialog.js";
+import { logger } from "../utils/logger.js";
 import {
   toggleStickerPin,
   toggleStickerBorder,
@@ -75,7 +76,7 @@ async function optimizeBackgroundImage(imageFile) {
     const originalHeight = img.height;
 
     if (originalWidth <= maxWidth && originalHeight <= maxHeight) {
-      console.log("背景画像: リサイズ不要（元サイズ使用）");
+      logger.log("背景画像: リサイズ不要（元サイズ使用）");
       return imageFile;
     }
 
@@ -100,12 +101,12 @@ async function optimizeBackgroundImage(imageFile) {
       canvas.toBlob((blob) => resolve(blob), imageFile.type, 0.92);
     });
 
-    console.log(
+    logger.log(
       `背景画像: リサイズ完了 (${originalWidth}x${originalHeight} → ${newWidth}x${newHeight})`,
     );
     return resizedImageBlob;
   } catch (error) {
-    console.error("背景画像のリサイズに失敗:", error);
+    logger.error("背景画像のリサイズに失敗:", error);
     return imageFile;
   } finally {
     URL.revokeObjectURL(imageUrl);
@@ -221,7 +222,7 @@ export async function handleLayoutButton() {
  */
 export async function togglePhysicsMode() {
   if (isPhysicsActive()) {
-    disablePhysics();
+    await disablePhysics();
     state.disablePhysicsMode();
     elements.physicsBtn.classList.remove("active");
     elements.canvas.classList.remove("physics-mode");
@@ -229,12 +230,19 @@ export async function togglePhysicsMode() {
     state.showUI();
     updateInfoButtonVisibility();
   } else {
-    enablePhysics();
-    state.enablePhysicsMode();
-    elements.physicsBtn.classList.add("active");
-    elements.canvas.classList.add("physics-mode");
-    state.deselectAll();
-    state.showUI();
-    updateInfoButtonVisibility();
+    try {
+      await enablePhysics();
+      state.enablePhysicsMode();
+      elements.physicsBtn.classList.add("active");
+      elements.canvas.classList.add("physics-mode");
+      state.deselectAll();
+      state.showUI();
+      updateInfoButtonVisibility();
+    } catch (error) {
+      console.error("物理モードの有効化に失敗しました:", error);
+      // エラーが発生した場合はボタンの状態を元に戻す
+      elements.physicsBtn.classList.remove("active");
+      elements.canvas.classList.remove("physics-mode");
+    }
   }
 }

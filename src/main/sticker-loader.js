@@ -4,6 +4,7 @@
  */
 
 import { loadAllStickersFromDB, updateStickerInDB } from "../modules/db.js";
+import { logger } from "../utils/logger.js";
 import { STICKER_DEFAULTS } from "../modules/constants.js";
 import {
   addStickerToDOM,
@@ -18,7 +19,7 @@ import {
  */
 async function loadStickerDataFromDB() {
   const stickers = await loadAllStickersFromDB();
-  console.log(`IndexedDBから${stickers.length}個のステッカーを読み込みました`);
+  logger.log(`IndexedDBから${stickers.length}個のステッカーを読み込みました`);
   return stickers;
 }
 
@@ -26,6 +27,11 @@ async function loadStickerDataFromDB() {
  * Blobから画像を読み込む
  */
 async function loadImageFromBlob(blob) {
+  // Blobオブジェクトかどうかを確認
+  if (!blob || !(blob instanceof Blob)) {
+    throw new Error(`loadImageFromBlob: blobがBlobオブジェクトではありません。型: ${typeof blob}, 値: ${blob}`);
+  }
+
   return new Promise((resolve) => {
     const img = new Image();
     const tempBlobUrl = URL.createObjectURL(blob);
@@ -150,19 +156,19 @@ function validateAndFixPosition(id, x, yPercent, width) {
   let needsFixing = false;
 
   if (!isFinite(x) || Math.abs(x) > 10000) {
-    console.warn(`ステッカー${id}のx座標が異常: ${x} → 0に修正`);
+    logger.warn(`ステッカー${id}のx座標が異常: ${x} → 0に修正`);
     x = 0;
     needsFixing = true;
   }
 
   if (!isFinite(yPercent) || Math.abs(yPercent) > 200) {
-    console.warn(`ステッカー${id}のyPercent座標が異常: ${yPercent} → 50に修正`);
+    logger.warn(`ステッカー${id}のyPercent座標が異常: ${yPercent} → 50に修正`);
     yPercent = 50;
     needsFixing = true;
   }
 
   if (!isFinite(width) || width < 10 || width > 5000) {
-    console.warn(`ステッカー${id}のwidthが異常: ${width} → デフォルトに修正`);
+    logger.warn(`ステッカー${id}のwidthが異常: ${width} → デフォルトに修正`);
     width = STICKER_DEFAULTS.WIDTH;
     needsFixing = true;
   }
@@ -285,6 +291,12 @@ function addProcessedStickerToDOM(
  * 個別のステッカーデータを処理してDOMに追加
  */
 async function processStickerForReload(stickerData, needsConversion) {
+  // blobが存在しない場合はエラー
+  if (!stickerData.blob) {
+    logger.error(`processStickerForReload: stickerData.blobが存在しません。ID: ${stickerData.id}`, stickerData);
+    throw new Error(`ステッカーID ${stickerData.id} のblobデータが見つかりません`);
+  }
+
   const img = await loadImageFromBlob(stickerData.blob);
   const { borderMode, originalType, transparency } = await getStickerImageInfo(
     stickerData,
@@ -314,6 +326,6 @@ export async function loadStickersFromDB() {
 
   if (needsConversion && stickers.length > 0) {
     localStorage.setItem("hybrid_coordinate_migrated", "true");
-    console.log("座標変換が完了しました");
+    logger.log("座標変換が完了しました");
   }
 }

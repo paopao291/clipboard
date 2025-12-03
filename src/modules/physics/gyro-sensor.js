@@ -4,6 +4,7 @@
  */
 
 import { PHYSICS_CONFIG } from "../constants.js";
+import { logger } from "../../utils/logger.js";
 
 // ========================================
 // ジャイロセンサー関連（スマホ用）
@@ -14,6 +15,16 @@ let targetGravity = {
 };
 let isGyroActive = false;
 let gyroPermissionGranted = false;
+
+/**
+ * モバイルデバイスかどうかを判定
+ * @returns {boolean} モバイルデバイスの場合true
+ */
+function isMobileDevice() {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+}
 
 // ========================================
 // イベントハンドラ
@@ -81,6 +92,15 @@ export function updateGravity(engine) {
 }
 
 /**
+ * 固定重力（下向き）を設定（PC環境用）
+ */
+export function setFixedGravity() {
+  const { X, Y } = PHYSICS_CONFIG.GRAVITY;
+  targetGravity.x = X;
+  targetGravity.y = Y;
+}
+
+/**
  * ジャイロセンサーの利用可能性をチェック（ユーザーインタラクション内で呼び出す必要あり）
  * @returns {Promise<boolean>} 許可が得られた場合はtrue
  */
@@ -88,29 +108,35 @@ export async function checkGyroAvailability() {
   // DeviceOrientationEventが存在するかチェック
   if (!window.DeviceOrientationEvent) {
     gyroPermissionGranted = false;
-    console.log("物理モード: DeviceOrientationEventが利用できません（PC環境）");
+    logger.log("物理モード: DeviceOrientationEventが利用できません（PC環境）");
+    // PC環境では固定重力を設定
+    setFixedGravity();
     return false;
   }
 
   // iOS 13以降では許可が必要（ユーザーインタラクション内で実行する必要あり）
   if (typeof DeviceOrientationEvent.requestPermission === "function") {
     try {
-      console.log("物理モード: 方向センサーの許可をリクエスト中...");
+      logger.log("物理モード: 方向センサーの許可をリクエスト中...");
       const permission = await DeviceOrientationEvent.requestPermission();
       gyroPermissionGranted = permission === "granted";
 
       if (gyroPermissionGranted) {
-        console.log("物理モード: 方向センサーの許可が付与されました");
+        logger.log("物理モード: 方向センサーの許可が付与されました");
       } else {
-        console.log("物理モード: 方向センサーの許可が拒否されました");
+        logger.log("物理モード: 方向センサーの許可が拒否されました");
+        // 許可が拒否された場合は固定重力を設定
+        setFixedGravity();
         // ユーザーに通知
         const { showToast } = await import("../ui.js");
         showToast("方向センサーの許可が必要です");
       }
       return gyroPermissionGranted;
     } catch (error) {
-      console.warn("物理モード: 方向センサーの許可リクエストに失敗:", error);
+      logger.warn("物理モード: 方向センサーの許可リクエストに失敗:", error);
       gyroPermissionGranted = false;
+      // エラー時も固定重力を設定
+      setFixedGravity();
       // ユーザーに通知
       const { showToast } = await import("../ui.js");
       showToast("方向センサーの許可に失敗しました");
@@ -119,9 +145,20 @@ export async function checkGyroAvailability() {
   } else {
     // Android/PCでは自動的に許可
     // ただし、PCではbeta/gammaがnullなので実際には動作しない
-    gyroPermissionGranted = true;
-    console.log("物理モード: 方向センサーは自動的に利用可能です（Android）");
-    return true;
+    // PCかモバイルかを判定
+    if (isMobileDevice()) {
+      // Android: 自動的に許可
+      gyroPermissionGranted = true;
+      logger.log("物理モード: 方向センサーは自動的に利用可能です（Android）");
+      return true;
+    } else {
+      // PC環境: ジャイロは利用できないので固定重力を使用
+      gyroPermissionGranted = false;
+      logger.log("物理モード: 方向センサーは利用できません（PC環境）");
+      // PC環境では固定重力を設定
+      setFixedGravity();
+      return false;
+    }
   }
 }
 

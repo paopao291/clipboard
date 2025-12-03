@@ -94,7 +94,7 @@ class BlobURLManager {
 
       return true;
     } catch (error) {
-      console.warn("Failed to revoke blob URL:", error);
+      logger.warn("Failed to revoke blob URL:", error);
       return false;
     }
   }
@@ -224,7 +224,7 @@ class BlobURLManager {
       try {
         URL.revokeObjectURL(url);
       } catch (error) {
-        console.warn("Failed to revoke temp URL:", error);
+        logger.warn("Failed to revoke temp URL:", error);
       }
     });
     this.tempUrls.clear();

@@ -5,6 +5,7 @@
 
 import { state } from "../../state.js";
 import { PHYSICS_CONFIG } from "../constants.js";
+import { logger } from "../../utils/logger.js";
 
 // Matter.jsモジュール
 const { World, Bodies, Body } = Matter;
@@ -65,6 +66,11 @@ export function addPhysicsBody(sticker, world, isPhysicsEnabled) {
 
   // マッピングに追加
   stickerBodyMap.set(sticker.id, body);
+  
+  // デバッグログ（最初の数個のみ）
+  if (stickerBodyMap.size <= 3) {
+    logger.log(`物理モード: 物理ボディを追加しました (ID: ${sticker.id}, 位置: x=${x.toFixed(1)}, y=${y.toFixed(1)}, 半径: ${radius.toFixed(1)})`);
+  }
 }
 
 /**

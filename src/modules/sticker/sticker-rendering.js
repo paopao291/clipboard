@@ -6,8 +6,18 @@
 import { BORDER_WIDTHS, STICKER_DEFAULTS } from "../constants.js";
 import { blobURLManager } from "../blob-url-manager.js";
 import { updateStickerInDB } from "../db.js";
-import { showToast, updateInfoButtonVisibility, updateHelpStickerState, updateHelpStickerBorder } from "../ui.js";
-import { getImageTypeInfo, getImageDimensions, getBlobFromURL } from "./sticker-processing.js";
+import { logger } from "../../utils/logger.js";
+import {
+  showToast,
+  updateInfoButtonVisibility,
+  updateHelpStickerState,
+  updateHelpStickerBorder,
+} from "../ui.js";
+import {
+  getImageTypeInfo,
+  getImageDimensions,
+  getBlobFromURL,
+} from "./sticker-processing.js";
 
 /**
  * 縁取りの設定
@@ -167,7 +177,7 @@ function canvasToBlob(canvas, fallbackBlob, errorMessage) {
       if (resultBlob) {
         resolve(resultBlob);
       } else {
-        console.warn(errorMessage);
+        logger.warn(errorMessage);
         resolve(fallbackBlob);
       }
     }, "image/png");
@@ -192,14 +202,14 @@ function loadImageAndProcess(blob, processImage, fallbackResult) {
         blobURLManager.revokeURL(blobUrl);
         resolve(result);
       } catch (error) {
-        console.warn("画像処理エラー:", error);
+        logger.warn("画像処理エラー:", error);
         blobURLManager.revokeURL(blobUrl);
         resolve(fallbackResult);
       }
     };
 
     img.onerror = () => {
-      console.warn("画像読み込み失敗");
+      logger.warn("画像読み込み失敗");
       blobURLManager.revokeURL(blobUrl);
       resolve(fallbackResult);
     };
@@ -215,12 +225,12 @@ function loadImageAndProcess(blob, processImage, fallbackResult) {
  * @returns {Promise<Blob>} padding付き画像blob
  */
 export async function addPaddingToImage(blob, borderWidth) {
-  console.log("パディング追加: borderWidth =", borderWidth);
+  logger.log("パディング追加: borderWidth =", borderWidth);
   return loadImageAndProcess(
     blob,
     async (img) => {
       if (borderWidth <= 0) {
-        console.log("パディング幅が0px以下です。最低8pxを使用");
+        logger.log("パディング幅が0px以下です。最低8pxを使用");
         borderWidth = 8;
       }
 
@@ -242,7 +252,7 @@ export async function addPaddingToImage(blob, borderWidth) {
       finalCtx.clearRect(0, 0, finalWidth, finalHeight);
       finalCtx.drawImage(canvas, borderWidth, borderWidth);
 
-      console.log(
+      logger.log(
         `パディング追加: ${img.width}x${img.height} → ${finalCanvas.width}x${finalCanvas.height}`,
       );
       return await canvasToBlob(
@@ -283,7 +293,7 @@ export async function applyOutlineFilter(
       );
 
       if (borderWidth <= 0) {
-        console.warn("縁取り幅が0以下です。縁取りを適用しません");
+        logger.warn("縁取り幅が0以下です。縁取りを適用しません");
         return { blob, borderWidth: 0, borderMode };
       }
 
@@ -304,7 +314,7 @@ export async function applyOutlineFilter(
           img,
         });
 
-      console.log(
+      logger.log(
         `縁取り適用: モード${borderMode}, 幅${borderWidth}px, 画像サイズ${originalWidth}x${originalHeight}, タイプ=${imageType}, 透過=${hasTransparencyFlag}`,
       );
 
@@ -362,7 +372,7 @@ export function calculateBorderSettings(
     );
   }
 
-  console.log(
+  logger.log(
     `縁取り設定: モード=${actualBorderMode}, 幅=${borderWidth}px, 最大=${maxBorderWidth}px`,
   );
 
@@ -405,7 +415,7 @@ export async function processBorderAndPadding(
   }
 
   if (borderMode === 0) {
-    console.log(`モード${borderMode}: 5%パディングを追加（${paddingWidth}px）`);
+    logger.log(`モード${borderMode}: 5%パディングを追加（${paddingWidth}px）`);
 
     const paddedBlob = await addPaddingToImage(originalBlob, paddingWidth);
 
@@ -423,12 +433,12 @@ export async function processBorderAndPadding(
       hasTransparency,
     );
 
-    console.log(
+    logger.log(
       `モード${borderMode}: 縁取り${borderWidth}px + パディング${paddingWidth}px（合計${borderWidth + paddingWidth}px）`,
     );
     const paddedBorderBlob = await addPaddingToImage(borderBlob, paddingWidth);
 
-    console.log(`モード${borderMode}: 縁取りなし用に5%パディング追加`);
+    logger.log(`モード${borderMode}: 縁取りなし用に5%パディング追加`);
     const paddedBlob = await addPaddingToImage(originalBlob, maxBorderWidth);
 
     return {
@@ -445,11 +455,9 @@ export async function processBorderAndPadding(
       hasTransparency,
     );
 
-    console.log(
-      `モード${borderMode}: 縁取り${borderWidth}px（パディングなし）`,
-    );
+    logger.log(`モード${borderMode}: 縁取り${borderWidth}px（パディングなし）`);
 
-    console.log(`モード${borderMode}: 縁取りなし用に5%パディング追加`);
+    logger.log(`モード${borderMode}: 縁取りなし用に5%パディング追加`);
     const paddedBlob = await addPaddingToImage(originalBlob, maxBorderWidth);
 
     return {
@@ -475,7 +483,7 @@ export async function toggleStickerBorder(sticker) {
   sticker.borderMode = nextBorderMode;
   sticker.hasBorder = nextBorderMode !== 0;
 
-  console.log(
+  logger.log(
     `縁取りモード変更: ${currentBorderMode} → ${nextBorderMode}, hasBorder: ${sticker.hasBorder}`,
   );
 
@@ -490,10 +498,10 @@ export async function toggleStickerBorder(sticker) {
 
     if (sticker.originalBlob) {
       originalBlob = sticker.originalBlob;
-      console.log("縁取りモード変更: originalBlobを直接使用");
+      logger.log("縁取りモード変更: originalBlobを直接使用");
     } else {
       const originalBlobUrl = sticker.originalBlobUrl || sticker.blobUrl;
-      console.log(
+      logger.log(
         "縁取りモード変更: オリジナルBlobURLから取得:",
         originalBlobUrl,
       );
@@ -503,11 +511,11 @@ export async function toggleStickerBorder(sticker) {
         if (!originalBlob) {
           if (sticker.blob) {
             originalBlob = sticker.blob;
-            console.log("縁取りモード変更: URL取得失敗、sticker.blobを使用");
+            logger.log("縁取りモード変更: URL取得失敗、sticker.blobを使用");
           }
         }
       } catch (err) {
-        console.warn(
+        logger.warn(
           "縁取りモード変更: URLからの取得に失敗、sticker.blobを使用:",
           err,
         );
@@ -519,7 +527,7 @@ export async function toggleStickerBorder(sticker) {
 
     if (originalBlob) {
       const imageDimensions = await getImageDimensions(originalBlob);
-      console.log("元画像の実際のサイズ:", imageDimensions);
+      logger.log("元画像の実際のサイズ:", imageDimensions);
 
       const { type: originalType, hasTransparency: transparency } =
         await getImageTypeInfo({
@@ -527,7 +535,7 @@ export async function toggleStickerBorder(sticker) {
           sticker,
         });
 
-      console.log(
+      logger.log(
         `縁取りモード変更: originalType=${originalType}, transparency=${transparency}`,
       );
 
@@ -558,7 +566,7 @@ export async function toggleStickerBorder(sticker) {
       sticker.paddedBlobUrl = paddedBlobUrl;
       sticker.blobUrl = paddedBlobUrl;
 
-      console.log(
+      logger.log(
         `モード${nextBorderMode}の画像を設定: borderWidth=${result.borderWidth}px, hasBorder=${sticker.hasBorder}`,
       );
 

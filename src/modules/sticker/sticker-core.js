@@ -4,6 +4,7 @@
  */
 
 import { state } from "../../state.js";
+import { logger } from "../../utils/logger.js";
 import { STICKER_DEFAULTS, HELP_STICKER_CONFIG } from "../constants.js";
 import {
   saveStickerToDB,
@@ -302,7 +303,7 @@ async function undoRemoveSticker(stickerData) {
  */
 export async function saveStickerChanges(sticker) {
   if (!sticker) {
-    console.warn("saveStickerChanges: sticker is null");
+    logger.warn("saveStickerChanges: sticker is null");
     return;
   }
 

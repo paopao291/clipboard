@@ -31,11 +31,11 @@ export async function convertToWebP(blob, quality = 0.9) {
       canvas.toBlob(
         (webpBlob) => {
           if (webpBlob) {
-            console.log(`WebP変換: ${Math.round(blob.size / 1024)}KB → ${Math.round(webpBlob.size / 1024)}KB (${Math.round((1 - webpBlob.size / blob.size) * 100)}%削減)`);
+            logger.log(`WebP変換: ${Math.round(blob.size / 1024)}KB → ${Math.round(webpBlob.size / 1024)}KB (${Math.round((1 - webpBlob.size / blob.size) * 100)}%削減)`);
             resolve(webpBlob);
           } else {
             // WebP変換失敗の場合は元のBlobを返す
-            console.warn('WebP変換失敗: 元の画像を使用します');
+            logger.warn('WebP変換失敗: 元の画像を使用します');
             resolve(blob);
           }
         },
@@ -46,7 +46,7 @@ export async function convertToWebP(blob, quality = 0.9) {
 
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      console.warn('画像読み込みエラー: 元の画像を使用します');
+      logger.warn('画像読み込みエラー: 元の画像を使用します');
       // エラー時は元のBlobを返す（フォールバック）
       resolve(blob);
     };
@@ -124,7 +124,7 @@ export async function convertImageFormat(blob, mimeType, quality = 0.9) {
           if (convertedBlob) {
             resolve(convertedBlob);
           } else {
-            console.warn(`${mimeType}変換失敗: 元の画像を使用します`);
+            logger.warn(`${mimeType}変換失敗: 元の画像を使用します`);
             resolve(blob);
           }
         },
@@ -135,7 +135,7 @@ export async function convertImageFormat(blob, mimeType, quality = 0.9) {
 
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      console.warn('画像読み込みエラー: 元の画像を使用します');
+      logger.warn('画像読み込みエラー: 元の画像を使用します');
       resolve(blob);
     };
 

@@ -6,6 +6,7 @@
 import { IMAGE_PROCESSING_CONFIG } from "../constants.js";
 import { blobURLManager } from "../blob-url-manager.js";
 import { convertToWebP, supportsWebP } from "../image-converter.js";
+import { logger } from "../../utils/logger.js";
 
 // WebP対応状況（アプリ起動時にチェック）
 let webpSupported = true;
@@ -16,7 +17,7 @@ let webpSupported = true;
  */
 export async function initWebPSupport() {
   webpSupported = await supportsWebP();
-  console.log(
+  logger.log(
     `WebP対応: ${webpSupported ? "サポートされています" : "サポートされていません（フォールバック）"}`,
   );
 }
@@ -73,7 +74,7 @@ export function hasTransparency(img) {
 
     return false;
   } catch (e) {
-    console.warn("透過チェック中にエラー:", e);
+    logger.warn("透過チェック中にエラー:", e);
     return false;
   }
 }
@@ -187,7 +188,7 @@ export async function resizeImageBlob(blob, maxSize = 1000) {
         (resizedBlob) => {
           blobURLManager.revokeURL(blobUrl);
           if (resizedBlob) {
-            console.log(
+            logger.log(
               `画像リサイズ: ${img.width}x${img.height} → ${width}x${height} (${mimeType}, ${Math.round(resizedBlob.size / 1024)}KB)`,
             );
             resolve({
@@ -196,7 +197,7 @@ export async function resizeImageBlob(blob, maxSize = 1000) {
               hasTransparency: transparency,
             });
           } else {
-            console.warn("リサイズ失敗、元の画像を使用");
+            logger.warn("リサイズ失敗、元の画像を使用");
             resolve({ blob, originalType, hasTransparency: transparency });
           }
         },
@@ -207,7 +208,7 @@ export async function resizeImageBlob(blob, maxSize = 1000) {
 
     img.onerror = () => {
       blobURLManager.revokeURL(blobUrl);
-      console.warn("画像読み込み失敗、元の画像を使用");
+      logger.warn("画像読み込み失敗、元の画像を使用");
       resolve({ blob, originalType, hasTransparency: false });
     };
 
@@ -235,7 +236,7 @@ export async function prepareImageBlob(
     throw new Error("画像のリサイズに失敗しました");
   }
 
-  console.log(
+  logger.log(
     `画像準備完了: ${Math.round(resizedBlob.size / 1024)}KB, タイプ=${originalType}, 透過=${hasTransparency}`,
   );
 
@@ -274,7 +275,7 @@ export async function getBlobFromURL(url) {
     const blob = await response.blob();
     return blob;
   } catch (error) {
-    console.warn("URLからBlobの取得に失敗:", error);
+    logger.warn("URLからBlobの取得に失敗:", error);
     return null;
   }
 }

@@ -4,6 +4,7 @@
  */
 
 import { state } from "../../state.js";
+import { logger } from "../../utils/logger.js";
 import { elements } from "../ui.js";
 import { copySticker } from "../sticker.js";
 import { absoluteToHybrid, getCenterCoordinates } from "../coordinate-utils.js";
@@ -29,7 +30,7 @@ export async function handleKeyboardShortcut(e) {
       try {
         await copySticker(state.selectedSticker);
       } catch (err) {
-        console.warn("キーボードショートカットによるコピー処理に失敗:", err);
+        logger.warn("キーボードショートカットによるコピー処理に失敗:", err);
       }
     }
   }
@@ -63,7 +64,7 @@ export async function handleKeyboardShortcut(e) {
         const { pasteSticker } = await import("../sticker.js");
         await pasteSticker(coords.x, coords.yPercent);
       } catch (err) {
-        console.warn("キーボードショートカットによるペースト処理に失敗:", err);
+        logger.warn("キーボードショートカットによるペースト処理に失敗:", err);
       }
       return;
     }

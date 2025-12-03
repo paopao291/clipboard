@@ -4,6 +4,7 @@
  */
 
 import { state } from "../../state.js";
+import { logger } from "../../utils/logger.js";
 import {
   PHYSICS_CONFIG,
   STICKER_DEFAULTS,
@@ -100,9 +101,22 @@ export function startRenderLoop(
     lastPhysicsTime = currentTime;
 
     // 固定タイムステップで物理演算を実行
+    let physicsSteps = 0;
     while (accumulator >= PHYSICS_DELTA) {
       stepPhysics(engine, getStickerBodyMap, getIsGyroActive, updateGravity);
       accumulator -= PHYSICS_DELTA;
+      physicsSteps++;
+    }
+    
+    // デバッグログ（最初の数フレームのみ）
+    if (lastRenderTime < 1000) { // 最初の1秒間のみ
+      const stickerBodyMap = getStickerBodyMap();
+      if (physicsSteps > 0 && stickerBodyMap.size > 0) {
+        const firstBody = stickerBodyMap.values().next().value;
+        if (firstBody) {
+          logger.log(`物理モード: レンダリングループ動作中 (物理ステップ: ${physicsSteps}, ボディ数: ${stickerBodyMap.size}, 最初のボディ位置: x=${firstBody.position.x.toFixed(1)}, y=${firstBody.position.y.toFixed(1)})`);
+        }
+      }
     }
 
     // 補間係数を計算（0.0〜1.0）
@@ -163,7 +177,10 @@ export function stepPhysics(
   // 物理演算を実行
   Engine.update(engine, PHYSICS_DELTA);
 
-  // ジャイロが有効な場合のみ重力を更新（スマホ）
+  // 重力を更新
+  // ジャイロが有効な場合: ジャイロセンサーの値に基づいて重力を更新（スマホ）
+  // ジャイロが無効な場合: 固定重力は既にエンジンに設定されているので更新不要（PC環境）
+  // ただし、PC環境で固定重力を設定した場合は、一度だけ適用する必要がある
   if (getIsGyroActive()) {
     updateGravity(engine);
   }
@@ -335,7 +352,7 @@ function batchUpdateDOM(updatesNeeded) {
       }
     } catch (error) {
       // DOM更新エラーをログに記録（処理は継続）
-      console.warn(`DOM更新エラー: ステッカーID ${update.sticker.id}`, error);
+      logger.warn(`DOM更新エラー: ステッカーID ${update.sticker.id}`, error);
     }
   });
 }

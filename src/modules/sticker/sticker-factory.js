@@ -8,15 +8,13 @@ import { IMAGE_PROCESSING_CONFIG, STICKER_DEFAULTS } from "../constants.js";
 import { saveStickerToDB } from "../db.js";
 import { updateInfoButtonVisibility } from "../ui.js";
 import { blobURLManager } from "../blob-url-manager.js";
-import {
-  prepareImageBlob,
-  getImageDimensions,
-} from "./sticker-processing.js";
+import { prepareImageBlob, getImageDimensions } from "./sticker-processing.js";
 import {
   calculateBorderSettings,
   processBorderAndPadding,
 } from "./sticker-rendering.js";
 import { addStickerToDOM } from "./sticker-core.js";
+import { logger } from "../../utils/logger.js";
 
 /**
  * Blobの処理（パディング、縁取りの適用）
@@ -36,7 +34,7 @@ async function processBlobForSticker(
   imageWidth,
   imageHeight,
 ) {
-  console.log(`画像処理開始: モード=${borderMode}`);
+  logger.log(`画像処理開始: モード=${borderMode}`);
 
   const result = await processBorderAndPadding(
     blob,
@@ -50,7 +48,7 @@ async function processBlobForSticker(
   const blobWithBorderUrl = blobURLManager.createURL(result.resultBlob);
   const paddedBlobUrl = blobURLManager.createURL(result.paddedBlob);
 
-  console.log(
+  logger.log(
     `画像処理完了: 縁取り幅=${result.borderWidth}px, モード=${borderMode}`,
   );
 
@@ -109,7 +107,7 @@ function createStickerDOM(params) {
     hasTransparency,
   );
 
-  console.log(`DOM作成完了: ID=${stickerId}, z-index=${actualZIndex}`);
+  logger.log(`DOM作成完了: ID=${stickerId}, z-index=${actualZIndex}`);
 
   return actualZIndex;
 }
@@ -138,7 +136,7 @@ async function saveDetailedStickerData(
     try {
       blobForBorder = await fetch(blobWithBorderUrl).then((r) => r.blob());
     } catch (fetchErr) {
-      console.warn("縁取り画像取得エラー:", fetchErr);
+      logger.warn("縁取り画像取得エラー:", fetchErr);
     }
   }
 
@@ -160,7 +158,7 @@ async function saveDetailedStickerData(
     timestamp: Date.now(),
   });
 
-  console.log(`ステッカー詳細保存完了: ID=${stickerId}`);
+  logger.log(`ステッカー詳細保存完了: ID=${stickerId}`);
 }
 
 /**
@@ -201,7 +199,7 @@ async function persistNewSticker(stickerData) {
     timestamp: Date.now(),
   });
 
-  console.log(`ステッカー初期保存完了: borderMode=${borderMode}`);
+  logger.log(`ステッカー初期保存完了: borderMode=${borderMode}`);
 
   setTimeout(async () => {
     try {
@@ -213,7 +211,7 @@ async function persistNewSticker(stickerData) {
         hasTransparency,
       );
     } catch (err) {
-      console.warn("ステッカー詳細保存エラー:", err);
+      logger.warn("ステッカー詳細保存エラー:", err);
     }
   }, 100);
 }
@@ -274,7 +272,7 @@ export async function addStickerFromBlob(
     ? processedBlobs.blobWithBorderUrl
     : processedBlobs.paddedBlobUrl;
 
-  console.log(
+  logger.log(
     `表示設定: 縁取り幅=${processedBlobs.borderWidth}px, ` +
       `表示=${hasBorder ? "縁取りあり" : "縁取りなし"}`,
   );

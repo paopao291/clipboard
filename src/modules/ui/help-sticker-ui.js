@@ -1,4 +1,5 @@
 import { HELP_CONFIG, HELP_STICKER_CONFIG } from "../constants.js";
+import { logger } from "../../utils/logger.js";
 import { state } from "../../state.js";
 import { attachStickerEventListeners } from "../events.js";
 import { elements } from "./dom-elements.js";
@@ -222,7 +223,7 @@ export function restoreHelpSticker() {
 
   // テンプレートが存在するか確認
   if (!elements.helpStickerTemplate) {
-    console.error('ヘルプステッカーテンプレートが見つかりません');
+    logger.error('ヘルプステッカーテンプレートが見つかりません');
     return;
   }
 

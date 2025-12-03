@@ -5,6 +5,7 @@ import {
   arrayDataToBlob,
   cloneBlob,
 } from "./modules/blob-utils.js";
+import { logger } from "./utils/logger.js";
 
 /**
  * アプリケーションの状態管理
@@ -322,7 +323,7 @@ class AppState {
         );
         originalBlob = cloneBlob(fetchedBlob);
       } catch (err) {
-        console.warn("originalBlobUrlからのBlob取得エラー:", err);
+        logger.warn("originalBlobUrlからのBlob取得エラー:", err);
       }
     } else if (stickerData.blobUrl) {
       try {
@@ -331,7 +332,7 @@ class AppState {
         );
         originalBlob = cloneBlob(fetchedBlob);
       } catch (err) {
-        console.warn("blobUrlからのBlob取得エラー:", err);
+        logger.warn("blobUrlからのBlob取得エラー:", err);
       }
     }
 
@@ -363,7 +364,7 @@ class AppState {
       await this.saveCopiedStickerData();
     } catch (err) {
       // IndexedDBへの保存が失敗しても、メモリ内のデータは有効なので続行
-      console.warn(
+      logger.warn(
         "IndexedDBへの保存に失敗しました（メモリ内のデータは有効）:",
         err,
       );
@@ -440,7 +441,7 @@ class AppState {
       // 将来的に複数のコピーデータを保持する場合は、タイムスタンプベースのクリーンアップを実装
     } catch (err) {
       // IndexedDBへの保存が失敗しても、メモリ内のデータは有効なのでエラーを投げない
-      console.warn(
+      logger.warn(
         "コピーデータのIndexedDB保存に失敗（メモリ内のデータは有効）:",
         err,
       );
@@ -485,10 +486,10 @@ class AppState {
 
         this.copiedStickerId = stickerId;
         this.copiedStickerData = restoredData;
-        console.log("コピーデータを復元しました:", stickerId);
+        logger.log("コピーデータを復元しました:", stickerId);
       }
     } catch (err) {
-      console.warn("コピーデータのIndexedDB復元に失敗:", err);
+      logger.warn("コピーデータのIndexedDB復元に失敗:", err);
       // 失敗した場合はクリア
       this.copiedStickerData = null;
       this.copiedStickerId = null;
@@ -523,7 +524,7 @@ class AppState {
       };
 
       request.onerror = (event) => {
-        console.error("IndexedDB接続エラー:", event.target.error);
+        logger.error("IndexedDB接続エラー:", event.target.error);
         reject(event.target.error);
       };
     });

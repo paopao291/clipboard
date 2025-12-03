@@ -1,4 +1,5 @@
 // html2canvasはCDNから読み込まれたグローバル変数として使用
+import { logger } from "../utils/logger.js";
 
 const SAVE_CONFIG = {
   SCALE_WITH_BG: 3, // 背景画像がある場合のscale
@@ -171,7 +172,7 @@ export async function handleSaveButton() {
     // ダウンロード
     downloadCanvasAsImage(canvasResult);
   } catch (error) {
-    console.error("Error capturing canvas:", error);
+    logger.error("Error capturing canvas:", error);
   } finally {
     // UI要素を元に戻す
     restoreUIElements(hiddenElements);

@@ -4,6 +4,7 @@
  */
 
 import { state } from "../../state.js";
+import { logger } from "../../utils/logger.js";
 import { resizeImageBlob } from "../sticker.js";
 
 // ========================================
@@ -48,7 +49,7 @@ export async function generateProxyImages() {
       // 画像をプロキシに切り替え
       img.src = proxyUrl;
     } catch (error) {
-      console.warn(
+      logger.warn(
         `プロキシ画像の生成に失敗: ステッカーID ${sticker.id}`,
         error,
       );
@@ -56,7 +57,7 @@ export async function generateProxyImages() {
   });
 
   await Promise.all(proxyPromises);
-  console.log(`物理モード: ${proxyUrlMap.size}個のプロキシ画像を生成しました`);
+  logger.log(`物理モード: ${proxyUrlMap.size}個のプロキシ画像を生成しました`);
 }
 
 /**
@@ -88,5 +89,5 @@ export async function restoreOriginalImages() {
   proxyUrlMap.clear();
   originalUrlMap.clear();
 
-  console.log("物理モード: 元の高解像度画像に復元しました");
+  logger.log("物理モード: 元の高解像度画像に復元しました");
 }

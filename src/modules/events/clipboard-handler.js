@@ -4,6 +4,7 @@
  */
 
 import { state } from "../../state.js";
+import { logger } from "../../utils/logger.js";
 import { elements } from "../ui.js";
 import { addStickerFromBlob, pasteSticker } from "../sticker.js";
 import { showConfirmDialog } from "../dialog.js";
@@ -20,7 +21,7 @@ export async function handlePaste(e) {
   try {
     clipboardText = e.clipboardData.getData("text/plain");
   } catch (err) {
-    console.warn("クリップボードテキスト取得エラー:", err);
+    logger.warn("クリップボードテキスト取得エラー:", err);
   }
 
   let coords;

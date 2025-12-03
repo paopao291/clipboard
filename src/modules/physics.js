@@ -15,6 +15,7 @@
  */
 
 import { state } from "../state.js";
+import { logger } from "../utils/logger.js";
 import { PHYSICS_CONFIG } from "./constants.js";
 
 // 各モジュールをインポート
@@ -38,6 +39,7 @@ import {
   getIsGyroActive,
   setIsGyroActive,
   getGyroPermissionGranted,
+  setFixedGravity,
 } from "./physics/gyro-sensor.js";
 
 import {
@@ -74,54 +76,93 @@ import {
  * @returns {Promise<boolean>} 有効化に成功した場合はtrue（ジャイロ許可が必要な場合は許可状態による）
  */
 export async function enablePhysics() {
-  if (getIsPhysicsEnabled()) return true;
-
-  // エンジンを有効化
-  engineEnablePhysics();
-
-  // ジャイロを無効化（初期はPC想定）
-  setIsGyroActive(false);
-
-  // プロキシ画像を生成（パフォーマンス最適化）
-  await generateProxyImages();
-
-  // 固定されていないシールに物理ボディを追加
-  state.stickers.forEach((sticker) => {
-    if (!sticker.isPinned) {
-      addPhysicsBody(sticker);
-    }
-  });
-
-  // レンダリングループを開始
-  startRenderLoop(
-    getEngine(),
-    getStickerBodyMap,
-    getIsGyroActive,
-    updateGravity,
-  );
-
-  // イベントリスナーを登録
-  setupEventListeners();
-
-  // ジャイロセンサーのチェック
-  const gyroGranted = await checkGyroAvailability();
-
-  // ジャイロ許可が得られなかった場合でも、固定重力（下向き）で物理モードを継続
-  if (!gyroGranted) {
-    console.log("物理モード: ジャイロなしで固定重力モードで動作します");
-    setIsGyroActive(false); // ジャイロを無効化（固定重力を使用）
-    const { showToast } = await import("./ui.js");
-    showToast("物理モード（固定重力）");
+  if (getIsPhysicsEnabled()) {
+    logger.log("物理モード: 既に有効です");
+    return true;
   }
 
-  return true;
+  try {
+    logger.log("物理モード: 有効化を開始します");
+    
+    // エンジンを有効化
+    engineEnablePhysics();
+    logger.log("物理モード: エンジンを有効化しました");
+
+    // PC用: 重力を下向きに設定（リファクタリング前の実装に合わせる）
+    const engine = getEngine();
+    if (engine) {
+      const { X, Y, SCALE } = PHYSICS_CONFIG.GRAVITY;
+      engine.gravity.x = X;
+      engine.gravity.y = Y;
+      engine.gravity.scale = SCALE;
+      logger.log(`物理モード: 固定重力を設定しました (x: ${X}, y: ${Y}, scale: ${SCALE})`);
+    }
+
+    // ジャイロを無効化（初期はPC想定）
+    setIsGyroActive(false);
+
+    // プロキシ画像を生成（パフォーマンス最適化）
+    await generateProxyImages();
+
+    // 固定されていないシールに物理ボディを追加
+    let bodyCount = 0;
+    state.stickers.forEach((sticker) => {
+      if (!sticker.isPinned) {
+        addPhysicsBody(sticker);
+        bodyCount++;
+      }
+    });
+    logger.log(`物理モード: ${bodyCount}個の物理ボディを追加しました`);
+    
+    const stickerBodyMap = getStickerBodyMap();
+    logger.log(`物理モード: 実際に追加された物理ボディ数: ${stickerBodyMap.size}`);
+
+    // レンダリングループを開始
+    startRenderLoop(
+      getEngine(),
+      getStickerBodyMap,
+      getIsGyroActive,
+      updateGravity,
+    );
+
+    // イベントリスナーを登録
+    setupEventListeners();
+
+    // ジャイロセンサーのチェック
+    const gyroGranted = await checkGyroAvailability();
+
+    // ジャイロ許可が得られなかった場合でも、固定重力（下向き）で物理モードを継続
+    if (!gyroGranted) {
+      logger.log("物理モード: ジャイロなしで固定重力モードで動作します");
+      setIsGyroActive(false); // ジャイロを無効化（固定重力を使用）
+      // PC環境では、エンジンの重力は既に physics-engine.js の enablePhysics() で設定されている
+      // stepPhysics() では isGyroActive が false なので updateGravity() は呼ばれず、固定重力がそのまま使われる
+      const { showToast } = await import("./ui.js");
+      showToast("物理モード（固定重力）");
+    }
+
+    logger.log("物理モード: 有効化が完了しました");
+    return true;
+  } catch (error) {
+    logger.error("物理モードの有効化中にエラーが発生しました:", error);
+    // エラーが発生した場合は物理モードを無効化
+    await disablePhysics();
+    throw error;
+  }
 }
 
 /**
  * 物理モードを無効化
  */
 export async function disablePhysics() {
-  if (!getIsPhysicsEnabled()) return;
+  if (!getIsPhysicsEnabled()) {
+    logger.log("物理モード: 既に無効です");
+    return;
+  }
+
+  logger.log("物理モード: 無効化を開始します");
+  const stackTrace = new Error().stack;
+  logger.log("物理モード: disablePhysics()が呼ばれました。スタックトレース:", stackTrace);
 
   // エンジンを無効化
   engineDisablePhysics();

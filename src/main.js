@@ -46,6 +46,17 @@ import {
 } from "./main/button-handlers.js";
 import { handleSaveButton } from "./main/save-handler.js";
 
+// イベントリスナークリーンアップ用の配列
+const eventCleanup = [];
+
+/**
+ * クリーンアップ可能なイベントリスナーを追加
+ */
+function addCleanableListener(target, event, handler, options) {
+  target.addEventListener(event, handler, options);
+  eventCleanup.push(() => target.removeEventListener(event, handler, options));
+}
+
 /**
  * アプリケーションの初期化
  */
@@ -181,5 +192,15 @@ async function init() {
   }, PASTE_AREA_CONFIG.FOCUS_DELAY_MS);
 }
 
+/**
+ * アプリケーション終了時のクリーンアップ
+ */
+function cleanup() {
+  eventCleanup.forEach((cleanupFn) => cleanupFn());
+}
+
 // DOMContentLoaded後に初期化実行
 document.addEventListener("DOMContentLoaded", init);
+
+// ページアンロード時にクリーンアップ（SPAや開発時のホットリロード対応）
+window.addEventListener("beforeunload", cleanup);

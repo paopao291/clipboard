@@ -1,5 +1,6 @@
 import { DB_CONFIG } from "./constants.js";
 import { blobToArrayBuffer, arrayBufferToBlob } from "./blob-utils.js";
+import { logger } from "../utils/logger.js";
 
 let db = null;
 
@@ -24,7 +25,7 @@ export function initDB() {
     const request = indexedDB.open(DB_CONFIG.NAME, DB_CONFIG.VERSION);
 
     request.onerror = () => {
-      console.error("IndexedDB open error");
+      logger.error("IndexedDB open error");
       reject(request.error);
     };
 
@@ -88,7 +89,7 @@ export async function saveStickerToDB(stickerData) {
     const request = objectStore.put(dataToSave);
     return promisifyRequest(request);
   } catch (error) {
-    console.error("DB保存エラー:", error);
+    logger.error("DB保存エラー:", error);
     throw error;
   }
 }
@@ -134,7 +135,7 @@ export async function updateStickerInDB(id, updates) {
     const data = await promisifyRequest(readStore.get(id));
 
     if (!data) {
-      console.warn(`DB更新: ID ${id} のデータが見つかりません`);
+      logger.warn(`DB更新: ID ${id} のデータが見つかりません`);
       return;
     }
 
@@ -161,7 +162,7 @@ export async function updateStickerInDB(id, updates) {
     const putRequest = writeStore.put(data);
     await promisifyRequest(putRequest);
   } catch (e) {
-    console.error("DB更新エラー:", e);
+    logger.error("DB更新エラー:", e);
     throw e; // エラーを再スロー
   }
 }
@@ -222,7 +223,7 @@ export async function loadAllStickersFromDB() {
     stickers.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
     return stickers;
   } catch (e) {
-    console.error("DB読み込みエラー:", e);
+    logger.error("DB読み込みエラー:", e);
     return [];
   }
 }

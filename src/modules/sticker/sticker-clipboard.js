@@ -4,6 +4,7 @@
  */
 
 import { state } from "../../state.js";
+import { logger } from "../../utils/logger.js";
 import { showToast } from "../ui.js";
 
 /**
@@ -17,7 +18,7 @@ import { showToast } from "../ui.js";
  */
 export async function copySticker(sticker) {
   if (!sticker) {
-    console.warn("コピーするステッカーが指定されていません");
+    logger.warn("コピーするステッカーが指定されていません");
     return false;
   }
 
@@ -27,7 +28,7 @@ export async function copySticker(sticker) {
     try {
       await navigator.clipboard.writeText(identifier);
     } catch (clipboardErr) {
-      console.warn(
+      logger.warn(
         "クリップボードへの書き込みに失敗しました（メモリ保存は成功）:",
         clipboardErr,
       );
@@ -36,7 +37,7 @@ export async function copySticker(sticker) {
     showToast("コピーしました");
     return true;
   } catch (err) {
-    console.warn("ステッカーのコピーに失敗しました:", err);
+    logger.warn("ステッカーのコピーに失敗しました:", err);
     showToast("コピーに失敗しました");
     return false;
   }
@@ -61,7 +62,7 @@ export async function pasteSticker(x, yPercent) {
     }
     const retried = state.getCopiedStickerData();
     if (!retried) {
-      console.warn("コピーされたステッカーがありません");
+      logger.warn("コピーされたステッカーがありません");
       return false;
     }
     return await pasteSticker(x, yPercent);
@@ -81,7 +82,7 @@ export async function pasteSticker(x, yPercent) {
         const blobResponse = await fetch(url);
         blob = await blobResponse.blob();
       } catch (fetchErr) {
-        console.warn("URLからのBlob取得に失敗:", fetchErr);
+        logger.warn("URLからのBlob取得に失敗:", fetchErr);
         throw new Error("コピーしたステッカーデータを取得できません");
       }
     } else {
@@ -108,7 +109,7 @@ export async function pasteSticker(x, yPercent) {
 
     return true;
   } catch (err) {
-    console.warn("ステッカーのペーストに失敗しました:", err);
+    logger.warn("ステッカーのペーストに失敗しました:", err);
     showToast("ペーストに失敗しました");
     return false;
   }

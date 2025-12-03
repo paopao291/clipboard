@@ -6,9 +6,17 @@
 import { updateStickerInDB } from "../db.js";
 import { showToast, updateInfoButtonVisibility } from "../ui.js";
 import { blobURLManager } from "../blob-url-manager.js";
-import { resizeImageBlob, getImageTypeInfo, getImageDimensions } from "./sticker-processing.js";
-import { processBorderAndPadding, updateStickerImageUrl } from "./sticker-rendering.js";
+import {
+  resizeImageBlob,
+  getImageTypeInfo,
+  getImageDimensions,
+} from "./sticker-processing.js";
+import {
+  processBorderAndPadding,
+  updateStickerImageUrl,
+} from "./sticker-rendering.js";
 import { releaseOldUrls } from "./sticker-core.js";
+import { logger } from "../../utils/logger.js";
 
 /**
  * 背景除去処理（@imgly/background-removalを使用）
@@ -153,13 +161,13 @@ async function trimTransparentEdges(blob) {
       }
 
       const opaqueRatio = opaquePixels / totalPixels;
-      console.log(
+      logger.log(
         `背景除去結果: 不透明ピクセル ${opaquePixels}/${totalPixels} (${(opaqueRatio * 100).toFixed(2)}%)`,
       );
 
       if (opaqueRatio < 0.01) {
         blobURLManager.revokeURL(blobUrl);
-        console.warn(
+        logger.warn(
           "背景除去後、対象物がほとんど見つかりませんでした。元の画像を使用します。",
         );
         resolve({ blob: blob, isValid: false });
@@ -174,7 +182,7 @@ async function trimTransparentEdges(blob) {
 
       if (minX >= maxX || minY >= maxY) {
         blobURLManager.revokeURL(blobUrl);
-        console.warn("トリミング範囲が無効です。元の画像を返します。");
+        logger.warn("トリミング範囲が無効です。元の画像を返します。");
         resolve({ blob: blob, isValid: false });
         return;
       }
@@ -224,7 +232,7 @@ async function trimTransparentEdges(blob) {
  */
 async function checkTransparencyRatio(blob, threshold = 0.9) {
   if (!blob || !(blob instanceof Blob)) {
-    console.warn("無効なBlobが渡されました");
+    logger.warn("無効なBlobが渡されました");
     return false;
   }
 
@@ -255,20 +263,20 @@ async function checkTransparencyRatio(blob, threshold = 0.9) {
         }
 
         const transparentRatio = transparentPixels / totalPixels;
-        console.log(
+        logger.log(
           `透明ピクセル: ${transparentPixels}/${totalPixels} (${(transparentRatio * 100).toFixed(2)}%)`,
         );
 
         resolve(transparentRatio >= threshold);
       } catch (e) {
-        console.warn("透明度チェックエラー:", e);
+        logger.warn("透明度チェックエラー:", e);
         resolve(false);
       }
     };
 
     img.onerror = () => {
       blobURLManager.revokeURL(blobUrl);
-      console.warn("画像読み込みエラー");
+      logger.warn("画像読み込みエラー");
       resolve(false);
     };
 
@@ -283,7 +291,7 @@ async function checkTransparencyRatio(blob, threshold = 0.9) {
 export async function toggleStickerBgRemoval(sticker) {
   try {
     if (sticker.bgRemovalProcessed) {
-      console.log("既に背景除去済みです");
+      logger.log("既に背景除去済みです");
       return;
     }
 
@@ -312,7 +320,7 @@ export async function toggleStickerBgRemoval(sticker) {
 
     finalizeBgRemoval(sticker, removedBgBlob);
   } catch (error) {
-    console.error("背景除去エラー:", error);
+    logger.error("背景除去エラー:", error);
     sticker.element.classList.remove("processing");
     showToast(error.message || "背景除去に失敗しました");
   }
@@ -356,10 +364,7 @@ function updateStickerBaseImage(sticker, newBlob) {
  */
 async function applyBorderAndPadding(sticker) {
   const hasBorder = sticker.hasBorder;
-  const borderMode =
-    sticker.borderMode !== undefined
-      ? sticker.borderMode
-      : 2;
+  const borderMode = sticker.borderMode !== undefined ? sticker.borderMode : 2;
 
   const imageDimensions = await getImageDimensions(sticker.originalBlob);
 
@@ -369,7 +374,7 @@ async function applyBorderAndPadding(sticker) {
       sticker,
     });
 
-  console.log(
+  logger.log(
     `applyBorderAndPadding: originalType=${originalType}, transparency=${transparency}`,
   );
 
