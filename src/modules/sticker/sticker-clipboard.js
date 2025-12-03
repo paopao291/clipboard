@@ -72,42 +72,21 @@ export async function pasteSticker(x, yPercent) {
     const adjustedYPercent = typeof yPercent === "number" ? yPercent : 50;
     const xOffset = typeof x === "number" ? x : 0;
 
-    let blob = null;
-
-    if (copiedData.originalBlob) {
-      blob = copiedData.originalBlob;
-    } else if (copiedData.originalBlobUrl || copiedData.blobUrl) {
-      try {
-        const url = copiedData.originalBlobUrl || copiedData.blobUrl;
-        const blobResponse = await fetch(url);
-        blob = await blobResponse.blob();
-      } catch (fetchErr) {
-        logger.warn("URLからのBlob取得に失敗:", fetchErr);
-        throw new Error("コピーしたステッカーデータを取得できません");
-      }
-    } else {
-      throw new Error("コピーしたステッカーデータが無効です");
-    }
-
-    if (!blob) {
-      throw new Error("有効な画像データがありません");
-    }
+    const blob = await getBlobFromCopiedData(copiedData);
 
     // 動的インポートで循環参照を回避
     const { addStickerFromBlob } = await import("./sticker-factory.js");
-    await addStickerFromBlob(
+    await addStickerFromBlob({
       blob,
-      xOffset,
-      adjustedYPercent,
-      copiedData.width,
-      copiedData.rotation,
-      null,
-      null,
-      copiedData.hasBorder,
-      copiedData.borderMode,
-      copiedData.originalType,
-      copiedData.hasTransparency,
-    );
+      x: xOffset,
+      yPercent: adjustedYPercent,
+      width: copiedData.width,
+      rotation: copiedData.rotation,
+      hasBorder: copiedData.hasBorder,
+      borderMode: copiedData.borderMode,
+      storedOriginalType: copiedData.originalType,
+      storedHasTransparency: copiedData.hasTransparency,
+    });
 
     return true;
   } catch (err) {
@@ -115,4 +94,33 @@ export async function pasteSticker(x, yPercent) {
     showToast("ペーストに失敗しました");
     return false;
   }
+}
+
+/**
+ * コピーデータからBlobを取得
+ * @param {Object} copiedData - コピーされたステッカーデータ
+ * @returns {Promise<Blob>} 画像Blob
+ * @throws {Error} Blobが取得できない場合
+ */
+async function getBlobFromCopiedData(copiedData) {
+  if (copiedData.originalBlob) {
+    return copiedData.originalBlob;
+  }
+
+  if (copiedData.originalBlobUrl || copiedData.blobUrl) {
+    try {
+      const url = copiedData.originalBlobUrl || copiedData.blobUrl;
+      const blobResponse = await fetch(url);
+      const blob = await blobResponse.blob();
+      if (!blob) {
+        throw new Error("Blobが空です");
+      }
+      return blob;
+    } catch (fetchErr) {
+      logger.warn("URLからのBlob取得に失敗:", fetchErr);
+      throw new Error("コピーしたステッカーデータを取得できません");
+    }
+  }
+
+  throw new Error("コピーしたステッカーデータが無効です");
 }

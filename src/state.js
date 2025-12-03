@@ -295,6 +295,49 @@ class AppState {
   }
 
   /**
+   * ステッカーデータからオリジナルBlobを取得
+   * @param {Object} stickerData - ステッカーデータ
+   * @returns {Promise<Blob>} クローンされたBlob
+   * @throws {Error} Blobが取得できない場合
+   */
+  async getOriginalBlobFromSticker(stickerData) {
+    // 優先順位：originalBlob > blob > originalBlobUrl > blobUrl
+    if (stickerData.originalBlob) {
+      return cloneBlob(stickerData.originalBlob);
+    }
+
+    if (stickerData.blob) {
+      return cloneBlob(stickerData.blob);
+    }
+
+    if (stickerData.originalBlobUrl) {
+      try {
+        const fetchedBlob = await fetch(stickerData.originalBlobUrl).then((r) =>
+          r.blob(),
+        );
+        return cloneBlob(fetchedBlob);
+      } catch (err) {
+        logger.warn("originalBlobUrlからのBlob取得エラー:", err);
+        throw new Error("originalBlobUrlからのBlob取得に失敗しました");
+      }
+    }
+
+    if (stickerData.blobUrl) {
+      try {
+        const fetchedBlob = await fetch(stickerData.blobUrl).then((r) =>
+          r.blob(),
+        );
+        return cloneBlob(fetchedBlob);
+      } catch (err) {
+        logger.warn("blobUrlからのBlob取得エラー:", err);
+        throw new Error("blobUrlからのBlob取得に失敗しました");
+      }
+    }
+
+    throw new Error("コピーする画像データを取得できませんでした");
+  }
+
+  /**
    * ステッカーのコピーデータを保存
    * @param {Object} stickerData - コピーするステッカーデータ
    * @returns {string} コピー識別子
@@ -309,42 +352,13 @@ class AppState {
       this.copiedStickerData.originalBlob = null;
     }
 
-    // オリジナル画像のBlobを取得（優先順位：originalBlob > blob > URL取得）
-    let originalBlob = null;
-    if (stickerData.originalBlob) {
-      // Blobをクローン（元のステッカーが削除されても影響を受けないように）
-      originalBlob = cloneBlob(stickerData.originalBlob);
-    } else if (stickerData.blob) {
-      originalBlob = cloneBlob(stickerData.blob);
-    } else if (stickerData.originalBlobUrl) {
-      try {
-        const fetchedBlob = await fetch(stickerData.originalBlobUrl).then((r) =>
-          r.blob(),
-        );
-        originalBlob = cloneBlob(fetchedBlob);
-      } catch (err) {
-        logger.warn("originalBlobUrlからのBlob取得エラー:", err);
-      }
-    } else if (stickerData.blobUrl) {
-      try {
-        const fetchedBlob = await fetch(stickerData.blobUrl).then((r) =>
-          r.blob(),
-        );
-        originalBlob = cloneBlob(fetchedBlob);
-      } catch (err) {
-        logger.warn("blobUrlからのBlob取得エラー:", err);
-      }
-    }
-
-    // originalBlobが取得できなかった場合はエラー
-    if (!originalBlob) {
-      throw new Error("コピーする画像データを取得できませんでした");
-    }
+    // オリジナル画像のBlobを取得
+    const originalBlob = await this.getOriginalBlobFromSticker(stickerData);
 
     // コピーするデータから必要な情報だけ取り出す
     const copiedData = {
       // Blobデータを直接保持（リロード後も有効）
-      originalBlob: originalBlob, // 元画像Blob（クローン済み）
+      originalBlob, // 元画像Blob（クローン済み）
       // サイズと表示に関する属性
       width: stickerData.width,
       rotation: stickerData.rotation,

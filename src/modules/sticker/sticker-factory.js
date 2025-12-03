@@ -217,32 +217,13 @@ async function persistNewSticker(stickerData) {
 }
 
 /**
- * Blobからシールを追加（リファクタリング版）
+ * 画像タイプ情報を解決（保存された値があれば優先、なければ検出）
  * @param {Blob} blob - 画像Blob
- * @param {number} x - 画面中央からのX座標オフセット（px）
- * @param {number} yPercent - 画面高さに対するY座標の割合（0-100）
- * @param {number} width - 幅（px）
- * @param {number} rotation - 回転角度
- * @param {number|null} id - シールID
- * @param {number|null} zIndex - z-index
- * @param {boolean} hasBorder - 縁取りあり
- * @param {number} borderMode - 縁取りモード（0:なし, 1:2.5%, 2:5%）
- * @param {string|null} storedOriginalType - 保存された画像タイプ（コピー・ペースト時に使用）
- * @param {boolean|null} storedHasTransparency - 保存された透過情報（コピー・ペースト時に使用）
+ * @param {string|null} storedOriginalType - 保存された画像タイプ
+ * @param {boolean|null} storedHasTransparency - 保存された透過情報
+ * @returns {Promise<{originalType: string, hasTransparency: boolean}>}
  */
-export async function addStickerFromBlob(
-  blob,
-  x,
-  yPercent,
-  width = STICKER_DEFAULTS.WIDTH,
-  rotation = STICKER_DEFAULTS.ROTATION,
-  id = null,
-  zIndex = null,
-  hasBorder = STICKER_DEFAULTS.HAS_BORDER,
-  borderMode = STICKER_DEFAULTS.BORDER_MODE,
-  storedOriginalType = null,
-  storedHasTransparency = null,
-) {
+async function resolveImageTypeInfo(blob, storedOriginalType, storedHasTransparency) {
   const {
     blob: resizedBlob,
     originalType: detectedOriginalType,
@@ -251,16 +232,94 @@ export async function addStickerFromBlob(
 
   // 保存された値がある場合はそれを使用（コピー・ペースト時に縁取りの方向を保持）
   const originalType = storedOriginalType || detectedOriginalType;
-  const hasTransparency = storedHasTransparency !== null ? storedHasTransparency : detectedHasTransparency;
+  const hasTransparency =
+    storedHasTransparency !== null ? storedHasTransparency : detectedHasTransparency;
 
-  const stickerId = id || Date.now();
+  return {
+    blob: resizedBlob,
+    originalType,
+    hasTransparency,
+  };
+}
+
+/**
+ * ステッカー作成のオプション
+ * @typedef {Object} StickerCreationOptions
+ * @property {Blob} blob - 画像Blob
+ * @property {number} x - 画面中央からのX座標オフセット（px）
+ * @property {number} yPercent - 画面高さに対するY座標の割合（0-100）
+ * @property {number} [width] - 幅（px）
+ * @property {number} [rotation] - 回転角度
+ * @property {number|null} [id] - シールID
+ * @property {number|null} [zIndex] - z-index
+ * @property {boolean} [hasBorder] - 縁取りあり
+ * @property {number} [borderMode] - 縁取りモード（0:なし, 1:2.5%, 2:5%）
+ * @property {string|null} [storedOriginalType] - 保存された画像タイプ（コピー・ペースト時に使用）
+ * @property {boolean|null} [storedHasTransparency] - 保存された透過情報（コピー・ペースト時に使用）
+ */
+
+/**
+ * Blobからシールを追加（リファクタリング版）
+ * 
+ * 使用例:
+ * - オプションオブジェクト形式: addStickerFromBlob({ blob, x, yPercent, ... })
+ * - 位置引数形式（後方互換性）: addStickerFromBlob(blob, x, yPercent)
+ * 
+ * @param {Blob|StickerCreationOptions} blobOrOptions - 画像Blobまたはオプションオブジェクト
+ * @param {number} [x] - 画面中央からのX座標オフセット（px）（位置引数形式の場合）
+ * @param {number} [yPercent] - 画面高さに対するY座標の割合（0-100）（位置引数形式の場合）
+ * @returns {Promise<void>}
+ */
+export async function addStickerFromBlob(blobOrOptions, x, yPercent) {
+  // オプションオブジェクト形式か位置引数形式かを判定
+  let options;
+  if (blobOrOptions instanceof Blob) {
+    // 位置引数形式（後方互換性）
+    options = {
+      blob: blobOrOptions,
+      x: typeof x === "number" ? x : 0,
+      yPercent: typeof yPercent === "number" ? yPercent : 50,
+      width: STICKER_DEFAULTS.WIDTH,
+      rotation: STICKER_DEFAULTS.ROTATION,
+      id: null,
+      zIndex: null,
+      hasBorder: STICKER_DEFAULTS.HAS_BORDER,
+      borderMode: STICKER_DEFAULTS.BORDER_MODE,
+      storedOriginalType: null,
+      storedHasTransparency: null,
+    };
+  } else {
+    // オプションオブジェクト形式
+    options = {
+      blob: blobOrOptions.blob,
+      x: blobOrOptions.x ?? 0,
+      yPercent: blobOrOptions.yPercent ?? 50,
+      width: blobOrOptions.width ?? STICKER_DEFAULTS.WIDTH,
+      rotation: blobOrOptions.rotation ?? STICKER_DEFAULTS.ROTATION,
+      id: blobOrOptions.id ?? null,
+      zIndex: blobOrOptions.zIndex ?? null,
+      hasBorder: blobOrOptions.hasBorder ?? STICKER_DEFAULTS.HAS_BORDER,
+      borderMode: blobOrOptions.borderMode ?? STICKER_DEFAULTS.BORDER_MODE,
+      storedOriginalType: blobOrOptions.storedOriginalType ?? null,
+      storedHasTransparency: blobOrOptions.storedHasTransparency ?? null,
+    };
+  }
+
+  const { blob: resizedBlob, originalType, hasTransparency } =
+    await resolveImageTypeInfo(
+      options.blob,
+      options.storedOriginalType,
+      options.storedHasTransparency,
+    );
+
+  const stickerId = options.id || Date.now();
 
   const imageDimensions = await getImageDimensions(resizedBlob);
 
   const borderSettings = calculateBorderSettings(
     originalType,
     hasTransparency,
-    borderMode,
+    options.borderMode,
     imageDimensions.width,
     imageDimensions.height,
   );
@@ -276,26 +335,26 @@ export async function addStickerFromBlob(
 
   const originalBlobUrl = blobURLManager.createURL(resizedBlob);
 
-  const displayUrl = hasBorder
+  const displayUrl = options.hasBorder
     ? processedBlobs.blobWithBorderUrl
     : processedBlobs.paddedBlobUrl;
 
   logger.log(
     `表示設定: 縁取り幅=${processedBlobs.borderWidth}px, ` +
-      `表示=${hasBorder ? "縁取りあり" : "縁取りなし"}`,
+      `表示=${options.hasBorder ? "縁取りあり" : "縁取りなし"}`,
   );
 
   const actualZIndex = createStickerDOM({
     url: displayUrl,
     blobUrl: originalBlobUrl,
     blobWithBorderUrl: processedBlobs.blobWithBorderUrl,
-    x,
-    yPercent,
-    width,
-    rotation,
+    x: options.x,
+    yPercent: options.yPercent,
+    width: options.width,
+    rotation: options.rotation,
     stickerId,
-    zIndex,
-    hasBorder,
+    zIndex: options.zIndex,
+    hasBorder: options.hasBorder,
     borderWidth: processedBlobs.borderWidth,
     borderMode: borderSettings.borderMode,
     originalBlobUrl,
@@ -307,12 +366,12 @@ export async function addStickerFromBlob(
   await persistNewSticker({
     stickerId,
     resizedBlob,
-    x,
-    yPercent,
-    width,
-    rotation,
+    x: options.x,
+    yPercent: options.yPercent,
+    width: options.width,
+    rotation: options.rotation,
     actualZIndex,
-    hasBorder,
+    hasBorder: options.hasBorder,
     borderMode: borderSettings.borderMode,
     originalType,
     hasTransparency,
