@@ -121,6 +121,7 @@ export async function enablePhysics() {
     startRenderLoop(
       getEngine(),
       getStickerBodyMap,
+      getIsPhysicsEnabled,
       getIsGyroActive,
       updateGravity,
     );

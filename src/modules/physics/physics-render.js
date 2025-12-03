@@ -123,7 +123,7 @@ export function startRenderLoop(
     const alpha = accumulator / PHYSICS_DELTA;
 
     // 補間してレンダリング
-    renderWithInterpolation(alpha, getStickerBodyMap);
+    renderWithInterpolation(alpha, getStickerBodyMap());
   };
 
   renderLoopId = requestAnimationFrame(renderLoop);
