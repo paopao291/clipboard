@@ -9,21 +9,6 @@
 </head>
 
 <body>
-    <!-- SVGフィルタ定義：シンプルな縁取り（Safari対応版） -->
-    <svg style="position: absolute; width: 0; height: 0" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-            <filter id="outline-filter" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB">
-                <feMorphology operator="dilate" radius="12" in="SourceAlpha" result="dilated" />
-                <feFlood flood-color="#ffffff" flood-opacity="1" result="white" />
-                <feComposite in="white" in2="dilated" operator="in" result="outline" />
-                <feMerge>
-                    <feMergeNode in="outline" />
-                    <feMergeNode in="SourceGraphic" />
-                </feMerge>
-            </filter>
-        </defs>
-    </svg>
-
     <div id="app">
         <!-- 隠しファイル入力 -->
         <input type="file" id="galleryInput" accept="image/*" style="display: none" multiple />
