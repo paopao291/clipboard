@@ -383,7 +383,6 @@ body.has-background-image .background-btn .background-icon-remove {
     height: var(--size-icon-lg);
 }
 
-
 /* ボタン：共通スタイル */
 .header-btn,
 .selection-btn,
@@ -455,7 +454,6 @@ body.has-background-image .background-btn .background-icon-remove {
     height: var(--size-icon-sm);
 }
 
-
 .add-btn.hidden {
     opacity: 0;
     visibility: hidden;
@@ -471,7 +469,6 @@ body.has-background-image .background-btn .background-icon-remove {
     transform: scale(0.8);
     pointer-events: none;
 }
-
 
 /* フッターボタン：背景色とシャドウ */
 .footer-btn {
@@ -746,7 +743,7 @@ body.has-background-image .background-btn .background-icon-remove {
         transform: scale(1);
     }
     25% {
-        transform: scale(0.97);
+        transform: scale(0.95);
     }
     100% {
         transform: scale(1);
