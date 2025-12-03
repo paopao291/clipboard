@@ -54,11 +54,41 @@
     /* スペーシングシステム */
     --spacing-sm: 20px;
     --spacing-base: 24px;
+    --spacing-xs: 8px;
+    --spacing-gap: 12px;
 
     /* アニメーション：Apple標準 */
     --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
     --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
+
+    /* ボタン背景色 */
+    --button-bg-header: rgba(33, 33, 33, 0.15);
+    --button-bg-header-hover: rgba(33, 33, 33, 0.25);
+    --button-bg-selection: rgba(33, 33, 33, 0.3);
+    --button-bg-selection-hover: rgba(33, 33, 33, 0.4);
+    --button-border-overlay: rgba(255, 255, 255, 0.3);
+
+    /* z-index階層 */
+    --z-base: 1;
+    --z-overlay: 5000;
+    --z-sticker-selected: 6000;
+    --z-buttons: 10000;
+    --z-toast: 10001;
+    --z-dialog: 15000;
+    --z-resizing: 999999;
+
+    /* その他 */
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --radius-lg: 14px;
+    --radius-xl: 30px;
+    --icon-size-mobile: 30px;
+    --scrollbar-width: 8px;
 }
+
+/* ============================================
+   リセット・基本設定
+   ============================================ */
 
 * {
     margin: 0;
@@ -106,6 +136,10 @@ button {
     height: 100%;
 }
 
+/* ============================================
+   UI要素：オーバーレイ・ヒント
+   ============================================ */
+
 /* 選択時のオーバーレイ */
 .selection-overlay {
     position: fixed;
@@ -114,7 +148,7 @@ button {
     width: 100%;
     height: 100%;
     background: var(--color-overlay-dark);
-    z-index: 5000;
+    z-index: var(--z-overlay);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.25s var(--ease-out-expo);
@@ -141,7 +175,7 @@ button {
     width: 100%;
     height: 100%;
     pointer-events: auto;
-    z-index: 1;
+    z-index: var(--z-base);
     border: none;
     outline: none;
     resize: none;
@@ -155,105 +189,18 @@ button {
     transition: none;
 }
 
-@media (max-width: 768px) {
-    .desktop-hint {
-        display: none;
-    }
+/* ============================================
+   ボタン群：共通スタイル
+   ============================================ */
 
-    .mobile-hint {
-        display: block;
-    }
-
-    /* スマホでペーストエリアを有効化 */
-    .paste-area {
-        pointer-events: auto;
-        z-index: 1;
-        -webkit-user-select: text; /* iOSでペーストメニューを出すため */
-        user-select: text;
-        -webkit-touch-callout: default; /* iOS Safari用: 長押しメニューを有効化 */
-    }
-
-    /* スマホ：ボタン配置調整 */
-    .header-buttons {
-        top: var(--spacing-sm);
-        right: var(--spacing-sm);
-    }
-
-    /* 選択ボタン群 */
-    .selection-buttons {
-        top: var(--spacing-sm);
-        right: var(--spacing-sm);
-    }
-
-    .footer-buttons {
-        bottom: var(--spacing-sm);
-        left: var(--spacing-sm);
-    }
-
-    .add-btn {
-        bottom: var(--spacing-sm);
-        right: var(--spacing-sm);
-        width: var(--size-button-mobile-lg);
-        height: var(--size-button-mobile-lg);
-    }
-
-    .add-btn svg {
-        width: 30px;
-        height: 30px;
-    }
-
-    /* ヘルプステッカーのスマホ対応 */
-    .help-sticker-content {
-        padding: var(--spacing-base);
-    }
-
-    .help-sticker-content h2 {
-        font-size: var(--font-xl);
-        margin-bottom: var(--spacing-base);
-        letter-spacing: -0.5px;
-    }
-
-    .help-section h3 {
-        font-size: var(--font-base);
-        margin-top: 18px;
-    }
-
-    .help-section p {
-        font-size: var(--font-sm);
-    }
-
-    /* トーストのスマホ対応 */
-    .toast {
-        bottom: calc(var(--spacing-sm) * 2 + var(--size-button-mobile-lg));
-        font-size: var(--font-sm);
-        padding: 10px 16px;
-        max-width: 85%;
-    }
-
-    /* アクションボタンがある場合は右paddingを小さく */
-    .toast:has(.toast-action) {
-        padding-right: 10px;
-    }
-
-    .toast-message {
-        flex: 0 0 auto;
-        white-space: nowrap;
-    }
-
-    .toast-action {
-        font-size: var(--font-sm);
-        padding: 5px 14px;
-    }
-}
-
-/* 選択中のステッカー操作ボタン群のラッパー */
-.selection-buttons {
+/* ボタン群のラッパー：共通スタイル */
+.header-buttons,
+.selection-buttons,
+.footer-buttons {
     position: fixed;
-    top: var(--spacing-base);
-    right: var(--spacing-base);
     display: flex;
-    gap: 12px;
-    z-index: 10000;
+    gap: var(--spacing-gap);
+    z-index: var(--z-buttons);
     transition:
         opacity 0.3s var(--ease-out-expo),
         visibility 0.3s;
@@ -261,16 +208,37 @@ button {
     visibility: visible;
 }
 
-.selection-buttons.hidden {
+/* ボタン群：個別の配置 */
+.header-buttons,
+.selection-buttons {
+    top: var(--spacing-base);
+    right: var(--spacing-base);
+}
+
+.footer-buttons {
+    bottom: var(--spacing-base);
+    left: var(--spacing-base);
+}
+
+/* ボタン群：非表示状態 */
+.header-buttons.hidden,
+.selection-buttons.hidden,
+.footer-buttons.hidden {
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
 }
 
-/* 非表示時は各ボタンを個別に縮小 */
-.selection-buttons.hidden .selection-btn {
+/* ボタン群：非表示時の子要素縮小 */
+.header-buttons.hidden .header-btn,
+.selection-buttons.hidden .selection-btn,
+.footer-buttons.hidden .footer-btn {
     transform: scale(0.8);
 }
+
+/* ============================================
+   ボタン：アイコン切り替え
+   ============================================ */
 
 /* 背景画像ボタン：アイコンの切り替え */
 .background-btn .background-icon-add {
@@ -298,7 +266,6 @@ body.has-background-image .background-btn .background-icon-remove {
     display: none;
 }
 
-/* 固定ボタン：固定状態のスタイル */
 .selection-btn.pinned .pin-icon-outline {
     display: none;
 }
@@ -316,7 +283,6 @@ body.has-background-image .background-btn .background-icon-remove {
     display: none;
 }
 
-/* 背景除去ボタン：背景除去済み状態のスタイル */
 .selection-btn.bg-removed .bg-removal-icon-on {
     display: none;
 }
@@ -324,6 +290,10 @@ body.has-background-image .background-btn .background-icon-remove {
 .selection-btn.bg-removed .bg-removal-icon-off {
     display: block;
 }
+
+/* ============================================
+   UI要素：ボタン（個別）
+   ============================================ */
 
 /* ゴミ箱ボタン */
 .trash-btn {
@@ -340,7 +310,7 @@ body.has-background-image .background-btn .background-icon-remove {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 10000;
+    z-index: var(--z-buttons);
     color: var(--color-white);
     transition: all 0.3s var(--ease-out-expo);
     filter: var(--shadow-button-active);
@@ -359,7 +329,7 @@ body.has-background-image .background-btn .background-icon-remove {
 /* ゴミ箱ラベル */
 .trash-tooltip {
     position: absolute;
-    bottom: calc(100% + 8px);
+    bottom: calc(100% + var(--spacing-xs));
     left: 50%;
     transform: translateX(-50%);
     font-size: var(--font-sm);
@@ -378,13 +348,13 @@ body.has-background-image .background-btn .background-icon-remove {
     width: var(--size-button-mobile-lg);
     height: var(--size-button-mobile-lg);
     background: var(--color-black);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid var(--button-border-overlay);
     border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 10000;
+    z-index: var(--z-buttons);
     color: var(--color-white);
     transition: all 0.3s var(--ease-out-expo);
     box-shadow: var(--shadow-md), var(--shadow-sm);
@@ -413,32 +383,13 @@ body.has-background-image .background-btn .background-icon-remove {
     height: var(--size-icon-lg);
 }
 
-/* 右上ボタン群のラッパー */
-.header-buttons {
-    position: fixed;
-    top: var(--spacing-base);
-    right: var(--spacing-base);
-    display: flex;
-    gap: 12px;
-    z-index: 10000;
-    transition:
-        opacity 0.3s var(--ease-out-expo),
-        visibility 0.3s;
-    opacity: 1;
-    visibility: visible;
-}
 
-/* 非表示時は各ボタンを個別に縮小 */
-.header-buttons.hidden .header-btn {
-    transform: scale(0.8);
-}
-
-/* 右上アイコンボタン：基本スタイル（共通） */
+/* ボタン：共通スタイル */
 .header-btn,
-.selection-btn {
+.selection-btn,
+.footer-btn {
     width: var(--size-button-mobile);
     height: var(--size-button-mobile);
-    color: var(--color-white);
     border: none;
     border-radius: 50%;
     cursor: pointer;
@@ -451,59 +402,59 @@ body.has-background-image .background-btn .background-icon-remove {
     transform: scale(1);
 }
 
+/* ボタン：背景画像がある場合のボーダー */
 .has-background-image .header-btn,
 .has-background-image .selection-btn {
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid var(--button-border-overlay);
 }
 
-/* header-buttons内のボタン：グレー背景 */
+/* ヘッダー・選択ボタン：共通スタイル */
+.header-btn,
+.selection-btn {
+    color: var(--color-white);
+}
+
+/* ヘッダーボタン：背景色 */
 .header-btn {
-    background: rgba(33, 33, 33, 0.15);
+    background: var(--button-bg-header);
 }
 
 @media (hover: hover) {
     .header-btn:hover {
         transform: scale(1.05);
-        background: rgba(33, 33, 33, 0.25);
+        background: var(--button-bg-header-hover);
     }
 }
 
 .header-btn:active {
     transform: scale(0.95);
-    background: rgba(33, 33, 33, 0.25);
+    background: var(--button-bg-header-hover);
 }
 
-/* selection-buttons内のボタン：白背景 */
+/* 選択ボタン：背景色 */
 .selection-btn {
-    background: rgba(33, 33, 33, 0.3);
+    background: var(--button-bg-selection);
 }
 
 @media (hover: hover) {
     .selection-btn:hover {
         transform: scale(1.05);
-        background: rgba(33, 33, 33, 0.4);
+        background: var(--button-bg-selection-hover);
     }
 }
 
 .selection-btn:active {
     transform: scale(0.95);
-    background: rgba(33, 33, 33, 0.4);
+    background: var(--button-bg-selection-hover);
 }
 
-/* 右上アイコンボタン：SVGサイズ */
+/* ボタン：SVGサイズ */
 .header-btn svg,
 .selection-btn svg {
     width: var(--size-icon-sm);
     height: var(--size-icon-sm);
 }
 
-/* ボタン共通：非表示状態 */
-.header-buttons.hidden,
-.footer-buttons.hidden {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-}
 
 .add-btn.hidden {
     opacity: 0;
@@ -521,43 +472,12 @@ body.has-background-image .background-btn .background-icon-remove {
     pointer-events: none;
 }
 
-/* 左下ボタン群のラッパー */
-.footer-buttons {
-    position: fixed;
-    bottom: var(--spacing-base);
-    left: var(--spacing-base);
-    display: flex;
-    gap: 12px;
-    z-index: 10000;
-    transition:
-        opacity 0.3s var(--ease-out-expo),
-        visibility 0.3s;
-    opacity: 1;
-    visibility: visible;
-}
 
-/* 非表示時は各ボタンを個別に縮小 */
-.footer-buttons.hidden .footer-btn {
-    transform: scale(0.8);
-}
-
-/* 左下ボタン：基本スタイル（共通） */
+/* フッターボタン：背景色とシャドウ */
 .footer-btn {
-    width: var(--size-button-mobile);
-    height: var(--size-button-mobile);
     background: var(--color-white-translucent);
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     color: #333;
-    transition: all 0.3s var(--ease-out-expo);
     box-shadow: var(--shadow-base), var(--shadow-sm);
-    opacity: 1;
-    visibility: visible;
-    transform: scale(1);
 }
 
 @media (hover: hover) {
@@ -577,10 +497,15 @@ body.has-background-image .background-btn .background-icon-remove {
         var(--shadow-sm);
 }
 
+/* フッターボタン：SVGサイズ */
 .footer-btn svg {
     width: var(--size-icon-md);
     height: var(--size-icon-md);
 }
+
+/* ============================================
+   ボタン：状態別スタイル
+   ============================================ */
 
 /* 物理モードボタン：アクティブ状態 */
 .physics-btn.active:not(.hidden) {
@@ -602,7 +527,10 @@ body.has-background-image .background-btn .background-icon-remove {
     background: rgb(255, 105, 51);
 }
 
-/* キャンバス：ミニマルな空間 */
+/* ============================================
+   キャンバス
+   ============================================ */
+
 .canvas {
     width: 100%;
     height: 100%;
@@ -614,7 +542,10 @@ body.has-background-image .background-btn .background-icon-remove {
     touch-action: manipulation;
 }
 
-/* ヘルプステッカー：操作方法をステッカーとして表示 */
+/* ============================================
+   ステッカー：ヘルプステッカー
+   ============================================ */
+
 .sticker.help-sticker {
     /* 外側のコンテナはクリック不可にして、中のwrapperでクリックを受ける */
     pointer-events: none;
@@ -631,16 +562,14 @@ body.has-background-image .background-btn .background-icon-remove {
     width: 100%;
     height: 100%;
     transition: transform 0.2s var(--ease-out-expo);
-    /* ここがクリック可能な領域（scaleが適用される層） */
     pointer-events: auto;
     cursor: grab;
-    /* iOS最適化 */
-    /* will-changeは物理モード時のみ動的に適用 */
+    touch-action: none;
+    /* GPU加速（will-changeは物理モード時のみ動的に適用） */
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
-    touch-action: none;
 }
 
 .help-sticker-wrapper:active {
@@ -706,7 +635,7 @@ body.has-background-image .background-btn .background-icon-remove {
     padding: 4px 8px;
     background: rgba(0, 0, 0, 0.06);
     border: 1px solid rgba(0, 0, 0, 0.1);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     font-family: "SF Mono", "Menlo", monospace;
     font-size: var(--font-sm);
     font-weight: 600;
@@ -716,7 +645,7 @@ body.has-background-image .background-btn .background-icon-remove {
 
 /* スクロールバーのスタイル（クラフト紙に合わせた色） */
 .help-sticker-content::-webkit-scrollbar {
-    width: 8px;
+    width: var(--scrollbar-width);
 }
 
 .help-sticker-content::-webkit-scrollbar-track {
@@ -733,22 +662,21 @@ body.has-background-image .background-btn .background-icon-remove {
     background: rgba(101, 84, 71, 0.5);
 }
 
-/* ステッカー */
+/* ============================================
+   ステッカー：基本スタイル
+   ============================================ */
+
 .sticker {
     position: absolute;
     cursor: default;
     user-select: none;
     overflow: visible;
-    /* will-changeは物理モード時のみ動的に適用 */
-    /* GPU加速を強制 */
-    transform: translateZ(0);
-    /* iOS最適化：タッチアクションを無効化してタッチ遅延を削減 */
-    touch-action: none;
-    /* z-indexはJavaScriptで動的に設定されます */
-    /* ステッカー外枠はクリック不可（imgWrapperのみクリック可能） */
-    pointer-events: none;
-    /* ドロップシャドウを適用 */
+    pointer-events: none; /* 外枠はクリック不可（imgWrapperのみクリック可能） */
+    touch-action: none; /* iOS最適化：タッチ遅延を削減 */
     filter: var(--shadow-sticker);
+    /* GPU加速（will-changeは物理モード時のみ動的に適用） */
+    transform: translateZ(0);
+    /* z-indexはJavaScriptで動的に設定 */
 }
 
 /* 物理モード中のステッカー：will-changeを動的に適用（GPU最適化） */
@@ -800,7 +728,7 @@ body.has-background-image .background-btn .background-icon-remove {
 
 /* 選択中のステッカーはオーバーレイより前面に */
 .sticker.selected {
-    z-index: 6000 !important;
+    z-index: var(--z-sticker-selected) !important;
 }
 
 /* 選択時のクリックフィードバック */
@@ -834,9 +762,7 @@ body.has-background-image .background-btn .background-icon-remove {
 /* リサイズ中はより積極的にGPU加速 */
 .sticker.resizing {
     will-change: width, transform;
-    /* containは使わない（影がクリップされるため） */
-    /* 最前面に表示 */
-    z-index: 999999 !important;
+    z-index: var(--z-resizing) !important;
 }
 
 /* ピンチ中は他のステッカーへのタッチを無効化 */
@@ -930,17 +856,13 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
     position: relative;
     transition: transform 0.03s linear;
     cursor: grab;
-    /* will-changeは物理モード時のみ動的に適用 */
-    /* GPU加速を強制 */
-    transform: translateZ(0);
-    backface-visibility: hidden;
-    /* iOS最適化 */
-    -webkit-transform: translateZ(0);
-    -webkit-backface-visibility: hidden;
-    /* クリック可能な領域 */
     pointer-events: auto;
-    /* タッチアクションを制御してスクロールとの衝突を防ぐ */
     touch-action: none;
+    /* GPU加速（will-changeは物理モード時のみ動的に適用） */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
 .sticker-img-wrapper:active {
@@ -952,25 +874,22 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
     height: 100%;
     display: block;
     pointer-events: none;
-    /* SVGフィルターは画像に焼き込まれているため不要 */
-    /* GPU加速を強制 */
-    transform: translateZ(0);
-    backface-visibility: hidden;
-    /* iOS最適化 */
-    -webkit-transform: translateZ(0);
-    -webkit-backface-visibility: hidden;
-    /* 画像のスムーズレンダリング */
     image-rendering: auto;
     -webkit-user-drag: none;
+    /* GPU加速 */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
-
-/* ヘルプステッカーの縁取りなし時のシャドウはJavaScriptで設定される */
-
-/* 選択時・削除ドラッグ時のシャドウは不要（オーバーレイで表現） */
 
 .sticker.rotating .sticker-img-wrapper {
     cursor: crosshair;
 }
+
+/* ============================================
+   UI要素：ダイアログ・トースト
+   ============================================ */
 
 /* 確認ダイアログ */
 .confirm-dialog {
@@ -982,7 +901,7 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
     background: var(--color-overlay-dark);
     -webkit-backdrop-filter: blur(16px);
     backdrop-filter: blur(16px);
-    z-index: 15000;
+    z-index: var(--z-dialog);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -996,7 +915,7 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
 
 .confirm-dialog-content {
     background: var(--color-white);
-    border-radius: 30px;
+    border-radius: var(--radius-xl);
     padding: 16px;
     padding-top: 28px;
     max-width: min(420px, 85%);
@@ -1029,7 +948,7 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
     flex: 1;
     padding: 16px var(--spacing-base);
     border: none;
-    border-radius: 14px;
+    border-radius: var(--radius-lg);
     font-size: var(--font-md);
     font-weight: 600;
     cursor: pointer;
@@ -1078,7 +997,7 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
     font-size: var(--font-base);
     font-weight: 500;
     letter-spacing: -0.2px;
-    z-index: 10001;
+    z-index: var(--z-toast);
     opacity: 1;
     transition: all 0.3s var(--ease-out-expo);
     box-shadow: var(--shadow-md);
@@ -1105,7 +1024,7 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
     border: none;
     color: var(--color-white);
     padding: 6px 16px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     font-size: var(--font-sm);
     font-weight: 600;
     cursor: pointer;
@@ -1122,4 +1041,96 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
 .toast-action:active {
     transform: scale(0.95);
     background: var(--color-white-overlay);
+}
+
+/* レスポンシブデザイン：モバイル対応 */
+@media (max-width: 768px) {
+    .desktop-hint {
+        display: none;
+    }
+
+    .mobile-hint {
+        display: block;
+    }
+
+    /* スマホでペーストエリアを有効化 */
+    .paste-area {
+        pointer-events: auto;
+        z-index: var(--z-base);
+        -webkit-user-select: text; /* iOSでペーストメニューを出すため */
+        user-select: text;
+        -webkit-touch-callout: default; /* iOS Safari用: 長押しメニューを有効化 */
+    }
+
+    /* スマホ：ボタン配置調整 */
+    .header-buttons {
+        top: var(--spacing-sm);
+        right: var(--spacing-sm);
+    }
+
+    /* 選択ボタン群 */
+    .selection-buttons {
+        top: var(--spacing-sm);
+        right: var(--spacing-sm);
+    }
+
+    .footer-buttons {
+        bottom: var(--spacing-sm);
+        left: var(--spacing-sm);
+    }
+
+    .add-btn {
+        bottom: var(--spacing-sm);
+        right: var(--spacing-sm);
+        width: var(--size-button-mobile-lg);
+        height: var(--size-button-mobile-lg);
+    }
+
+    .add-btn svg {
+        width: var(--icon-size-mobile);
+        height: var(--icon-size-mobile);
+    }
+
+    /* ヘルプステッカーのスマホ対応 */
+    .help-sticker-content {
+        padding: var(--spacing-base);
+    }
+
+    .help-sticker-content h2 {
+        font-size: var(--font-xl);
+        margin-bottom: var(--spacing-base);
+        letter-spacing: -0.5px;
+    }
+
+    .help-section h3 {
+        font-size: var(--font-base);
+        margin-top: 18px;
+    }
+
+    .help-section p {
+        font-size: var(--font-sm);
+    }
+
+    /* トーストのスマホ対応 */
+    .toast {
+        bottom: calc(var(--spacing-sm) * 2 + var(--size-button-mobile-lg));
+        font-size: var(--font-sm);
+        padding: 10px 16px;
+        max-width: 85%;
+    }
+
+    /* アクションボタンがある場合は右paddingを小さく */
+    .toast:has(.toast-action) {
+        padding-right: 10px;
+    }
+
+    .toast-message {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+
+    .toast-action {
+        font-size: var(--font-sm);
+        padding: 5px 14px;
+    }
 }
