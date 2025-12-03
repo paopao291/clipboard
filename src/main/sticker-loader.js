@@ -291,13 +291,19 @@ function addProcessedStickerToDOM(
  * 個別のステッカーデータを処理してDOMに追加
  */
 async function processStickerForReload(stickerData, needsConversion) {
-  // blobが存在しない場合はエラー
-  if (!stickerData.blob) {
-    logger.error(`processStickerForReload: stickerData.blobが存在しません。ID: ${stickerData.id}`, stickerData);
+  // blobが存在しない場合はoriginalBlobをフォールバックとして使用
+  const blobToUse = stickerData.blob || stickerData.originalBlob;
+  if (!blobToUse) {
+    logger.error(`processStickerForReload: blobとoriginalBlobが存在しません。ID: ${stickerData.id}`, stickerData);
     throw new Error(`ステッカーID ${stickerData.id} のblobデータが見つかりません`);
   }
 
-  const img = await loadImageFromBlob(stickerData.blob);
+  // blobが存在しない場合はoriginalBlobをblobとして設定
+  if (!stickerData.blob && stickerData.originalBlob) {
+    stickerData.blob = stickerData.originalBlob;
+  }
+
+  const img = await loadImageFromBlob(blobToUse);
   const { borderMode, originalType, transparency } = await getStickerImageInfo(
     stickerData,
     img,
@@ -319,10 +325,24 @@ async function processStickerForReload(stickerData, needsConversion) {
 export async function loadStickersFromDB() {
   const stickers = await loadStickerDataFromDB();
   const needsConversion = !localStorage.getItem("hybrid_coordinate_migrated");
+  
+  logger.log(`読み込んだステッカー数: ${stickers.length}`);
+
+  let successCount = 0;
+  let errorCount = 0;
 
   for (const stickerData of stickers) {
-    await processStickerForReload(stickerData, needsConversion);
+    try {
+      await processStickerForReload(stickerData, needsConversion);
+      successCount++;
+    } catch (error) {
+      errorCount++;
+      logger.error(`ステッカーID ${stickerData.id} の読み込みに失敗しました:`, error);
+      // エラーが発生しても次のステッカーの処理を続行
+    }
   }
+
+  logger.log(`ステッカー読み込み完了: 成功 ${successCount}個, 失敗 ${errorCount}個`);
 
   if (needsConversion && stickers.length > 0) {
     localStorage.setItem("hybrid_coordinate_migrated", "true");

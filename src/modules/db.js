@@ -191,25 +191,13 @@ export async function loadAllStickersFromDB() {
 
     // Safari対策：ArrayBufferをBlobに戻す
     for (const sticker of stickers) {
-      if (sticker.blobData && sticker.blobType) {
-        // ArrayBufferからBlobを復元
-        sticker.blob = arrayBufferToBlob(sticker.blobData, sticker.blobType);
-        delete sticker.blobData;
-        delete sticker.blobType;
-      }
+      // デバッグ: データの状態を確認
+      const hasBlobData = !!(sticker.blobData && sticker.blobType);
+      const hasOriginalBlobData = !!(sticker.originalBlobData && sticker.originalBlobType);
+      const hasBlobWithBorderData = !!(sticker.blobWithBorderData && sticker.blobWithBorderType);
 
-      // blobWithBorderも同様に処理（既存データとの互換性を維持）
-      if (sticker.blobWithBorderData && sticker.blobWithBorderType) {
-        sticker.blobWithBorder = arrayBufferToBlob(
-          sticker.blobWithBorderData,
-          sticker.blobWithBorderType,
-        );
-        delete sticker.blobWithBorderData;
-        delete sticker.blobWithBorderType;
-      }
-
-      // originalBlobも同様に処理
-      if (sticker.originalBlobData && sticker.originalBlobType) {
+      // originalBlobを先に処理（blobのフォールバックとして使用するため）
+      if (hasOriginalBlobData) {
         sticker.originalBlob = arrayBufferToBlob(
           sticker.originalBlobData,
           sticker.originalBlobType,
@@ -217,11 +205,48 @@ export async function loadAllStickersFromDB() {
         delete sticker.originalBlobData;
         delete sticker.originalBlobType;
       }
+
+      // blobを復元（blobDataがない場合はoriginalBlobをフォールバックとして使用）
+      if (hasBlobData) {
+        // ArrayBufferからBlobを復元
+        sticker.blob = arrayBufferToBlob(sticker.blobData, sticker.blobType);
+        delete sticker.blobData;
+        delete sticker.blobType;
+      } else if (sticker.originalBlob) {
+        // blobDataが存在しないがoriginalBlobがある場合、それをblobとしても使用
+        sticker.blob = sticker.originalBlob;
+      }
+
+      // blobWithBorderも同様に処理（既存データとの互換性を維持）
+      if (hasBlobWithBorderData) {
+        sticker.blobWithBorder = arrayBufferToBlob(
+          sticker.blobWithBorderData,
+          sticker.blobWithBorderType,
+        );
+        delete sticker.blobWithBorderData;
+        delete sticker.blobWithBorderType;
+      }
+    }
+    
+    // blobが存在しないステッカーをフィルタリング
+    const validStickers = stickers.filter(sticker => {
+      const hasBlob = !!(sticker.blob || sticker.originalBlob);
+      if (!hasBlob) {
+        logger.warn(`ステッカーID ${sticker.id}: blobとoriginalBlobの両方が存在しません。スキップします。`, {
+          id: sticker.id,
+          keys: Object.keys(sticker)
+        });
+      }
+      return hasBlob;
+    });
+    
+    if (validStickers.length !== stickers.length) {
+      logger.warn(`${stickers.length - validStickers.length}個のステッカーがblobデータを持たないためスキップされました`);
     }
 
     // z-index順にソート（小さい順から追加することで重ね順を再現）
-    stickers.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
-    return stickers;
+    validStickers.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+    return validStickers;
   } catch (e) {
     logger.error("DB読み込みエラー:", e);
     return [];

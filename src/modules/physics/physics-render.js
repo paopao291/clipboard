@@ -175,6 +175,7 @@ export function stepPhysics(
   savePreviousPhysicsStates(getStickerBodyMap());
 
   // 物理演算を実行
+  // リファクタリング前の実装に合わせる（PHYSICS_DELTAはミリ秒単位）
   Engine.update(engine, PHYSICS_DELTA);
 
   // 重力を更新
