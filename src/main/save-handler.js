@@ -1,5 +1,4 @@
-import html2canvas from "html2canvas";
-import state from "../modules/state.js";
+// html2canvasはCDNから読み込まれたグローバル変数として使用
 
 const SAVE_CONFIG = {
   SCALE_WITH_BG: 3, // 背景画像がある場合のscale
@@ -93,7 +92,7 @@ function drawDotPattern(ctx, canvasWidth, canvasHeight, scale) {
         y,
         dotRadius * SAVE_CONFIG.DOT_SIZE_MULTIPLIER,
         0,
-        Math.PI * 2
+        Math.PI * 2,
       );
       ctx.fill();
     }
