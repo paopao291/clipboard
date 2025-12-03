@@ -351,6 +351,9 @@ class AppState {
       hasBorder: stickerData.hasBorder,
       borderWidth: stickerData.borderWidth,
       borderMode: stickerData.borderMode,
+      // 画像タイプと透過情報（縁取りの方向を決定するために必要）
+      originalType: stickerData.originalType,
+      hasTransparency: stickerData.hasTransparency,
       // その他の状態
       isPinned: stickerData.isPinned,
       bgRemovalProcessed: stickerData.bgRemovalProcessed,

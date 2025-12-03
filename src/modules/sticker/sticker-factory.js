@@ -227,6 +227,8 @@ async function persistNewSticker(stickerData) {
  * @param {number|null} zIndex - z-index
  * @param {boolean} hasBorder - 縁取りあり
  * @param {number} borderMode - 縁取りモード（0:なし, 1:2.5%, 2:5%）
+ * @param {string|null} storedOriginalType - 保存された画像タイプ（コピー・ペースト時に使用）
+ * @param {boolean|null} storedHasTransparency - 保存された透過情報（コピー・ペースト時に使用）
  */
 export async function addStickerFromBlob(
   blob,
@@ -238,12 +240,18 @@ export async function addStickerFromBlob(
   zIndex = null,
   hasBorder = STICKER_DEFAULTS.HAS_BORDER,
   borderMode = STICKER_DEFAULTS.BORDER_MODE,
+  storedOriginalType = null,
+  storedHasTransparency = null,
 ) {
   const {
     blob: resizedBlob,
-    originalType,
-    hasTransparency,
+    originalType: detectedOriginalType,
+    hasTransparency: detectedHasTransparency,
   } = await prepareImageBlob(blob, IMAGE_PROCESSING_CONFIG.MAX_SIZE);
+
+  // 保存された値がある場合はそれを使用（コピー・ペースト時に縁取りの方向を保持）
+  const originalType = storedOriginalType || detectedOriginalType;
+  const hasTransparency = storedHasTransparency !== null ? storedHasTransparency : detectedHasTransparency;
 
   const stickerId = id || Date.now();
 

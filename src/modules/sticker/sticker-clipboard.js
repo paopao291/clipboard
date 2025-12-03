@@ -105,6 +105,8 @@ export async function pasteSticker(x, yPercent) {
       null,
       copiedData.hasBorder,
       copiedData.borderMode,
+      copiedData.originalType,
+      copiedData.hasTransparency,
     );
 
     return true;
