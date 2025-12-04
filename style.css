@@ -835,6 +835,10 @@ body:has(.sticker.resizing) .sticker:not(.resizing) {
     z-index: 2;
 }
 
+.sticker.processing .sticker-img-wrapper img {
+    opacity: 0.5;
+}
+
 @keyframes Grad {
     0% {
         background-position: 0 0%;

@@ -3,6 +3,8 @@
  * WebP変換、フォーマット変換などの画像変換処理
  */
 
+import { logger } from "../utils/logger.js";
+
 /**
  * 画像をWebPに変換
  * @param {Blob} blob - 元の画像Blob
@@ -18,10 +20,10 @@ export async function convertToWebP(blob, quality = 0.9) {
       URL.revokeObjectURL(url);
 
       // Canvasに描画
-      const canvas = document.createElement('canvas');
+      const canvas = document.createElement("canvas");
       canvas.width = img.width;
       canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext("2d");
 
       // 透過を保持するための設定
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -31,22 +33,24 @@ export async function convertToWebP(blob, quality = 0.9) {
       canvas.toBlob(
         (webpBlob) => {
           if (webpBlob) {
-            logger.log(`WebP変換: ${Math.round(blob.size / 1024)}KB → ${Math.round(webpBlob.size / 1024)}KB (${Math.round((1 - webpBlob.size / blob.size) * 100)}%削減)`);
+            logger.log(
+              `WebP変換: ${Math.round(blob.size / 1024)}KB → ${Math.round(webpBlob.size / 1024)}KB (${Math.round((1 - webpBlob.size / blob.size) * 100)}%削減)`,
+            );
             resolve(webpBlob);
           } else {
             // WebP変換失敗の場合は元のBlobを返す
-            logger.warn('WebP変換失敗: 元の画像を使用します');
+            logger.warn("WebP変換失敗: 元の画像を使用します");
             resolve(blob);
           }
         },
-        'image/webp',
-        quality
+        "image/webp",
+        quality,
       );
     };
 
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      logger.warn('画像読み込みエラー: 元の画像を使用します');
+      logger.warn("画像読み込みエラー: 元の画像を使用します");
       // エラー時は元のBlobを返す（フォールバック）
       resolve(blob);
     };
@@ -62,7 +66,8 @@ export async function convertToWebP(blob, quality = 0.9) {
 export async function supportsWebP() {
   // 簡易的なWebP対応チェック（1x1ピクセルの透過WebP画像）
   return new Promise((resolve) => {
-    const webP = 'data:image/webp;base64,UklGRiQAAABXRUJQVlA4IBgAAAAwAQCdASoBAAEAAwA0JaQAA3AA/vuUAAA=';
+    const webP =
+      "data:image/webp;base64,UklGRiQAAABXRUJQVlA4IBgAAAAwAQCdASoBAAEAAwA0JaQAA3AA/vuUAAA=";
     const img = new Image();
 
     img.onload = () => {
@@ -84,7 +89,7 @@ export async function supportsWebP() {
  * @returns {string} MIMEタイプ（例: 'image/png', 'image/webp'）
  */
 export function getImageMimeType(blob) {
-  return blob.type || 'image/png';
+  return blob.type || "image/png";
 }
 
 /**
@@ -93,7 +98,7 @@ export function getImageMimeType(blob) {
  * @returns {boolean}
  */
 export function isWebP(blob) {
-  return blob.type === 'image/webp';
+  return blob.type === "image/webp";
 }
 
 /**
@@ -111,10 +116,10 @@ export async function convertImageFormat(blob, mimeType, quality = 0.9) {
     img.onload = () => {
       URL.revokeObjectURL(url);
 
-      const canvas = document.createElement('canvas');
+      const canvas = document.createElement("canvas");
       canvas.width = img.width;
       canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext("2d");
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0);
@@ -129,13 +134,13 @@ export async function convertImageFormat(blob, mimeType, quality = 0.9) {
           }
         },
         mimeType,
-        quality
+        quality,
       );
     };
 
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      logger.warn('画像読み込みエラー: 元の画像を使用します');
+      logger.warn("画像読み込みエラー: 元の画像を使用します");
       resolve(blob);
     };
 
