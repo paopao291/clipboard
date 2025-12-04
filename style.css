@@ -38,9 +38,7 @@
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
     --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.12);
     --shadow-sticker: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1));
-    --shadow-button: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
-    --shadow-button-hover: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
-    --shadow-button-active: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.2));
+    --shadow-button: drop-shadow(0 1px 8px rgba(0, 0, 0, 0.4));
 
     /* サイズシステム */
     --size-icon-sm: 22px;
@@ -304,7 +302,7 @@ body.has-background-image .background-btn .background-icon-remove {
     width: var(--size-button-mobile);
     height: var(--size-button-mobile);
     background-color: transparent;
-    border: 1px solid var(--color-white);
+    border: 1.5px solid var(--color-white);
     border-radius: 50%;
     cursor: default;
     display: flex;
@@ -313,7 +311,7 @@ body.has-background-image .background-btn .background-icon-remove {
     z-index: var(--z-buttons);
     color: var(--color-white);
     transition: all 0.3s var(--ease-out-expo);
-    filter: var(--shadow-button-active);
+    filter: var(--shadow-button);
     pointer-events: none;
     opacity: 1;
     visibility: visible;
@@ -333,7 +331,7 @@ body.has-background-image .background-btn .background-icon-remove {
     left: 50%;
     transform: translateX(-50%);
     font-size: var(--font-sm);
-    font-weight: 400;
+    font-weight: 600;
     color: var(--color-white);
     white-space: nowrap;
     pointer-events: none;

@@ -60,7 +60,7 @@ function prepareTapOrClick(clientX, clientY, isTouch, stickerId = null) {
     state.dragPrepareX = clientX;
     state.dragPrepareY = clientY;
   }
-  
+
   if (stickerId !== null) {
     state.pendingStickerId = stickerId;
   }
@@ -122,11 +122,6 @@ async function handlePinnedStickerInteraction(sticker, id, isTouch = false) {
  * @returns {Promise<boolean>} 削除した場合true
  */
 async function handleTrashDrop(clientX, clientY) {
-  // 未選択のステッカーをドラッグ中は削除できない
-  if (state.shouldClearSelectionOnDragEnd) {
-    return false;
-  }
-
   if (state.isDragging && isOverTrashBtn(clientX, clientY)) {
     const stickerToDelete = state.selectedSticker;
     state.deselectAll();
@@ -151,7 +146,7 @@ async function finishInteraction() {
   if (state.isDragging) {
     await checkAndFixOutOfBounds(state.selectedSticker);
   }
-  
+
   // ドラッグで選択しなかった場合、選択状態をクリア
   if (state.shouldClearSelectionOnDragEnd) {
     state.selectedSticker = null;
@@ -166,7 +161,12 @@ async function finishInteraction() {
  * @param {boolean} isTouch - タッチイベントかどうか
  * @param {TouchList} touches - タッチリスト（タッチイベントの場合）
  */
-function handleCanvasPointerDown(clientX, clientY, isTouch = false, touches = null) {
+function handleCanvasPointerDown(
+  clientX,
+  clientY,
+  isTouch = false,
+  touches = null,
+) {
   if (!isTouch) {
     const now = Date.now();
     if (now - lastTouchTime < 500) {
@@ -176,7 +176,13 @@ function handleCanvasPointerDown(clientX, clientY, isTouch = false, touches = nu
     lastTouchTime = Date.now();
   }
 
-  if (isTouch && touches && touches.length === 2 && state.selectedSticker && canPinch(state.selectedSticker)) {
+  if (
+    isTouch &&
+    touches &&
+    touches.length === 2 &&
+    state.selectedSticker &&
+    canPinch(state.selectedSticker)
+  ) {
     startPinchGesture(touches[0], touches[1], state.selectedSticker, true);
     return;
   }
@@ -216,7 +222,14 @@ function handleCanvasPointerDown(clientX, clientY, isTouch = false, touches = nu
  * @param {boolean} shiftKey - Shiftキーが押されているか
  * @param {TouchList} touches - タッチリスト（タッチイベントの場合）
  */
-async function handleStickerPointerDown(id, clientX, clientY, isTouch = false, shiftKey = false, touches = null) {
+async function handleStickerPointerDown(
+  id,
+  clientX,
+  clientY,
+  isTouch = false,
+  shiftKey = false,
+  touches = null,
+) {
   stopAutoLayout();
 
   const sticker = state.getStickerById(id);
@@ -265,7 +278,8 @@ async function handleStickerPointerDown(id, clientX, clientY, isTouch = false, s
       const rect = sticker.element.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
-      const angle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
+      const angle =
+        Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
       startRotation(angle, sticker, true);
       return;
     }
@@ -281,11 +295,12 @@ async function handleStickerPointerDown(id, clientX, clientY, isTouch = false, s
     const rect = sticker.element.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
-    const angle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
+    const angle =
+      Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
     startRotation(angle, sticker, false);
     return;
   }
-  
+
   // タップ判定の準備（ドラッグでは選択しない）
   prepareTapOrClick(clientX, clientY, isTouch, id);
 }
@@ -391,6 +406,9 @@ async function handlePointerUp(clientX, clientY, isTouch = false) {
     setOverlayDeleteMode(false);
     resetStickerTransformOrigin();
     state.endInteraction();
+
+    // ドラッグ終了後、UIを更新してゴミ箱を非表示に
+    updateInfoButtonVisibility();
   }
 }
 
@@ -405,7 +423,12 @@ export function handleCanvasTouchStart(e) {
   if (e.target === elements.canvas || e.target === elements.pasteArea) {
     const touches = e.touches;
     if (touches.length > 0) {
-      handleCanvasPointerDown(touches[0].clientX, touches[0].clientY, true, touches);
+      handleCanvasPointerDown(
+        touches[0].clientX,
+        touches[0].clientY,
+        true,
+        touches,
+      );
     }
   }
 }
@@ -421,7 +444,14 @@ export async function handleStickerTouchStart(e, id) {
   e.stopPropagation();
   const touches = e.touches;
   if (touches.length > 0) {
-    await handleStickerPointerDown(id, touches[0].clientX, touches[0].clientY, true, false, touches);
+    await handleStickerPointerDown(
+      id,
+      touches[0].clientX,
+      touches[0].clientY,
+      true,
+      false,
+      touches,
+    );
   }
 }
 
@@ -431,23 +461,31 @@ export function handleMouseMove(e) {
 
 export function handleTouchMove(e) {
   const touches = e.touches;
-  
+
   // 2本指タッチの場合、ピンチ操作を開始または継続
   if (touches.length === 2) {
     // ピンチ中の処理
-    if (state.isRotating && state.selectedSticker && canPinch(state.selectedSticker)) {
+    if (
+      state.isRotating &&
+      state.selectedSticker &&
+      canPinch(state.selectedSticker)
+    ) {
       handlePinchMove(touches[0], touches[1], state.selectedSticker);
       handlePinchRotationMove(touches[0], touches[1], state.selectedSticker);
       return;
     }
-    
+
     // まだピンチが開始されていない場合
     // 選択状態のステッカーがある場合、どこをピンチしてもそのステッカーを拡大縮小できる
-    if (state.selectedSticker && canPinch(state.selectedSticker) && !state.isDragging) {
+    if (
+      state.selectedSticker &&
+      canPinch(state.selectedSticker) &&
+      !state.isDragging
+    ) {
       startPinchGesture(touches[0], touches[1], state.selectedSticker, true);
       return;
     }
-    
+
     // 未選択のステッカーの場合は、handleStickerPointerDownで処理される
     return;
   }
@@ -475,7 +513,8 @@ export async function handleTouchEnd(e) {
  * @param {number} deltaY - ホイールのdeltaY値
  */
 function resizeStickerWithWheel(sticker, deltaY) {
-  const delta = deltaY > 0 ? -RESIZE_CONFIG.WHEEL_DELTA : RESIZE_CONFIG.WHEEL_DELTA;
+  const delta =
+    deltaY > 0 ? -RESIZE_CONFIG.WHEEL_DELTA : RESIZE_CONFIG.WHEEL_DELTA;
   const newWidth = sticker.width + delta;
   updateStickerSize(sticker, newWidth);
 
@@ -496,7 +535,10 @@ export async function handleWheel(e, id) {
   const sticker = state.getStickerById(id);
   if (!sticker) return;
 
-  if (sticker.isPinned || (state.selectedSticker && state.selectedSticker.isPinned)) {
+  if (
+    sticker.isPinned ||
+    (state.selectedSticker && state.selectedSticker.isPinned)
+  ) {
     return;
   }
 
@@ -526,7 +568,13 @@ export async function handleCanvasWheel(e) {
  * @param {number} id - シールID
  */
 export function attachStickerEventListeners(wrapperElement, id) {
-  wrapperElement.addEventListener("mousedown", (e) => handleStickerMouseDown(e, id));
+  wrapperElement.addEventListener("mousedown", (e) =>
+    handleStickerMouseDown(e, id),
+  );
   wrapperElement.addEventListener("wheel", (e) => handleWheel(e, id));
-  wrapperElement.addEventListener("touchstart", (e) => handleStickerTouchStart(e, id), { passive: false });
+  wrapperElement.addEventListener(
+    "touchstart",
+    (e) => handleStickerTouchStart(e, id),
+    { passive: false },
+  );
 }

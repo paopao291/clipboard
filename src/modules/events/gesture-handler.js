@@ -16,6 +16,7 @@ import {
   setTrashDragOver,
   isOverTrashBtn,
   setOverlayDeleteMode,
+  updateInfoButtonVisibility,
 } from "../ui.js";
 import {
   isPhysicsActive,
@@ -92,9 +93,6 @@ export function startDragWithoutSelection(clientX, clientY, sticker) {
 export function handleDragMove(clientX, clientY) {
   if (!state.isDragging || !state.selectedSticker) return;
 
-  // 未選択のステッカーをドラッグ中はゴミ箱判定をスキップ（削除できない）
-  const isUnselectedDrag = state.shouldClearSelectionOnDragEnd;
-
   const coords = absoluteToHybrid(clientX, clientY);
   const newX = coords.x - state.dragStartX;
   const newYPercent = coords.yPercent - state.dragStartYPercent;
@@ -118,19 +116,17 @@ export function handleDragMove(clientX, clientY) {
     lastDragY = clientY;
     lastDragTime = now;
   } else {
-    // 未選択のドラッグの場合はゴミ箱判定をスキップ
-    if (!isUnselectedDrag) {
-      const isOver = isOverTrashBtn(clientX, clientY);
-      setTrashDragOver(isOver);
-      setOverlayDeleteMode(isOver);
+    // ゴミ箱判定（未選択のドラッグでも削除可能）
+    const isOver = isOverTrashBtn(clientX, clientY);
+    setTrashDragOver(isOver);
+    setOverlayDeleteMode(isOver);
 
-      if (!isOver) {
-        updateStickerPosition(state.selectedSticker, newX, newYPercent);
-      }
-    } else {
-      // 未選択のドラッグの場合は位置更新のみ
+    if (!isOver) {
       updateStickerPosition(state.selectedSticker, newX, newYPercent);
     }
+
+    // ドラッグ中にゴミ箱を表示するためボタンの表示状態を更新
+    updateInfoButtonVisibility();
   }
 }
 
@@ -155,11 +151,7 @@ export function applyDragVelocity(clientX, clientY) {
     const velocityMagnitude = Math.sqrt(vx * vx + vy * vy);
     if (velocityMagnitude > maxVelocity) {
       const scale = maxVelocity / velocityMagnitude;
-      applyStickerVelocity(
-        state.selectedSticker.id,
-        vx * scale,
-        vy * scale,
-      );
+      applyStickerVelocity(state.selectedSticker.id, vx * scale, vy * scale);
     } else {
       applyStickerVelocity(state.selectedSticker.id, vx, vy);
     }
@@ -208,7 +200,12 @@ export function handleRotateMove(clientX, clientY) {
  * @param {boolean} selectSticker - 選択状態にするかどうか（デフォルト: true）
  * @returns {boolean} ピンチを開始したかどうか
  */
-export function startPinchGesture(touch1, touch2, targetSticker, selectSticker = true) {
+export function startPinchGesture(
+  touch1,
+  touch2,
+  targetSticker,
+  selectSticker = true,
+) {
   if (targetSticker.isPinned) {
     return false;
   }
@@ -387,7 +384,7 @@ export async function checkAndFixOutOfBounds(sticker) {
  */
 export function handleTapOrClick(possibleTap, startTime) {
   if (!possibleTap) return false;
-  
+
   const duration = Date.now() - (startTime || 0);
   if (
     duration < INTERACTION_CONFIG.TAP_MAX_DURATION_MS &&

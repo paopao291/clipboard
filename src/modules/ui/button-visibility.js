@@ -17,20 +17,55 @@ export function updateInfoButtonVisibility() {
   const isUIVisible = state.isUIVisibleState();
 
   // UI表示状態をcanvasに反映（斜線の表示制御用）
-  elements.canvas.classList.toggle('ui-hidden', !isUIVisible);
+  elements.canvas.classList.toggle("ui-hidden", !isUIVisible);
 
   // 固定されていないステッカーの数をカウント
-  const unpinnedCount = state.stickers.filter(s => !s.isPinned).length;
+  const unpinnedCount = state.stickers.filter((s) => !s.isPinned).length;
 
   // ステッカーがない場合：右上ボタン群+FAB表示、選択ボタン群・ゴミ箱・左下ボタン群非表示
   if (state.getStickerCount() === 0) {
-    elements.headerButtons.classList.toggle("hidden", !isUIVisible || isPhysicsMode);
+    elements.headerButtons.classList.toggle(
+      "hidden",
+      !isUIVisible || isPhysicsMode,
+    );
     elements.selectionButtons.classList.add("hidden");
     elements.trashBtn.classList.add("hidden");
     if (!isPhysicsMode) {
       elements.addBtn.classList.toggle("hidden", !isUIVisible);
     }
     elements.footerButtons.classList.add("hidden");
+    return;
+  }
+
+  // 未選択のステッカーをドラッグ中：未選択UI + ゴミ箱を表示
+  const isUnselectedDrag =
+    state.shouldClearSelectionOnDragEnd && state.isDragging;
+
+  if (isUnselectedDrag) {
+    elements.headerButtons.classList.toggle(
+      "hidden",
+      !isUIVisible || isPhysicsMode,
+    );
+    elements.selectionButtons.classList.add("hidden");
+    elements.trashBtn.classList.remove("hidden");
+    if (!isPhysicsMode) {
+      elements.addBtn.classList.toggle("hidden", !isUIVisible);
+    }
+    elements.footerButtons.classList.toggle("hidden", !isUIVisible);
+
+    // 物理モードボタンとレイアウトボタンの表示制御
+    if (unpinnedCount === 0) {
+      elements.physicsBtn.classList.add("hidden");
+    } else {
+      elements.physicsBtn.classList.toggle("hidden", !isUIVisible);
+    }
+
+    if (unpinnedCount >= 2) {
+      elements.layoutBtn.classList.toggle("hidden", !isUIVisible);
+    } else {
+      elements.layoutBtn.classList.add("hidden");
+    }
+
     return;
   }
 
@@ -46,46 +81,62 @@ export function updateInfoButtonVisibility() {
     elements.footerButtons.classList.add("hidden");
 
     // ヘルプステッカーが選択されている場合、コピーボタンと背景除去ボタンに属性を追加
-    const isHelpSticker = state.selectedSticker.element.classList.contains('help-sticker');
-    elements.copyBtn.setAttribute('data-for-help-sticker', isHelpSticker);
-    elements.bgRemovalBtn.setAttribute('data-for-help-sticker', isHelpSticker);
+    const isHelpSticker =
+      state.selectedSticker.element.classList.contains("help-sticker");
+    elements.copyBtn.setAttribute("data-for-help-sticker", isHelpSticker);
+    elements.bgRemovalBtn.setAttribute("data-for-help-sticker", isHelpSticker);
 
     // 固定ボタンの状態を更新（pinBtnはselectionButtons内にあるので個別制御不要）
     if (state.selectedSticker.isPinned) {
-      elements.pinBtn.classList.add('pinned');
+      elements.pinBtn.classList.add("pinned");
     } else {
-      elements.pinBtn.classList.remove('pinned');
+      elements.pinBtn.classList.remove("pinned");
     }
 
     // 縁取りボタンの状態を更新（hasBorderとborderMode）
     if (state.selectedSticker.hasBorder === false) {
-      elements.borderBtn.classList.add('no-border');
+      elements.borderBtn.classList.add("no-border");
     } else {
-      elements.borderBtn.classList.remove('no-border');
+      elements.borderBtn.classList.remove("no-border");
     }
 
     // border-modeクラスをすべて削除
-    elements.borderBtn.classList.remove('border-mode-0', 'border-mode-1', 'border-mode-2');
+    elements.borderBtn.classList.remove(
+      "border-mode-0",
+      "border-mode-1",
+      "border-mode-2",
+    );
 
     // 現在のborderModeクラスを追加
-    const borderMode = state.selectedSticker.borderMode !== undefined ?
-      state.selectedSticker.borderMode :
-      (state.selectedSticker.hasBorder ? 2 : 0); // デフォルト：hasBorder ? 8px : なし
+    const borderMode =
+      state.selectedSticker.borderMode !== undefined
+        ? state.selectedSticker.borderMode
+        : state.selectedSticker.hasBorder
+          ? 2
+          : 0; // デフォルト：hasBorder ? 8px : なし
 
     elements.borderBtn.classList.add(`border-mode-${borderMode}`);
 
     // 背景除去ボタンの表示・非表示を更新
     if (state.selectedSticker.bgRemovalProcessed) {
       // 背景除去済みの場合は背景除去ボタンを非表示
-      elements.bgRemovalBtn.style.display = 'none';
+      elements.bgRemovalBtn.style.display = "none";
     } else {
       // まだ背景除去していない場合のみ表示
-      elements.bgRemovalBtn.style.display = '';
+      elements.bgRemovalBtn.style.display = "";
     }
   } else {
-    elements.headerButtons.classList.toggle("hidden", !isUIVisible || isPhysicsMode);
+    elements.headerButtons.classList.toggle(
+      "hidden",
+      !isUIVisible || isPhysicsMode,
+    );
     elements.selectionButtons.classList.add("hidden");
-    elements.trashBtn.classList.add("hidden");
+    // ドラッグ中のみゴミ箱を表示
+    if (state.isDragging) {
+      elements.trashBtn.classList.remove("hidden");
+    } else {
+      elements.trashBtn.classList.add("hidden");
+    }
     if (!isPhysicsMode) {
       elements.addBtn.classList.toggle("hidden", !isUIVisible);
     }
