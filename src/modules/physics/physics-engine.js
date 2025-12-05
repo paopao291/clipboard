@@ -5,8 +5,8 @@
 
 import { PHYSICS_CONFIG } from "../constants.js";
 
-// Matter.jsモジュール
-const { Engine, World, Bodies, Runner } = Matter;
+// Matter.jsモジュール（グローバル変数として読み込まれる）
+// 分割代入は関数内で行う（Matter.jsの読み込みを待つため）
 
 // ========================================
 // 物理エンジンの状態
@@ -25,6 +25,14 @@ let isPhysicsEnabled = false;
  * 物理エンジンを初期化
  */
 export function initPhysicsEngine() {
+  // Matter.jsが読み込まれているか確認
+  if (typeof Matter === "undefined") {
+    console.error("Matter.js is not loaded yet");
+    return;
+  }
+
+  const { Engine, World, Bodies, Runner } = Matter;
+
   // エンジンを作成（下向きの重力を設定）
   const { X, Y, SCALE } = PHYSICS_CONFIG.GRAVITY;
 
@@ -59,6 +67,9 @@ export function initPhysicsEngine() {
  * 画面端に壁を作成
  */
 function createWalls() {
+  if (typeof Matter === "undefined") return;
+
+  const { Bodies, World } = Matter;
   const { innerWidth: width, innerHeight: height } = window;
   const { WALL_THICKNESS: thickness } = PHYSICS_CONFIG;
 
@@ -85,7 +96,9 @@ function createWalls() {
  * 画面リサイズ時に壁を再作成
  */
 export function updateWalls() {
-  if (!world) return;
+  if (!world || typeof Matter === "undefined") return;
+
+  const { World } = Matter;
 
   // 既存の壁を削除
   World.remove(world, walls);

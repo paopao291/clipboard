@@ -7,8 +7,8 @@ import { state } from "../../state.js";
 import { PHYSICS_CONFIG } from "../constants.js";
 import { logger } from "../../utils/logger.js";
 
-// Matter.jsモジュール
-const { World, Bodies, Body } = Matter;
+// Matter.jsモジュール（グローバル変数として読み込まれる）
+// 分割代入は各関数内で行う（Matter.jsの読み込みを待つため）
 
 // ========================================
 // 物理ボディ管理
@@ -24,7 +24,9 @@ const stickerBodyMap = new Map();
  * @param {boolean} isPhysicsEnabled - 物理モードが有効かどうか
  */
 export function addPhysicsBody(sticker, world, isPhysicsEnabled) {
-  if (!isPhysicsEnabled || !world) return;
+  if (!isPhysicsEnabled || !world || typeof Matter === "undefined") return;
+
+  const { World, Bodies } = Matter;
 
   // 固定されたステッカーはスキップ
   if (sticker.isPinned) return;
@@ -80,7 +82,8 @@ export function addPhysicsBody(sticker, world, isPhysicsEnabled) {
  */
 export function removePhysicsBody(stickerId, world) {
   const body = stickerBodyMap.get(stickerId);
-  if (body && world) {
+  if (body && world && typeof Matter !== "undefined") {
+    const { World } = Matter;
     World.remove(world, body);
     stickerBodyMap.delete(stickerId);
   }
@@ -100,7 +103,9 @@ export function getPhysicsBody(stickerId) {
  * @param {Object} world - Matter.jsワールド
  */
 export function clearAllBodies(world) {
-  if (!world) return;
+  if (!world || typeof Matter === "undefined") return;
+
+  const { World } = Matter;
 
   stickerBodyMap.forEach((body) => {
     World.remove(world, body);
@@ -124,7 +129,8 @@ export function getStickerBodyMap() {
  */
 export function applyStickerVelocity(stickerId, vx, vy) {
   const body = stickerBodyMap.get(stickerId);
-  if (body) {
+  if (body && typeof Matter !== "undefined") {
+    const { Body } = Matter;
     Body.setVelocity(body, { x: vx, y: vy });
   }
 }
@@ -137,7 +143,8 @@ export function applyStickerVelocity(stickerId, vx, vy) {
  */
 export function setStickerPhysicsPosition(stickerId, x, y) {
   const body = stickerBodyMap.get(stickerId);
-  if (body) {
+  if (body && typeof Matter !== "undefined") {
+    const { Body } = Matter;
     Body.setPosition(body, { x, y });
     Body.setVelocity(body, { x: 0, y: 0 }); // 速度をリセット
     Body.setAngularVelocity(body, 0); // 角速度をリセット
@@ -152,7 +159,8 @@ export function setStickerPhysicsPosition(stickerId, x, y) {
  */
 export function updateStickerPhysicsPositionDuringDrag(stickerId, x, y) {
   const body = stickerBodyMap.get(stickerId);
-  if (body) {
+  if (body && typeof Matter !== "undefined") {
+    const { Body } = Matter;
     // 位置だけ更新、速度は保持（重力が引き続き作用）
     Body.setPosition(body, { x, y });
   }

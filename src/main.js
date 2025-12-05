@@ -58,6 +58,32 @@ function addCleanableListener(target, event, handler, options) {
 }
 
 /**
+ * Matter.jsの読み込みを待つ
+ */
+function waitForMatter() {
+  return new Promise((resolve) => {
+    if (typeof window.Matter !== "undefined") {
+      resolve();
+      return;
+    }
+
+    const checkInterval = setInterval(() => {
+      if (typeof window.Matter !== "undefined") {
+        clearInterval(checkInterval);
+        resolve();
+      }
+    }, 50);
+
+    // タイムアウト（10秒）
+    setTimeout(() => {
+      clearInterval(checkInterval);
+      console.error("Matter.js failed to load within timeout");
+      resolve(); // エラーでも続行（initPhysicsEngineが内部でチェックする）
+    }, 10000);
+  });
+}
+
+/**
  * アプリケーションの初期化
  */
 async function init() {
@@ -72,6 +98,9 @@ async function init() {
 
   // WebP対応状況をチェック
   await initWebPSupport();
+
+  // Matter.jsの読み込みを待つ
+  await waitForMatter();
 
   // 物理エンジンを初期化
   initPhysicsEngine();

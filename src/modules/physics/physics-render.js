@@ -12,9 +12,6 @@ import {
 } from "../constants.js";
 import { physicsToHybrid, radiansToDegrees } from "../coordinate-utils.js";
 
-// Matter.jsモジュール
-const { Engine } = Matter;
-
 // ========================================
 // レンダリング状態
 // ========================================
@@ -107,14 +104,17 @@ export function startRenderLoop(
       accumulator -= PHYSICS_DELTA;
       physicsSteps++;
     }
-    
+
     // デバッグログ（最初の数フレームのみ）
-    if (lastRenderTime < 1000) { // 最初の1秒間のみ
+    if (lastRenderTime < 1000) {
+      // 最初の1秒間のみ
       const stickerBodyMap = getStickerBodyMap();
       if (physicsSteps > 0 && stickerBodyMap.size > 0) {
         const firstBody = stickerBodyMap.values().next().value;
         if (firstBody) {
-          logger.log(`物理モード: レンダリングループ動作中 (物理ステップ: ${physicsSteps}, ボディ数: ${stickerBodyMap.size}, 最初のボディ位置: x=${firstBody.position.x.toFixed(1)}, y=${firstBody.position.y.toFixed(1)})`);
+          logger.log(
+            `物理モード: レンダリングループ動作中 (物理ステップ: ${physicsSteps}, ボディ数: ${stickerBodyMap.size}, 最初のボディ位置: x=${firstBody.position.x.toFixed(1)}, y=${firstBody.position.y.toFixed(1)})`,
+          );
         }
       }
     }
@@ -176,7 +176,7 @@ export function stepPhysics(
 
   // 物理演算を実行
   // リファクタリング前の実装に合わせる（PHYSICS_DELTAはミリ秒単位）
-  Engine.update(engine, PHYSICS_DELTA);
+  Matter.Engine.update(engine, PHYSICS_DELTA);
 
   // 重力を更新
   // ジャイロが有効な場合: ジャイロセンサーの値に基づいて重力を更新（スマホ）
