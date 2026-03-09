@@ -135,6 +135,9 @@ async function init() {
   elements.saveBtn.addEventListener("click", handleSaveButton);
   elements.infoBtn.addEventListener("click", showHelp);
   elements.hideUIBtn.addEventListener("click", () => {
+    if (state.getStickerCount() === 0) {
+      return;
+    }
     state.hideUI();
     updateInfoButtonVisibility();
   });

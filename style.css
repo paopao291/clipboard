@@ -452,6 +452,13 @@ body.has-background-image .background-btn .background-icon-remove {
     height: var(--size-icon-sm);
 }
 
+.header-btn:disabled,
+.selection-btn:disabled,
+.footer-btn:disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
 .add-btn.hidden {
     opacity: 0;
     visibility: hidden;

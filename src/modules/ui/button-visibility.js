@@ -5,6 +5,13 @@ import { elements } from "./dom-elements.js";
  * ボタンの表示状態を更新
  */
 export function updateInfoButtonVisibility() {
+  const stickerCount = state.getStickerCount();
+
+  // ステッカー0枚時はUI非表示ボタンを無効化（復帰不能を防ぐ）
+  if (elements.hideUIBtn) {
+    elements.hideUIBtn.disabled = stickerCount === 0;
+  }
+
   // 物理モード中は追加ボタンとheader-buttonsを常に非表示
   const isPhysicsMode = state.isPhysicsModeActive();
 
@@ -23,7 +30,7 @@ export function updateInfoButtonVisibility() {
   const unpinnedCount = state.stickers.filter((s) => !s.isPinned).length;
 
   // ステッカーがない場合：右上ボタン群+FAB表示、選択ボタン群・ゴミ箱・左下ボタン群非表示
-  if (state.getStickerCount() === 0) {
+  if (stickerCount === 0) {
     elements.headerButtons.classList.toggle(
       "hidden",
       !isUIVisible || isPhysicsMode,
